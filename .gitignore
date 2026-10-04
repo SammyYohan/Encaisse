@@ -1,0 +1,48 @@
+# ═══════════════════════════════════════════════════════════════
+#  Encaisse — .gitignore
+#  Règle d'or : AUCUNE donnée utilisateur, AUCUN secret dans le repo.
+#  Ce fichier est chargé en deps de diligence technique.
+# ═══════════════════════════════════════════════════════════════
+
+# ── Données utilisateur ─────────────────────────────────────────
+# Export JSON manuel d'un compte réel (clients, factures, IBAN…).
+encaisse-export.json
+encaisse-export.*.json
+*.export.json
+# Captures d'écran / backups locaux contenant des données de test.
+*.bak
+*.local.json
+
+# ── Secrets & environnement côté serveur (Worker / Stripe) ─────
+# Jamais versionné. Se remplissent via `wrangler secret put` ou le
+# dashboard Cloudflare (Workers → Settings → Variables).
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler/
+.secrets/
+
+# ── Dépendances & build ─────────────────────────────────────────
+# Aucun build aujourd'hui (front vanilla) — ignoré par précaution
+# si un outillage est ajouté plus tard.
+node_modules/
+dist/
+build/
+.cache/
+.parcel-cache/
+
+# ── Fichiers de développement jetables ──────────────────────────
+# Extracteurs i18n, tests jsdom, serveur local, script d'icônes.
+__*
+!__keep*
+*.log
+npm-debug.log*
+
+# ── Éditeurs / OS ───────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

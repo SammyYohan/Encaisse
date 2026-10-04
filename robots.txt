@@ -1,0 +1,8 @@
+# ⚠️ Remplace VOTRE-DOMAINE.TLD après l'achat du nom de domaine.
+User-agent: *
+Allow: /
+
+# Espace client privé : ne jamais l'indexer
+Disallow: /r/
+
+Sitemap: https://VOTRE-DOMAINE.TLD/sitemap.xml

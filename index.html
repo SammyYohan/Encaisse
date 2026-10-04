@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="fr" data-lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Encaisse — Quote → Compliant invoice → Paid</title>
+<meta name="description" content="Quote in 60s, compliant e-invoice (Factur-X / Peppol / QR-bill / US sales tax), Stripe payment link, guided reminders. Offline-first.">
+<meta name="theme-color" content="#0f172a">
+<meta name="color-scheme" content="light">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Encaisse — Quote → Compliant invoice → Paid">
+<meta property="og:description" content="Quote in 60s, compliant e-invoice, Stripe payment link, guided reminders. Offline-first, works on site.">
+<meta property="og:image" content="icons/icon-512.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Encaisse — Quote → Compliant invoice → Paid">
+<meta name="twitter:description" content="Quote in 60s, compliant e-invoice, Stripe payment link, guided reminders.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Encaisse","applicationCategory":"BusinessApplication","operatingSystem":"Web, iOS, Android","offers":{"@type":"Offer","price":"19","priceCurrency":"EUR"},"description":"Devis et factures conformes, lien de paiement Stripe, relances automatiques. Hors-ligne d'abord."}
+</script>
+</head>
+<body>
+<div class="stage" id="stage">
+<div class="phone" id="app">
+
+  <!-- ONBOARDING -->
+  <div class="onb" id="onb" role="dialog" aria-modal="true" aria-label="Encaisse">
+    <div class="onb-bg" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="grain"></span></div>
+    <div class="onb-top">
+      <div class="brand"><span class="logo">₣</span><span>Encaisse</span><em>SLC</em></div>
+      <div class="onb-top-right">
+        <button class="link" id="onbLang" type="button">EN</button>
+        <button class="link" id="onbSkip" type="button" data-i18n="Passer">Passer</button>
+      </div>
+    </div>
+    <div class="onb-bar"><i id="onbBar"></i></div>
+    <div class="onb-slides" id="onbSlides">
+      <section class="slide is-active" data-i="0">
+        <div class="art a1" aria-hidden="true"><span class="card-mini m1">DEVIS-2026-014<br><b>12 500 € ✓</b></span><span class="card-mini m2">VAT ✓ Factur-X<br><b>Paid · Stripe</b></span><span class="coin">₣</span></div>
+        <h1 data-i18n-html="Tu travailles.<br>Tu dois être <mark>payé.</mark>">Tu travailles.<br>Tu dois être <mark>payé.</mark></h1>
+        <p data-i18n="Devis en 60 secondes sur chantier, même sans réseau. Facture aux mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.">Devis en 60 secondes sur chantier, même sans réseau. Facture aux mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.</p>
+        <ul class="chips"><li>FR Factur-X</li><li>BE Peppol</li><li>CH QR-facture</li><li>US Sales tax</li></ul>
+      </section>
+      <section class="slide" data-i="1">
+        <div class="art a2" aria-hidden="true"><span class="phone-mini"><i></i><i></i><i class="ok"></i></span><span class="paylist">Stripe ✓ 120,00 €<br>SEPA ✓ 1 250,00 €<br>Stripe ✓ $450.00</span></div>
+        <h1 data-i18n-html="Un bouton.<br>Zéro paperasse.">Un bouton.<br>Zéro paperasse.</h1>
+        <p data-i18n="Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tout reste sur ton téléphone.">Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tout reste sur ton téléphone.</p>
+        <ul class="ticks"><li data-i18n="Photo chantier en preuve">Photo chantier en preuve</li><li data-i18n="Hors-ligne d'abord">Hors-ligne d'abord</li><li data-i18n="Numéros inviolables">Numéros inviolables</li></ul>
+      </section>
+      <section class="slide" data-i="2">
+        <div class="art a3" aria-hidden="true"><span class="bubble" data-i18n="Bonjour Awa, facture FAC-2026-0042 de 850 €, lien : pay… 👋">Bonjour Awa, facture FAC-2026-0042 de 850 €, lien : pay… 👋</span><span class="bubble b" data-i18n="Relance J+7 envoyée ✓">Relance J+7 envoyée ✓</span></div>
+        <h1 data-i18n-html="Les impayés<br>se relancent <mark>sans honte.</mark>">Les impayés<br>se relancent <mark>sans honte.</mark></h1>
+        <p data-i18n="L'app te dit qui relancer et quand — J+3 poli, J+7 ferme, J+15 mise en demeure — et pré-remplit le message WhatsApp ou e-mail. Tu envoies en 1 clic. Un écran : qui te doit combien, depuis quand.">L'app te dit qui relancer et quand — J+3 poli, J+7 ferme, J+15 mise en demeure — et pré-remplit le message WhatsApp ou e-mail. Tu envoies en 1 clic. Un écran : qui te doit combien, depuis quand.</p>
+        <ul class="ticks"><li data-i18n="WhatsApp &amp; e-mail 1-clic">WhatsApp &amp; e-mail 1-clic</li><li data-i18n="Échéances J+3 / J+7 / J+15">Échéances J+3 / J+7 / J+15</li><li data-i18n="Prévision cash 30 j">Prévision cash 30 j</li></ul>
+      </section>
+      <section class="slide" data-i="3">
+        <div class="art a4" aria-hidden="true"><span class="kpi"><b data-i18n="À encaisser">À encaisser</b><strong>18 450 €</strong></span><span class="kpi k2"><b data-i18n="En retard">En retard</b><strong>4 500 €</strong></span></div>
+        <h1 data-i18n-html="Inscription 30 secondes.<br><mark>Tarif de ton pays.</mark>">Inscription 30 secondes.<br><mark>Tarif de ton pays.</mark></h1>
+        <p data-i18n="Dis-moi où tu factures : le prix s'adapte automatiquement. Devis illimités, 3 factures gratuites par mois, sans carte.">Dis-moi où tu factures : le prix s'adapte automatiquement. Devis illimités, 3 factures gratuites par mois, sans carte.</p>
+        <input class="onb-input" id="onbBiz" placeholder="Nom de ta boîte (ex : Atelier Koné)" data-i18n-ph="Nom de ta boîte (ex : Atelier Koné)" maxlength="60" autocomplete="organization">
+        <select class="onb-input" id="onbSecteur" aria-label="Ton activité">
+          <option value="artisan" data-i18n="🔨 Artisan / BTP">🔨 Artisan / BTP</option>
+          <option value="commerce" data-i18n="🛍️ Commerce / Boutique">🛍️ Commerce / Boutique</option>
+          <option value="services" data-i18n="💼 Services / Freelance">💼 Services / Freelance</option>
+          <option value="food" data-i18n="🍲 Resto / Food">🍲 Resto / Food</option>
+          <option value="beaute" data-i18n="💇 Beauté / Bien-être">💇 Beauté / Bien-être</option>
+          <option value="transport" data-i18n="🛵 Transport / Livraison">🛵 Transport / Livraison</option>
+        </select>
+        <div class="pays-grid" id="onbPays">
+          <button type="button" data-pays="FR" class="is-sel" data-i18n="🇫🇷 France · Factur-X">🇫🇷 France · Factur-X</button>
+          <button type="button" data-pays="BE" data-i18n="🇧🇪 Belgique · Peppol">🇧🇪 Belgique · Peppol</button>
+          <button type="button" data-pays="CH" data-i18n="🇨🇭 Suisse · QR-facture">🇨🇭 Suisse · QR-facture</button>
+          <button type="button" data-pays="US" data-i18n="🇺🇸 United States · Sales tax">🇺🇸 United States · Sales tax</button>
+        </div>
+        <p class="onb-price" id="onbPrice">🇫🇷 Solo 19 €/mois · Pro 39 €/mois · -20% en annuel</p>
+        <p class="fine" data-i18n="Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.">Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.</p>
+      </section>
+    </div>
+    <div class="onb-nav">
+      <div class="dots" id="onbDots" aria-hidden="true"><i class="is-on"></i><i></i><i></i><i></i></div>
+      <button class="btn primary big" id="onbNext" type="button">Continuer →</button>
+    </div>
+  </div>
+
+  <!-- APP SHELL -->
+  <header class="top">
+    <div class="brand small"><span class="logo">₣</span><span>Encaisse</span></div>
+    <div class="top-right">
+      <span class="plan-badge" id="planBadge">Gratuit</span>
+      <span class="pill-pays" id="pillPays">🇫🇷 Factur-X</span>
+      <span class="dot-net" id="dotNet" title="statut réseau"><i></i><em>Hors-ligne OK</em></span>
+    </div>
+  </header>
+  <div class="demo-bar" id="demoBar" hidden data-i18n="🧪 Mode démonstration — aucun paiement réel tant que Stripe n'est pas branché.">🧪 Mode démonstration — aucun paiement réel tant que Stripe n'est pas branché.</div>
+
+  <main class="views" id="views">
+    <section class="view is-active" data-view="home" aria-label="Accueil">
+      <div class="hero">
+        <p class="eyebrow" id="helloLine">Bonjour 👋 · Voici ton cash</p>
+        <div class="kpis">
+          <div class="kpi-card"><span data-i18n="À encaisser">À encaisser</span><strong id="kpiDue">0</strong><em id="kpiDueN">0 factures</em></div>
+          <div class="kpi-card alert"><span data-i18n="En retard &gt;7j">En retard &gt;7j</span><strong id="kpiLate">0</strong><em id="kpiLateN">0 factures</em></div>
+          <div class="kpi-card ok"><span data-i18n="Encaissé ce mois">Encaissé ce mois</span><strong id="kpiPaid">0</strong><em id="kpiPaidN">0 factures</em></div>
+        </div>
+        <div class="cashbar"><div class="cashbar-top"><span data-i18n="Prévision 30 jours">Prévision 30 jours</span><b id="cashPct">0%</b></div><div class="track"><i id="cashFill"></i></div><small id="cashHint">Crée ta première facture pour activer la prévision.</small></div>
+      </div>
+      <div class="sec-head"><h2 data-i18n="À relancer en priorité">À relancer en priorité</h2><button class="link" data-goto="docs" type="button" data-i18n="Tout voir">Tout voir</button></div>
+      <div class="list" id="lateList"></div>
+      <div class="sec-head"><h2 data-i18n="Derniers documents">Derniers documents</h2><button class="link" data-goto="docs" type="button" data-i18n="Tout voir">Tout voir</button></div>
+      <div class="list" id="recentList"></div>
+    </section>
+
+    <section class="view" data-view="docs" aria-label="Documents">
+      <div class="toolbar">
+        <div class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="Chercher client, n°…" data-i18n-ph="Chercher client, n°…" autocomplete="off"></div>
+        <div class="filters" role="tablist" aria-label="Filtres">
+          <button class="is-on" data-f="all" type="button"><span data-i18n="Tous">Tous</span> <span class="cnt-badge" id="cAll">0</span></button>
+          <button data-f="devis" type="button"><span data-i18n="Devis">Devis</span> <span class="cnt-badge" id="cDev">0</span></button>
+          <button data-f="facture" type="button"><span data-i18n="Factures">Factures</span> <span class="cnt-badge" id="cFac">0</span></button>
+          <button data-f="late" type="button"><span data-i18n="En retard">En retard</span> <span class="cnt-badge alert" id="cLate">0</span></button>
+        </div>
+      </div>
+      <div class="list" id="docList"></div>
+    </section>
+
+    <section class="view" data-view="clients" aria-label="Clients">
+      <div class="sec-head"><h2><span data-i18n="Clients">Clients</span> <span class="count" id="cliCount">0</span></h2><button class="btn small" id="addCliBtn" type="button" data-i18n="+ Client">+ Client</button></div>
+      <div class="list" id="cliList"></div>
+    </section>
+
+    <section class="view" data-view="reglages" aria-label="Réglages">
+      <h2 class="pad" data-i18n="Mon activité">Mon activité</h2>
+      <div class="card plan-card" id="planCard"></div>
+      <form class="card form" id="bizForm">
+        <label><span data-i18n="Nom entreprise / activité">Nom entreprise / activité</span><input name="biz" required maxlength="60" placeholder="Ex : Atelier Koné BTP"></label>
+        <label><span data-i18n="Ton activité">Ton activité</span><select name="secteur" id="secSel">
+          <option value="artisan" data-i18n="🔨 Artisan / BTP">🔨 Artisan / BTP</option>
+          <option value="commerce" data-i18n="🛍️ Commerce / Boutique">🛍️ Commerce / Boutique</option>
+          <option value="services" data-i18n="💼 Services / Freelance">💼 Services / Freelance</option>
+          <option value="food" data-i18n="🍲 Resto / Food">🍲 Resto / Food</option>
+          <option value="beaute" data-i18n="💇 Beauté / Bien-être">💇 Beauté / Bien-être</option>
+          <option value="transport" data-i18n="🛵 Transport / Livraison">🛵 Transport / Livraison</option>
+        </select></label>
+        <div class="grid2">
+          <label><span data-i18n="Pays fiscal">Pays fiscal</span><select name="pays" id="paysSel">
+            <option value="FR" data-i18n="🇫🇷 France — Factur-X / PDP">🇫🇷 France — Factur-X / PDP</option>
+            <option value="BE" data-i18n="🇧🇪 Belgique — Peppol-BIS">🇧🇪 Belgique — Peppol-BIS</option>
+            <option value="CH" data-i18n="🇨🇭 Suisse — QR-facture">🇨🇭 Suisse — QR-facture</option>
+            <option value="US" data-i18n="🇺🇸 United States — Sales tax">🇺🇸 United States — Sales tax</option>
+          </select></label>
+          <label><span data-i18n="Devise">Devise</span><select name="devise" id="devSel"><option>€</option><option>CHF</option><option>$</option></select></label>
+        </div>
+        <div class="grid2">
+          <label><span data-i18n="Langue de l'interface">Langue de l'interface</span><select name="lang" id="langSel"><option value="fr">🇫🇷 Français</option><option value="en">🇬🇧 English</option></select></label>
+          <label><span data-i18n="Adresse (mentions légales)">Adresse (mentions légales)</span><input name="adresse" maxlength="90" placeholder="12 rue des Arts, 75011 Paris"></label>
+        </div>
+        <div class="grid2">
+          <label><span data-i18n="E-mail / téléphone">E-mail / téléphone</span><input name="contact" maxlength="80" placeholder="contact@atelier.fr · +33 6 …"></label>
+          <label><span data-i18n="N° TVA / SIRET / EIN">N° TVA / SIRET / EIN</span><input name="tvaId" maxlength="40" placeholder="FR12345678901"></label>
+        </div>
+        <label><span data-i18n="IBAN / RIB (facultatif)">IBAN / RIB (facultatif)</span><input name="iban" maxlength="40" placeholder="FR76 3000 …"></label>
+        <p class="rule" id="ruleLine"></p>
+        <div class="pay-toggles" id="payToggles"></div>
+        <button class="btn primary" type="submit" data-i18n="Enregistrer">Enregistrer</button>
+      </form>
+      <div class="card">
+        <h3 data-i18n="Preuve &amp; archivage">Preuve &amp; archivage</h3>
+        <p class="muted" id="archiveLine">Numérotation inviolable, montants en centimes, journal horodaté. Export comptable en 1 clic.</p>
+        <div class="row"><button class="btn small" id="exportBtn" type="button" data-i18n="Exporter JSON">Exporter JSON</button><button class="btn small ghost" id="importBtn" type="button" data-i18n="Importer JSON">Importer JSON</button><button class="btn small ghost danger" id="resetBtn" type="button" data-i18n="Réinitialiser démo">Réinitialiser démo</button></div>
+        <input type="file" id="importFile" accept=".json" hidden>
+      </div>
+      <div class="card">
+        <h3 data-i18n="Légal">Légal</h3>
+        <div class="row">
+          <a class="btn small ghost" href="legal.html#mentions" data-i18n="Mentions légales">Mentions légales</a>
+          <a class="btn small ghost" href="legal.html#cgv" data-i18n="CGU / CGV">CGU / CGV</a>
+          <a class="btn small ghost" href="legal.html#privacy" data-i18n="Confidentialité">Confidentialité</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <button class="fab" id="fab" type="button" aria-label="Nouveau">+<span data-i18n="Nouveau">Nouveau</span></button>
+
+  <nav class="tabs" aria-label="Navigation" role="tablist">
+    <button class="is-on" data-goto="home" type="button" role="tab" aria-selected="true"><i>◉</i><span data-i18n="Accueil">Accueil</span></button>
+    <button data-goto="docs" type="button" role="tab" aria-selected="false"><i>▤</i><span data-i18n="Docs">Docs</span></button>
+    <button data-goto="clients" type="button" role="tab" aria-selected="false"><i>☺</i><span data-i18n="Clients">Clients</span></button>
+    <button data-goto="reglages" type="button" role="tab" aria-selected="false"><i>⚙</i><span data-i18n="Réglages">Réglages</span></button>
+  </nav>
+
+  <!-- SHEETS -->
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Éditeur"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+</div>
+<script src="config.js"></script>
+<script src="i18n.js"></script>
+<script src="qr.js"></script>
+<script src="app.js" defer></script>
+</body>
+</html>

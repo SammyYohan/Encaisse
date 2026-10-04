@@ -1,0 +1,21 @@
+# Normalisation des fins de ligne : Git convertit selon `text=auto`,
+# les fichiers sont stockés en LF dans le dépôt. Évite les diff
+# parasites quand un contributeur travaille sur Windows.
+* text=auto
+
+*.js      text eol=lf
+*.css     text eol=lf
+*.html    text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.txt     text eol=lf
+*.xml     text eol=lf
+*.webmanifest text eol=lf
+_headers  text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+*.png     binary
+*.jpg     binary
+*.ico     binary
+*.pdf     binary
