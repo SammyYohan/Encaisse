@@ -65,6 +65,11 @@ python -m http.server 8000
 Au premier chargement, l'onboarding (pays → métier → nom de l'entreprise) crée
 des données de démonstration.
 
+> ⚠️ **Éviter le port `8000`.** Le CLI OpenCode sonde
+> `http://127.0.0.1:8000/health` toutes les 30 s ; si ton serveur de dev occupe
+> ce port, son journal se remplit de `GET /health → 404` (inoffensifs). Utilise
+> plutôt `3000` (`npx serve .`) ou `python -m http.server 8080`.
+
 **Réinitialiser la démo :** *Réglages → Réinitialiser démo* (les compteurs de
 numérotation sont conservés — un numéro de facture n'est jamais réutilisé).
 

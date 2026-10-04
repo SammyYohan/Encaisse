@@ -65,6 +65,11 @@ python -m http.server 8000
 Open `http://localhost:3000`. On first load you get the onboarding flow
 (country → trade → business name) which seeds demo data.
 
+> ⚠️ **Avoid port `8000`.** The OpenCode CLI health-probes
+> `http://127.0.0.1:8000/health` every 30 s; if your dev server owns that port
+> its log fills with harmless `GET /health → 404`. Use `3000` (`npx serve .`) or
+> `python -m http.server 8080` instead.
+
 **Reset the demo:** *Settings → Reset demo* (keeps the numbering counters intact —
 document numbers are never reused).
 
