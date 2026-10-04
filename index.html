@@ -7,6 +7,9 @@
 <meta name="description" content="Quote in 60s, compliant e-invoice (Factur-X / Peppol / QR-bill / US sales tax), Stripe payment link, guided reminders. Offline-first.">
 <meta name="theme-color" content="#0f172a">
 <meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Encaisse">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Encaisse — Quote → Compliant invoice → Paid">
 <meta property="og:description" content="Quote in 60s, compliant e-invoice, Stripe payment link, guided reminders. Offline-first, works on site.">
@@ -96,6 +99,15 @@
   </header>
   <div class="demo-bar" id="demoBar" hidden data-i18n="🧪 Mode démonstration — aucun paiement réel tant que Stripe n'est pas branché.">🧪 Mode démonstration — aucun paiement réel tant que Stripe n'est pas branché.</div>
 
+  <div class="install-bar" id="installBar" hidden>
+    <b data-i18n="📲 Installe Encaisse sur ton écran d'accueil">📲 Installe Encaisse sur ton écran d'accueil</b>
+    <span class="install-bar-txt" data-i18n="Ça ouvre comme une app, même hors-ligne, sans passer par l'App Store.">Ça ouvre comme une app, même hors-ligne, sans passer par l'App Store.</span>
+    <div class="install-bar-act">
+      <button class="btn small primary" id="installDo" type="button" data-i18n="Installer">Installer</button>
+      <button class="btn small ghost" id="installNo" type="button" data-i18n="Masquer">Masquer</button>
+    </div>
+  </div>
+
   <main class="views" id="views">
     <section class="view is-active" data-view="home" aria-label="Accueil">
       <div class="hero">
@@ -170,6 +182,7 @@
         <h3 data-i18n="Preuve &amp; archivage">Preuve &amp; archivage</h3>
         <p class="muted" id="archiveLine">Numérotation inviolable, montants en centimes, journal horodaté. Export comptable en 1 clic.</p>
         <div class="row"><button class="btn small" id="exportBtn" type="button" data-i18n="Exporter JSON">Exporter JSON</button><button class="btn small ghost" id="importBtn" type="button" data-i18n="Importer JSON">Importer JSON</button><button class="btn small ghost danger" id="resetBtn" type="button" data-i18n="Réinitialiser démo">Réinitialiser démo</button></div>
+        <div class="row"><button class="btn small ghost" id="installBtn2" type="button" data-i18n="📲 Installer l'app">📲 Installer l'app</button></div>
         <input type="file" id="importFile" accept=".json" hidden>
       </div>
       <div class="card">

@@ -304,6 +304,7 @@ function finishOnb(){
   localStorage.setItem(LS_ON,"1");
   $("#onb").hidden=true;
   applyI18n();syncSettings();render();
+  try{updateInstallBar()}catch{}
   toast(T("Compte créé ✓ {n} factures gratuites par mois · devis illimités",{n:FREE_MONTHLY}));
 }
 
@@ -1187,5 +1188,44 @@ function bind(){
   }
 }
 
+/* ---------- installation PWA (invite native + guide iOS) ---------- */
+const LS_INS="encaisse.install.hidden";
+let deferredInstall=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;updateInstallBar()});
+window.addEventListener("appinstalled",()=>{deferredInstall=null;updateInstallBar();toast(T("Encaisse installée ✓"))});
+function isStandalone(){try{if(navigator.standalone===true)return true}catch{}try{return matchMedia("(display-mode: standalone)").matches}catch{return false}}
+function isIOS(){const ua=navigator.userAgent||"";return /iP(hone|ad|od)/.test(ua)||(/Mac/.test(ua)&&navigator.maxTouchPoints>1)}
+function installDismissed(){try{return localStorage.getItem(LS_INS)==="1"}catch{return false}}
+function updateInstallBar(){
+  const bar=document.getElementById("installBar");if(!bar)return;
+  let onboarded=false;try{onboarded=!!localStorage.getItem(LS_ON)}catch{}
+  bar.hidden=!(onboarded&&!isStandalone()&&!installDismissed()&&(deferredInstall||isIOS()));
+}
+function openIOSGuide(){
+  openSheet(`<h2>${T("Installer Encaisse sur ton écran d'accueil")}</h2>
+  <p class="sub">${T("Sur iPhone / iPad, l'installation se fait en 3 gestes (il n'y a pas de bouton automatique) :")}</p>
+  <ol class="ios-steps">
+    <li>${T("Appuie sur Partager ⬆️ en bas de l'écran")}</li>
+    <li>${T("Choisis « Ajouter à l'écran d'accueil »")}</li>
+    <li>${T("Confirme : Ajouter, en haut à droite")}</li>
+  </ol>
+  <div class="row"><button class="btn primary" id="guideOk" type="button">${T("Compris ✓")}</button></div>`);
+  document.getElementById("guideOk").onclick=closeSheet;
+}
+function doInstall(){
+  if(deferredInstall){
+    const dp=deferredInstall;deferredInstall=null;
+    try{dp.prompt();dp.userChoice.then(()=>updateInstallBar()).catch(()=>updateInstallBar())}catch{updateInstallBar()}
+  }else if(isIOS()){openIOSGuide()}
+  else{toast(T("Utilise le menu du navigateur → Installer l'application"))}
+}
+function initInstall(){
+  const d=document.getElementById("installDo"),n=document.getElementById("installNo"),b2=document.getElementById("installBtn2");
+  if(d)d.onclick=doInstall;
+  if(n)n.onclick=()=>{try{localStorage.setItem(LS_INS,"1")}catch{}updateInstallBar()};
+  if(b2)b2.onclick=()=>{if(isStandalone())toast(T("Encaisse est déjà installée ✓"));else doInstall()};
+  updateInstallBar();
+}
+
 /* ---------- boot ---------- */
-load();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();
+load();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();initInstall();
