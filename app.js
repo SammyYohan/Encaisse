@@ -251,7 +251,12 @@ function totals(doc){
 }
 /* ---------- toast / sheet ---------- */
 let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600)}
-function openSheet(html){const s=$("#sheet"),sc=$("#scrim");s.innerHTML=html;s.hidden=false;sc.hidden=false;requestAnimationFrame(()=>s.querySelector("input,select,button")?.focus());s.scrollTop=0}
+function openSheet(html){const s=$("#sheet"),sc=$("#scrim");s.innerHTML=html;s.hidden=false;sc.hidden=false;requestAnimationFrame(()=>{
+  s.querySelector("input,select,button")?.focus();
+  /* si le bas de la feuille (boutons d'action) sort de l'écran, on descend juste assez */
+  const need=s.getBoundingClientRect().bottom-window.innerHeight;
+  if(need>0)window.scrollBy(0,need+16);
+});s.scrollTop=0}
 function closeSheet(){$("#sheet").hidden=true;$("#scrim").hidden=true}
 
 const itemLib=l=>loc(l&&l.lib);
@@ -282,6 +287,8 @@ function initOnb(){
   upd();
   $("#onbNext").onclick=()=>{ if(oi<NS-1){setSlide(oi+1);return} finishOnb(); };
   $("#onbSkip").onclick=finishOnb;
+  /* pastilles de progression cliquables (le swipe existe aussi) */
+  $$("#onbDots i").forEach((dot,i)=>{dot.onclick=()=>setSlide(i)});
   $("#onbSlides").addEventListener("click",e=>{const b=e.target.closest("#onbPays button");if(!b)return;$$("#onbPays button").forEach(x=>x.classList.remove("is-sel"));b.classList.add("is-sel");upd()});
   let sx=null;const el=$("#onbSlides");
   el.addEventListener("touchstart",e=>sx=e.touches[0].clientX,{passive:true});
@@ -309,10 +316,17 @@ function finishOnb(){
 }
 
 /* ---------- navigation ---------- */
+let curView="home";const scrollMem={};
 function goto(v){
+  scrollMem[curView]=window.scrollY;curView=v;
   $$(".tabs button").forEach(b=>{const on=b.dataset.goto===v;b.classList.toggle("is-on",on);b.setAttribute("aria-selected",on?"true":"false")});
   $$(".view").forEach(x=>x.classList.toggle("is-active",x.dataset.view===v));
-  $("#views").scrollTop=0;window.scrollTo({top:0,behavior:"smooth"});
+  /* le FAB « Nouveau » n'a pas de sens sur Réglages : on le masque */
+  const fab=$("#fab");if(fab)fab.classList.toggle("off",v==="reglages");
+  $("#views").scrollTop=0;
+  /* restaure la position de défilement de la vue précédente plutôt que de
+     toujours remonter : revenir à l'accueil retrouve sa place */
+  requestAnimationFrame(()=>window.scrollTo({top:scrollMem[v]||0,behavior:"auto"}));
 }
 
 /* ---------- statuts ---------- */
@@ -331,7 +345,7 @@ function docStatus(d){
     return d.statut==="envoye"?["s-envoye",T("Devis envoyé")]:["s-brouillon",T("Brouillon")];
   }
   const st=relanceStage(d);if(st)return st;
-  const late=daysLate(d.eche);return["s-envoye",late<0?`J${late}`:T("Envoyée")];
+  const late=daysLate(d.eche);return["s-envoye",late<0?T("Échéance dans {j} j",{j:-late}):T("Envoyée")];
 }
 
 /* ---------- vues principales ---------- */
@@ -344,7 +358,7 @@ function render(){
   $("#kpiDue").textContent=fmt(sum(due),dev);$("#kpiDueN").textContent=T("{n} facture(s)",{n:due.length});
   $("#kpiLate").textContent=fmt(sum(late),dev);$("#kpiLateN").textContent=T("{n} facture(s)",{n:late.length});
   $("#kpiPaid").textContent=fmt(sum(paidThisMonth),dev);$("#kpiPaidN").textContent=T("{n} facture(s)",{n:paidThisMonth.length});
-  $("#helloLine").textContent=`${T("Bonjour 👋")} · ${esc(S.biz.nom||T("Voici ton cash"))}`;
+  $("#helloLine").textContent=`${T("Bonjour 👋")} · ${S.biz.nom||T("Voici ton cash")}`;
 
   const soon=due.filter(d=>daysLate(d.eche)>=-30);
   const totalDue=sum(due), dueSoon=sum(soon);
@@ -375,28 +389,55 @@ function cardHTML(d){
   <div class="doc-actions">${actionsHTML(d)}</div></article>`;
 }
 
-function contactBtns(d){
-  const c=cliOf(d);
-  const wa=(c.tel||"").replace(/[^0-9]/g,"");
-  const mail=(c.email||"").trim();
-  let out="";
-  if(wa)out+=`<button class="chip-btn wa" data-act="shareWa" type="button">💬 WhatsApp</button>`;
-  if(mail)out+=`<button class="chip-btn" data-act="shareMail" type="button">✉️ ${T("E-mail")}</button>`;
-  return out;
-}
-
+/* Interface des actions de carte : 3 actions primaires + "⋯" qui ouvre la
+   feuille exhaustive (openDocActions). La complexité (matrix complète) reste
+   cachée ; la carte garde une interface stable et compacte quel que soit le statut. */
+function moreBtn(d){return `<button class="chip-btn more" data-act="more" data-id="${d.id}" type="button" aria-label="${T("Plus d'actions")}" title="${T("Plus d'actions")}">⋯</button>`}
 function actionsHTML(d){
   if(d.type==="devis"){
-    if(d.statut==="converti")return `<button class="chip-btn" data-act="view" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn go" data-act="dup" type="button">↻ ${T("Refaire")}</button><button class="chip-btn" data-act="del" type="button">${T("Supprimer")}</button>`;
-    const signBtn=d.signature?"":`<button class="chip-btn" style="background:#ecfdf5;border-color:#a7f3d0;color:#065f46" data-act="sign" type="button">✍️ ${T("Faire signer")}</button>`;
-    const acompteBtn=d.acompteFactureId?"":`<button class="chip-btn" style="background:#f0fdfa;border-color:#99f6e4;color:#0f766e" data-act="acompte" type="button">⚡ ${T("Acompte")}</button>`;
-    return `${signBtn}${acompteBtn}<button class="chip-btn go" data-act="convert" type="button">→ ${T("Facturer")}</button><button class="chip-btn" data-act="edit" type="button">✎ ${T("Modifier")}</button><button class="chip-btn" data-act="pay" type="button">${T("Partager")}</button>${contactBtns(d)}<button class="chip-btn" data-act="view" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn" data-act="del" type="button">${T("Supprimer")}</button>`;
+    if(d.statut==="converti")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn go" data-act="dup" data-id="${d.id}" type="button">↻ ${T("Refaire")}</button>${moreBtn(d)}`;
+    return `<button class="chip-btn go" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button><button class="chip-btn" data-act="pay" data-id="${d.id}" type="button">📤 ${T("Partager")}</button><button class="chip-btn" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button>${moreBtn(d)}`;
   }
-  if(d.statut==="paye")return `<button class="chip-btn" data-act="view" type="button">${T("Reçu / Imprimer")}</button>${contactBtns(d)}<button class="chip-btn go" data-act="dup" type="button">↻ ${T("Refaire")}</button>`;
-  return `<button class="chip-btn pay" data-act="pay" type="button">${T("Lien paiement")}</button><button class="chip-btn" data-act="edit" type="button">✎ ${T("Modifier")}</button><button class="chip-btn" data-act="relance" type="button">${T("Relancer")}</button>${contactBtns(d)}<button class="chip-btn" data-act="paid" type="button">${T("Marquer payée ✓")}</button><button class="chip-btn" data-act="view" type="button">${T("Aperçu / Imprimer")}</button>`;
+  if(d.statut==="paye")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Reçu / Imprimer")}</button><button class="chip-btn go" data-act="dup" data-id="${d.id}" type="button">↻ ${T("Refaire")}</button>${moreBtn(d)}`;
+  return `<button class="chip-btn pay" data-act="pay" data-id="${d.id}" type="button">💳 ${T("Lien paiement")}</button><button class="chip-btn go" data-act="paid" data-id="${d.id}" type="button">✓ ${T("Marquer payée ✓")}</button><button class="chip-btn" data-act="relance" data-id="${d.id}" type="button">🔔 ${T("Relancer")}</button>${moreBtn(d)}`;
+}
+/* Toutes les actions d'un document, dans une feuille (cible tactile pleine largeur). */
+function openDocActions(id){
+  const d=S.docs.find(x=>x.id===id);if(!d)return;
+  const tt=totals(d), isDevis=d.type==="devis", paid=d.statut==="paye", conv=isDevis&&d.statut==="converti";
+  const B=(act,label,cls="")=>`<button class="btn${cls?" "+cls:""}" data-act="${act}" data-id="${d.id}" type="button">${label}</button>`;
+  const c=cliOf(d), wa=(c.tel||"").replace(/[^0-9]/g,""), mail=(c.email||"").trim();
+  let h=`<h2>${T("Actions")} · ${esc(d.numero)}</h2><p class="sub">${esc(d.client)} · ${fmt(tt.net??tt.ttc,S.biz.devise)}</p><div class="act-list">`;
+  h+=B("view",`👁 ${T("Aperçu / Imprimer")}`);
+  if(!paid&&!conv){
+    if(isDevis){
+      if(!d.signature)h+=B("sign",`✍️ ${T("Faire signer")}`);
+      if(!d.acompteFactureId)h+=B("acompte",`⚡ ${T("Acompte")}`);
+      h+=B("convert",`→ ${T("Facturer")}`,"primary");
+      h+=B("pay",`📤 ${T("Partager")}`);
+    }else{
+      h+=B("pay",`💳 ${T("Lien paiement")}`,"primary");
+      h+=B("relance",`🔔 ${T("Relancer")}`);
+      h+=B("paid",`✓ ${T("Marquer payée ✓")}`,"primary");
+    }
+    h+=B("edit",`✎ ${T("Modifier")}`);
+  }
+  if(!conv){if(wa)h+=B("shareWa","💬 WhatsApp");if(mail)h+=B("shareMail",`✉️ ${T("E-mail")}`)}
+  h+=B("dup",`↻ ${T("Refaire")}`);
+  if(isDevis||!paid)h+=B("del",`🗑 ${T("Supprimer")}`,"danger");
+  h+=`</div><div class="row"><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div>`;
+  openSheet(h);
+  $("#cancelS").onclick=closeSheet;
 }
 
 let filter="all";
+/* Filtre Documents : une seule source de vérité (état + UI des puces + rendu).
+   Utilisé par les puces de filtres ET par les KPI cliquables de l'accueil. */
+function applyFilter(f){
+  filter=f;
+  $$(".toolbar .filters button").forEach(x=>x.classList.toggle("is-on",x.dataset.f===f));
+  renderDocs();
+}
 function renderDocs(){
   const q=($("#q").value||"").toLowerCase().trim();
   let arr=[...S.docs].sort((a,b)=>(b.emis||"")<(a.emis||"")?-1:1);
@@ -416,7 +457,7 @@ function renderDocs(){
       return str.includes(q);
     });
   }
-  $("#docList").innerHTML=arr.length?arr.map(cardHTML).join(""):`<div class="empty">${T("Rien ici.")}<br><small>${T("Change de filtre ou crée un document en 60s.")}</small></div>`;
+  $("#docList").innerHTML=arr.length?arr.map(cardHTML).join(""):`<div class="empty">📄 ${T("Rien ici.")}<br><small>${T("Change de filtre ou crée un document en 60s.")}</small><br><button class="btn primary small" data-new="1" type="button">+ ${T("Nouveau")}</button></div>`;
 }
 
 function renderClis(){
@@ -432,7 +473,7 @@ function renderClis(){
     const callBtn=rawTel?`<a class="chip-btn" style="text-decoration:none;background:#f8fafc" href="tel:${esc(rawTel)}">📞 ${T("Appeler")}</a>`:"";
     const first=esc((name.split("—")[0]||name).trim().split(" ")[0]);
     return `<article class="doc"><div class="doc-top"><div><b>☺ ${esc(name)}</b><br><small>${esc(c.tel||c.email||"—")} ${dueBy[c.id]?`· ${T("doit")} <b style="color:var(--red)">${fmt(dueBy[c.id],S.biz.devise)}</b>`:`· ${T("à jour ✓")}`}</small></div><span class="status ${dueBy[c.id]?"s-retard":"s-paye"}">${dueBy[c.id]?T("À suivre"):"OK"}</span></div><div class="doc-actions"><button class="chip-btn go" data-cnew="${c.id}" type="button">+ ${T("Devis pour")} ${first}</button>${waBtn}${mailBtn}${callBtn}<button class="chip-btn" data-cdel="${c.id}" type="button">${T("Retirer")}</button></div></article>`;
-  }).join(""):`<div class="empty">${T("Ajoute ton premier client pour facturer en 1 clic.")}</div>`;
+  }).join(""):`<div class="empty">☺️ ${T("Ajoute ton premier client pour facturer en 1 clic.")}<br><button class="btn primary small" data-addcli="1" type="button">${T("+ Client")}</button></div>`;
 }
 /* ---------- abonnement ---------- */
 function isPaid(){return S.sub?.plan==="solo"||S.sub?.plan==="pro"}
@@ -1062,10 +1103,17 @@ function bind(){
     if(e.target.closest("[data-new]")){openNew();return}
     const cnew=e.target.closest("[data-cnew]");if(cnew){openNew(cnew.dataset.cnew);goto("docs");return}
     const cdel=e.target.closest("[data-cdel]");if(cdel){if(confirm(T("Retirer ce client ?"))){S.clients=S.clients.filter(c=>c.id!==cdel.dataset.cdel);save();render()}return}
+    /* KPI de l'accueil → Documents filtrés (le tableau de bord est cliquable) */
+    const kp=e.target.closest("[data-kpi]");if(kp){goto("docs");applyFilter(kp.dataset.kpi);haptic([10]);return}
+    if(e.target.closest("[data-addcli]")){openClient();return}
+    /* tap sur la carte document (hors boutons/links) → aperçu */
+    const card=e.target.closest(".doc[data-id]");
+    if(card&&!e.target.closest("button,a")){openView(card.dataset.id);return}
     const b=e.target.closest("[data-act]");if(!b)return;
     const id=b.dataset.id||b.closest(".doc")?.dataset.id;
     const act=b.dataset.act;
     const d=S.docs.find(x=>x.id===id);
+    if(act==="more")openDocActions(id);
     if(act==="view")openView(id);
     if(act==="edit")openEdit(id);
     if(act==="pay")openPay(id);
@@ -1074,8 +1122,8 @@ function bind(){
     if(act==="acompte")openAcompte(id);
     if(act==="shareWa")shareWhatsApp(id);
     if(act==="shareMail")shareEmail(id);
-    if(act==="paid"){if(d&&confirm(T("Confirmer encaissement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();toast(T("Encaissé 🎉"))}}
-    if(act==="del"){if(d&&confirm(T("Supprimer {n} ? Le compteur reste inviolable.",{n:d.numero}))){S.docs=S.docs.filter(x=>x.id!==id);save();render()}}
+    if(act==="paid"){if(d&&confirm(T("Confirmer encaissement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();closeSheet();toast(T("Encaissé 🎉"))}}
+    if(act==="del"){if(d&&confirm(T("Supprimer {n} ? Le compteur reste inviolable.",{n:d.numero}))){S.docs=S.docs.filter(x=>x.id!==id);save();render();closeSheet()}}
     if(act==="convert"&&d){
       if(!canCreate("facture")){openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}
       const nid=uid(), num_=nextNum("facture");
@@ -1096,17 +1144,28 @@ function bind(){
       S.docs.push({id:nid,type:d.type,numero:num_,clientId:d.clientId,client:d.client,
         items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",
         statut:"envoye",emis:todayISO(),eche:addDays(todayISO(),15),relances:0,photo:null});
-      save();render();toast(`${d.type==="devis"?T("Devis"):T("Facture")} ${num_} ${T("dupliquée ✓")}`);
+      save();render();closeSheet();toast(`${d.type==="devis"?T("Devis"):T("Facture")} ${num_} ${T("dupliquée ✓")}`);
     }
   });
 
-  $$(".tabs button").forEach(b=>b.onclick=()=>goto(b.dataset.goto));
-  $$(".toolbar .filters button").forEach(b=>b.onclick=()=>{$$(".toolbar .filters button").forEach(x=>x.classList.remove("is-on"));b.classList.add("is-on");filter=b.dataset.f;renderDocs()});
+  $$(".tabs button").forEach(b=>b.onclick=()=>{haptic([6]);goto(b.dataset.goto)});
+  $$(".toolbar .filters button").forEach(b=>b.onclick=()=>applyFilter(b.dataset.f));
   $("#q").oninput=renderDocs;
   $("#fab").onclick=()=>openNew();
   $("#addCliBtn").onclick=openClient;
   $("#scrim").onclick=closeSheet;
+  /* feuille : glisser vers le bas (à partir du haut) pour fermer */
+  const sh=$("#sheet");let dY=null,dMoved=false;
+  sh.addEventListener("touchstart",e=>{dY=sh.scrollTop>0?null:e.touches[0].clientY;dMoved=false},{passive:true});
+  sh.addEventListener("touchmove",e=>{if(dY==null)return;const dy=e.touches[0].clientY-dY;if(dy>6){dMoved=true;sh.classList.add("dragging");sh.style.transform=`translateY(${Math.min(dy,300)}px)`}},{passive:true});
+  sh.addEventListener("touchend",e=>{if(dY==null)return;const dy=e.changedTouches[0].clientY-dY;sh.classList.remove("dragging");sh.style.transform="";if(dMoved&&dy>90)closeSheet();dY=null;dMoved=false},{passive:true});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+  /* les KPI de l'accueil sont des <button> : activation au clavier */
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    const k=e.target.closest?.("[data-kpi]");if(!k)return;
+    e.preventDefault();goto("docs");applyFilter(k.dataset.kpi);
+  });
 
   $("#bizForm").onsubmit=e=>{
     e.preventDefault();
