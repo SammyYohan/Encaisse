@@ -1,7 +1,7 @@
 /* Encaisse SW — cache-first ultra-léger.
    ⚠️ VERSION : à incrémenter à chaque release (les fichiers critiques passent en
    network-first, donc config.js et ce SW sont rechargés même avec un ancien cache). */
-const C = "encaisse-v6";
+const C = "encaisse-v7";
 const A = [
   "./", "index.html", "styles.css",
   "app.js", "i18n.js", "qr.js", "config.js",
@@ -34,6 +34,10 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  /* API (checkout, abonnement, portail) et pages client /r/ : JAMAIS en cache —
+     une réponse périmée casserait la vérification d'abonnement ou le paiement. */
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/r/")) return;
 
   if (NET_FIRST.some(f => url.pathname.endsWith(f))) {
     e.respondWith(

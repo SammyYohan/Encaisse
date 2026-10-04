@@ -6,8 +6,13 @@ window.ENCAISSE_CONFIG = {
      false = le paiement est considéré comme branché (nécessite STRIPE_LIVE + une clé). */
   DEMO_MODE: true,
 
-  /* Passe à true UNIQUEMENT quand le checkout Stripe (checkout session / payment link)
-     est réellement appelé côté serveur (Cloudflare Worker). */
+  /* ✅ MISE EN PRODUCTION DU PAIEMENT — 3 étapes, une seule fois (voir README §6) :
+     1. npx wrangler d1 create encaisse → UUID dans wrangler.toml + binding « DB »
+        puis : npx wrangler d1 execute encaisse --remote --file=schema.sql
+     2. npx wrangler pages secret put STRIPE_SECRET_KEY   (jamais dans le repo)
+     3. ICI : DEMO_MODE:false et STRIPE_LIVE:true, puis push sur main.
+     Les functions/ (Pages Functions) sont déjà en place : /api/checkout,
+     /api/sub, /api/portal, /api/pay et la page client /r/:slug. */
   STRIPE_LIVE: false,
 
   // Paiements abonnements Europe / Suisse / États-Unis — https://dashboard.stripe.com/apikeys
@@ -23,6 +28,7 @@ window.ENCAISSE_CONFIG = {
   PEPPOL_AP_USER: "",            // Belgique : point d'accès Peppol
   PEPPOL_AP_PASS: "",
 
-  // Domaine public une fois le nom de domaine acheté (sert au lien client /r/ID)
+  // Domaine public une fois le nom de domaine acheté : sert au lien client
+  // /r/:slug ET à la publication du portail (POST /api/portal sur cette origine).
   SITE_URL: ""
 };

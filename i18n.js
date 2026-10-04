@@ -341,6 +341,16 @@
     "🇫🇷 France · Factur-X": "🇫🇷 France · Factur-X",
     "🇧🇪 Belgique · Peppol": "🇧🇪 Belgium · Peppol",
     "🇨🇭 Suisse · QR-facture": "🇨🇭 Switzerland · QR-bill",
+    "Abonnement activé ✓ Bienvenue !": "Subscription activated ✓ Welcome!",
+    "Abonnement expiré — passe au payant pour garder tes factures illimitées.": "Subscription expired — upgrade to keep unlimited invoices.",
+    "Connexion requise pour valider l'abonnement.": "Connection required to validate the subscription.",
+    "Génération du lien client…": "Generating the customer link…",
+    "Lien client sécurisé activé ✓": "Secure customer link activated ✓",
+    "Paiement annulé — réessaie quand tu veux.": "Payment canceled — try again whenever you like.",
+    "Paiement indisponible pour l'instant — réessaie dans un instant.": "Payment temporarily unavailable — try again in a moment.",
+    "Paiement non confirmé — réessaie ou contacte le support.": "Payment not confirmed — retry or contact support.",
+    "Portail client indisponible — lien local utilisé.": "Customer portal unavailable — local link used.",
+    "Redirection vers le paiement sécurisé…": "Redirecting to secure payment…",
     "🇺🇸 United States · Sales tax": "🇺🇸 United States · Sales tax"
   };
 

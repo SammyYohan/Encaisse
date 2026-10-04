@@ -13,6 +13,13 @@
 /*
   Cache-Control: public, max-age=0, must-revalidate
 
+/api/*
+  Cache-Control: no-store
+
+/r/*
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow
+
 /sw.js
   Cache-Control: no-cache
 

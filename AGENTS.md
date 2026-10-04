@@ -11,12 +11,13 @@ python -m http.server 8080
 
 - **Never use port 8000** — the OpenCode CLI health-probes `http://127.0.0.1:8000/health` every 30 s. Use 3000 or 8080.
 - The service worker / PWA install are inert on `file://`; always serve over `http://localhost`.
-- Only automated check: `node --check app.js && node --check i18n.js` (run before pushing). There is no linter, typecheck, or test suite — ad-hoc scripts were never committed.
+- Only automated check: `node --check app.js && node --check i18n.js` (run before pushing). There is no linter, typecheck, or test suite — ad-hoc scripts were never committed. For `functions/*.js` (ESM): copy to a temp `.mjs` and `node --check` that (PowerShell needs `-LiteralPath`, the paths contain `[brackets]`).
 
 ## Architecture facts you would otherwise guess wrong
 
 - **Script order matters** (`index.html`): `config.js` → `i18n.js` → `qr.js` → `app.js` (defer). All top-level `function` declarations in `app.js` are on `window` — that is intentional (used to drive the UI from test harnesses).
-- **State**: one object `S` in `localStorage` under `encaisse.v1` (plus `encaisse.onboarded`, `encaisse.lang`). No server, no DB.
+- **Backend**: `functions/` = Cloudflare Pages Functions (plain ESM JS, deploys with the site, no build): `POST /api/checkout`, `GET /api/sub`, `POST /api/portal`, `GET /api/pay`, customer page `GET /r/:slug`. D1 binding must be named `DB` (schema: `schema.sql`). Stripe secret only via `wrangler pages secret put STRIPE_SECRET_KEY`. `DEMO_MODE`/`STRIPE_LIVE` flip only **after** D1 + secret are configured — never in this repo before.
+- **State**: one object `S` in `localStorage` under `encaisse.v1` (plus `encaisse.onboarded`, `encaisse.lang`). No accounts, no session — the app never requires a server; D1 only holds *copies* of explicitly shared documents (table `portal`).
 - **Money is integer cents** (`toCents()`). Never use floats for amounts.
 - **Document numbers are never reused**: `S.seq` counters are chronological and are *not* reset by *Settings → Reset demo*. Demo seeding runs once at the end of onboarding (`needSeed`) — don't run it twice or counters advance twice.
 - **i18n**: the French string *is* the key. `T("Marquer payée ✓")` looks up the English pair in `i18n.js`; missing keys fall back to French (never a crash). To add a string: write the French literal, add the EN pair to `i18n.js`, never translate the key. Markup uses `data-i18n` / `data-i18n-html` / `data-i18n-ph`. Verify coverage by grepping `data-i18n` values against the `EN` dictionary — an absent value silently renders French.

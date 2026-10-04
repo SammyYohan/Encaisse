@@ -70,6 +70,12 @@ Open `http://localhost:3000`. On first load you get the onboarding flow
 > its log fills with harmless `GET /health → 404`. Use `3000` (`npx serve .`) or
 > `python -m http.server 8080` instead.
 
+**Backend (`functions/`):** to exercise the Worker + a local D1:
+
+```powershell
+npx wrangler pages dev . --port 8788   # → http://localhost:8788
+```
+
 **Reset the demo:** *Settings → Reset demo* (keeps the numbering counters intact —
 document numbers are never reused).
 
@@ -84,6 +90,8 @@ document numbers are never reused).
 | `config.js` | **The only file to edit before going live** — API keys & flags |
 | `styles.css` | All styles, including `@media print` (PDF output) |
 | `sw.js` | Service worker: cache-first, with network-first on `config.js` / `i18n.js` / `sw.js` |
+| `functions/` | **Backend (Pages Functions, no build)**: `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay` + server-rendered customer page `/r/:slug` |
+| `schema.sql`, `wrangler.toml` | D1 schema (table `portal`) + wrangler config (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | PWA manifest + PNG icons (192, 512, maskable, apple-touch) |
 | `legal.html` | Legal notice, terms and privacy policy (bilingual, **placeholders to fill**) |
 | `robots.txt`, `sitemap.xml`, `_headers` | SEO + Cloudflare security headers |
@@ -115,9 +123,9 @@ Everything lives in one JSON object `S`, persisted to `localStorage` under
 |---|---|
 | `S.lang` | `"fr"` \| `"en"` (also mirrored under `encaisse.lang`) |
 | `S.biz` | Business identity: `nom`, `pays`, `secteur`, `devise`, `moyens`, `adresse`, `contact`, `tvaId`, `iban` — **printed on every invoice** |
-| `S.sub` | Subscription: `{plan, cycle, since}` — ⚠️ **client-side only** (see Roadmap) |
+| `S.sub` | Subscription: `{plan, cycle, since, exp, token, customer, checkedAt}` — `token` is an **HMAC-signed entitlement** issued by `/api/sub` after a real Stripe Checkout; refreshed when online (Stripe = source of truth), 14-day offline grace |
 | `S.clients` | `{id, nom, tel, email, adresse, tvaId}` |
-| `S.docs` | Quotes & invoices: `type`, `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `demo` |
+| `S.docs` | Quotes & invoices: `type`, `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `portal` (`{slug, hash}` — server publication ref), `demo` |
 | `S.seq` | Numbering counters, `{DEV:{YYYY:n}, FAC:{YYYY:n}}` |
 
 Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`.
@@ -192,12 +200,12 @@ the action bar are hidden when printing.
 
 | Key | Current | Meaning |
 |---|---|---|
-| `DEMO_MODE` | `true` | `true` ⇒ **no charge**, demo banner shown, plans can't really be bought. Keep `true` until the Worker exists |
-| `STRIPE_LIVE` | `false` | Set `true` **only** when a server actually creates the Checkout Session |
+| `DEMO_MODE` | `true` | `true` ⇒ **no charge**, demo banner shown, plans can't really be bought. The Worker (`functions/`) exists now — flip to `false` **after** D1 + `STRIPE_SECRET_KEY` are set up |
+| `STRIPE_LIVE` | `false` | Set `true` **at the same time** as `DEMO_MODE:false` — enables the real Checkout redirect |
 | `STRIPE_PUBLIC_KEY` | set | *Publishable* key — safe in the browser by design |
 | `STRIPE_PAYMENT_LINK` | `""` | Optional static Payment Link instead of a Checkout Session |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Certified e-invoicing partner (EU) — optional |
-| `SITE_URL` | `""` | Public origin, e.g. `https://app.example.com`. Drives the customer-facing `/r/:id` link |
+| `SITE_URL` | `""` | Public origin, e.g. `https://app.example.com`. Enables the real customer page `/r/:slug` (uploaded on explicit share) |
 
 > ⚠️ `DEMO_MODE: true` is a deliberate safety lock, **not a bug**. While it is on,
 > the "Upgrade" button marks the plan locally without any payment.
@@ -220,11 +228,37 @@ npx wrangler pages deploy . --project-name=encaisse
 
 Wrangler uploads **everything** in the folder — make sure `encaisse-export.json` is removed.
 
+### Stripe & customer portal (one-time setup)
+
+The backend is **Pages Functions** (`functions/`, plain JS — it deploys with the
+site, no build step). One-time activation:
+
+```powershell
+# 1. D1 (customer portal storage)
+npx wrangler d1 create encaisse                # copy the UUID into wrangler.toml
+npx wrangler d1 execute encaisse --remote --file=schema.sql
+#    + dashboard: Pages project → Settings → Functions → D1 binding named "DB"
+
+# 2. Stripe secret — never in this repository
+npx wrangler pages secret put STRIPE_SECRET_KEY --project-name=<project>
+
+# 3. Flip the two flags in config.js: DEMO_MODE:false, STRIPE_LIVE:true → push
+```
+
+Endpoints: `POST /api/checkout` (subscription Checkout, server-side prices) ·
+`GET /api/sub` (purchase check + HMAC entitlement token) · `POST /api/portal`
+(publishes `/r/:slug`, only on an explicit share) · `GET /api/pay` (invoice
+payment; amount comes from D1, never from the payer) · `/r/:slug`
+(server-rendered invoice, confirms payment via `?session_id=` — no webhook yet).
+
 ### Go-live checklist
 
 ```
 □ Replace VOTRE-DOMAINE.TLD in robots.txt and sitemap.xml
 □ Set SITE_URL in config.js
+□ Create D1 database + binding "DB" + run schema.sql (see above)
+□ Put STRIPE_SECRET_KEY (wrangler pages secret put) and test a real checkout
+□ Flip DEMO_MODE:false + STRIPE_LIVE:true in config.js
 □ Fill in legal.html (legal name, registration number, VAT, e-mail, ombudsman)
 □ Fill Réglages → My business (address, VAT number, IBAN) — printed on invoices
 □ Add the custom domain in Cloudflare (Workers & Pages → Custom domains)
@@ -262,13 +296,17 @@ unlimited invoicing. The only defensible wedge is
 
 ### 🔴 P0 — blocks charging real money
 
-1. **Server-rendered customer page `/r/:id`** — today the share link only opens
-   *on the merchant's own device* (state is local).
-2. **Stripe Checkout** created by a Cloudflare Worker (secret never in the browser).
-3. **Server-side subscription verification** — `S.sub` is client-side and forgeable.
-4. **E-mail sending** (payment confirmations, automated reminders) via a Worker cron.
-5. **Credit notes (avoirs)** — legally required in FR/BE.
-6. **Certified e-invoicing partner (PDP / Peppol)** before any "compliant" claim in the EU.
+1. ✅ **Server-rendered customer page `/r/:slug`** — `functions/r/[doc].js`,
+   D1-backed, published on an explicit share only (the local `?r=` link still
+   works as the offline fallback).
+2. ✅ **Stripe Checkout** created by Pages Functions (`/api/checkout`) — secret
+   stays in `wrangler pages secret put`, the browser only gets a redirect URL.
+3. ✅ **Server-side subscription verification** — `/api/sub` issues an
+   HMAC-signed token (`exp`), refreshed when online, 14-day offline grace;
+   Stripe remains the source of truth.
+4. 🔴 **E-mail sending** (payment confirmations, automated reminders) via a Worker cron.
+5. 🔴 **Credit notes (avoirs)** — legally required in FR/BE.
+6. 🔴 **Certified e-invoicing partner (PDP / Peppol)** before any "compliant" claim in the EU.
 
 ### 🟠 P1
 
@@ -286,13 +324,20 @@ D1 5 GB and 5 M reads/day — ample for the first thousands of users.
 ## 10. Security
 
 - All user input is escaped through `esc()` before being inserted as HTML;
-  amounts go through `num()`; no `innerHTML` receives raw user data.
+  amounts go through `num()`; no `innerHTML` receives raw user data — the same
+  rule applies server-side in `functions/` (portal rendering re-escapes D1 data).
 - `_headers` ships a **CSP** (Stripe allow-list), HSTS, `X-Frame-Options: DENY`,
-  `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`.
-- No server ⇒ **no password to leak, no database to breach**. The flip side: data
-  lives only in the customer's browser — export to JSON is the backup story.
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`;
+  `/r/:slug` responses add their own strict CSP, `no-store` and `noindex`.
+- **No password, no account.** The app's data still lives only in the customer's
+  browser (export to JSON is the backup story). D1 only holds a *copy* of
+  explicitly shared documents, keyed by a 96-bit random slug (possession =
+  authorization, like a Stripe payment link); `/api/portal` publishes nothing
+  unless the user shares.
 - Never move the Stripe **secret** key into this repository; it belongs in
-  `wrangler secret put STRIPE_SECRET_KEY`.
+  `wrangler pages secret put STRIPE_SECRET_KEY`. Subscription entitlements are
+  HMAC-signed server-side (key derived from the Stripe secret) — the browser
+  only ever holds a signed token with an expiry.
 - `encaisse-export.json` and `.dev.vars` are git-ignored.
 
 ## 11. Handover & due diligence

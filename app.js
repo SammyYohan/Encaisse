@@ -75,14 +75,62 @@ function makeQR(text){
 }
 
 /* Lien client.
-   - Si SITE_URL est défini (domaine public + Worker /r/:id déployé) : vraie page
-     serveur, le CLIENT la voit sur SON appareil. C'est le seul cas fonctionnel.
+   - Site publié (SITE_URL + slug portail) : vraie page SERVEUR /r/:slug —
+     le CLIENT la voit sur SON appareil. C'est le seul cas utilisable par un tiers.
    - Sinon : ?r=ID — ne fonctionne que DANS LE MÊME navigateur (test local). */
 function getDocUrl(docId){
   const cfg=window.ENCAISSE_CONFIG||{};
   const id=encodeURIComponent(docId);
-  if(cfg.SITE_URL) return String(cfg.SITE_URL).replace(/\/+$/,"")+"/r/"+id;
+  const site=String(cfg.SITE_URL||"").replace(/\/+$/,"");
+  const d=S.docs.find(x=>x.id===docId);
+  if(site&&d?.portal?.slug) return site+"/r/"+d.portal.slug;
   return `${window.location.origin}${window.location.pathname}?r=${id}`;
+}
+
+/* ---------- portail serveur : publication UNIQUEMENT à la demande, au moment
+   d'un partage explicite (aperçu seul = rien ne quitte l'appareil).
+   L'appareil reste la source de vérité ; D1 reçoit une copie révocable. ---------- */
+function fnv1a(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return(h>>>0).toString(36)}
+const BLOB_MAX=400000; /* ~300 ko d'image : au-delà, la photo n'est pas publiée */
+function portalPayload(d){
+  const doc=JSON.parse(JSON.stringify(d));
+  delete doc.portal; /* réservé au serveur (slug + hash) */
+  if(doc.photo&&doc.photo.length>BLOB_MAX)doc.photo=null;
+  if(doc.signature&&doc.signature.length>BLOB_MAX)doc.signature=null;
+  const b=S.biz;
+  return{doc,
+    biz:{nom:b.nom||"",devise:b.devise,pays:b.pays,adresse:b.adresse||"",tvaId:b.tvaId||"",
+         iban:b.iban||"",contact:b.contact||"",moyens:b.moyens||[]},
+    lang:lang()};
+}
+/* Publie/met à jour la page client ; retourne {url, server}. Le hash évite de
+   réécrire quand le document n'a pas bougé. Jamais d'exception propagée : en cas
+   d'échec on retombe sur le lien local (?r=). */
+async function ensurePortal(d){
+  const site=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
+  if(!site) return{url:getDocUrl(d.id),server:false};
+  const payload=portalPayload(d), h=fnv1a(JSON.stringify(payload));
+  if(d.portal?.slug&&d.portal.hash===h) return{url:site+"/r/"+d.portal.slug,server:true};
+  try{
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),15000);
+    const r=await fetch(site+"/api/portal",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({slug:d.portal?.slug||"",hash:h,...payload}),
+      signal:ctrl.signal});
+    clearTimeout(timer);
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.slug)throw new Error(j.error||("http_"+r.status));
+    const first=!d.portal?.slug;
+    d.portal={slug:j.slug,hash:h};
+    save();
+    if(first)toast(T("Lien client sécurisé activé ✓"));
+    return{url:site+"/r/"+j.slug,server:true};
+  }catch(e){
+    console.warn("Portail :",e);
+    toast(T("Portail client indisponible — lien local utilisé."));
+    return{url:getDocUrl(d.id),server:false};
+  }
 }
 
 /* ---------- monétisation : 1 prix par zone, marges calculées ---------- */
@@ -476,7 +524,17 @@ function renderClis(){
   }).join(""):`<div class="empty">☺️ ${T("Ajoute ton premier client pour facturer en 1 clic.")}<br><button class="btn primary small" data-addcli="1" type="button">${T("+ Client")}</button></div>`;
 }
 /* ---------- abonnement ---------- */
-function isPaid(){return S.sub?.plan==="solo"||S.sub?.plan==="pro"}
+function isPaid(){
+  const s=S.sub;
+  if(!(s&&(s.plan==="solo"||s.plan==="pro")))return false;
+  if(paymentsReady()){
+    /* Abonnement vérifié côté serveur (P0 n°3) : jeton signé + expiration.
+       Hors-ligne : tolérance de 14 j après expiration, puis déclassement. */
+    if(!s.token||!s.exp)return false;
+    if(Date.now()>Number(s.exp)+14*864e5)return false;
+  }
+  return true;
+}
 function realDocs(){return S.docs.filter(d=>!d.demo)}
 /* Offre gratuite : devis ILLIMITÉS, 3 factures par mois (les devis sont le
    canal d'acquisition, la facture est la valeur payante). */
@@ -518,10 +576,24 @@ function paymentsReady(){
   const cfg=window.ENCAISSE_CONFIG||{};
   return !cfg.DEMO_MODE && !!cfg.STRIPE_PUBLIC_KEY && cfg.STRIPE_LIVE===true;
 }
-function activatePlan(plan){
-  const reason=paymentsReady()
-    ? T("Paiement Stripe à confirmer — le tunnel de checkout sera branché avec ta clé secrète.")
-    : T("Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.");
+async function activatePlan(plan){
+  if(paymentsReady()){
+    /* Paiement réel : le serveur crée la session Stripe Checkout (le prix vient
+       de SA table, jamais du client) puis on quitte l'app vers Stripe. */
+    try{
+      const r=await fetch("/api/checkout",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({kind:"sub",plan,cycle:S.sub?.cycle||"monthly",zone:zoneKey(),origin:location.origin})});
+      const j=await r.json().catch(()=>({}));
+      if(r.ok&&j.url){toast(T("Redirection vers le paiement sécurisé…"));location.href=j.url;return}
+      throw new Error(j.error||("http_"+r.status));
+    }catch(e){
+      console.warn("Checkout :",e);
+      toast(T("Paiement indisponible pour l'instant — réessaie dans un instant."));
+      return;
+    }
+  }
+  const reason=T("Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.");
   S.sub={plan,cycle:S.sub?.cycle||"monthly",since:todayISO()};
   save();closeSheet();render();
   toast(`✓ ${T("Plan")} ${plan} — ${reason}`);
@@ -825,12 +897,12 @@ function openAcompte(id){
 }
 
 /* ---------- partage : WhatsApp, e-mail, lien ---------- */
-function docMessage(d){
+async function docMessage(d){
   const tt=totals(d);
   const c=cliOf(d);
   const who=(d.client||"").split("—")[0].trim();
   const amt=fmt(tt.net??tt.ttc,S.biz.devise);
-  const payUrl=getDocUrl(d.id);
+  const payUrl=(await ensurePortal(d)).url;
   const biz=S.biz.nom||"";
   if(d.type==="devis"){
     return T("Bonjour {w}, voici votre devis {n} d'un montant de {a} ({b}).\nConsultez-le et validez-le ici : {u}\n\nRestant à votre entière disposition 🙏",
@@ -843,19 +915,26 @@ function docMessage(d){
   return T("Bonjour {w}, voici votre facture {n} d'un montant de {a} ({b}).\nLien de paiement sécurisé : {u}\nÉchéance : {e}.\n\nMerci beaucoup ! 🙏",
     {w:who,n:d.numero,a:amt,b:biz,u:payUrl,e:d.eche});
 }
-function shareWhatsApp(id){
+async function shareWhatsApp(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const tel=(cliOf(d).tel||"").replace(/[^0-9]/g,"");
   if(!tel){toast(T("Ce client n'a pas de téléphone : ajoute un e-mail ou copie le lien."));return}
-  const url=`https://wa.me/${tel}?text=${encodeURIComponent(docMessage(d))}`;
-  haptic([15,30]);window.open(url,"_blank","noopener");
+  /* on ouvre la fenêtre AVANT l'attente (anti popup-blocker), puis on navigue */
+  const w=window.open("about:blank","_blank");
+  if(w)try{w.opener=null}catch{}
+  const msg=await docMessage(d);
+  const url=`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+  haptic([15,30]);
+  if(w&&!w.closed)w.location.href=url;
+  else location.href=url;
 }
-function shareEmail(id){
+async function shareEmail(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const mail=(cliOf(d).email||"").trim();
   if(!mail){toast(T("Ce client n'a pas d'e-mail."));return}
   const subject=d.type==="devis"?`${T("Devis")} ${d.numero}`:`${T("Facture")} ${d.numero}`;
-  const url=`mailto:${encodeURIComponent(mail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(docMessage(d))}`;
+  const msg=await docMessage(d);
+  const url=`mailto:${encodeURIComponent(mail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
   haptic([15,30]);window.location.href=url;
 }
 
@@ -978,11 +1057,11 @@ function openView(id){
       ${sigBox}
 
       <div class="inv-qr-section">
-        <div class="inv-qr-code">${qrSVG}</div>
+        <div class="inv-qr-code" id="viewQR">${qrSVG}</div>
         <div class="inv-qr-text">
           <strong>${T("Règlement sécurisé par Stripe")}</strong>
           ${T("Scannez ce QR code pour ouvrir la facture et payer en 1 clic (carte, SEPA, ACH, TWINT).")}
-          <br><small style="color:var(--mut)">${T("Lien direct")} : ${esc(payUrl)}</small>
+          <br><small style="color:var(--mut)" id="viewLink" data-u="${esc(payUrl)}">${T("Lien direct")} : ${esc(payUrl)}</small>
         </div>
       </div>
 
@@ -1009,6 +1088,18 @@ function openView(id){
   openSheet(html);
   $("#cancelS").onclick=closeSheet;
   const c2=$("#cancelS2");if(c2)c2.onclick=closeSheet;
+  /* QR = partage : si le lien serveur n'existe pas encore, on le publie et on
+     rafraîchit le QR + le lien affiché (site publié uniquement). */
+  const siteV=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
+  if(siteV)ensurePortal(d).then(res=>{
+    const lk=document.getElementById("viewLink");
+    if(lk&&lk.dataset.u!==res.url){
+      lk.dataset.u=res.url;
+      lk.textContent=T("Lien direct")+" : "+res.url;
+      const qr=document.getElementById("viewQR");
+      if(qr)qr.innerHTML=makeQR(res.url);
+    }
+  });
 }
 /* ---------- lien de paiement ---------- */
 function openPay(id){
@@ -1016,13 +1107,15 @@ function openPay(id){
   const tt=totals(d);
   const allowed=PAYS[S.biz.pays]?.moyens||[];
   const btns=allowed.map(k=>`<button class="chip-btn" type="button" data-m="${k}">${esc(mLabel(k))}</button>`).join("");
-  const payUrl=getDocUrl(d.id);
+  let payUrl=getDocUrl(d.id);
+  const site=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
   const qrSVG=makeQR(payUrl);
   openSheet(`<h2>${d.type==="devis"?T("Partager le document"):T("Lien de paiement")}</h2>
   <p class="sub">${esc(d.numero)} · ${fmt(tt.net??tt.ttc,S.biz.devise)} · ${esc(d.client)}</p>
   <div class="paylink">
-    <code>${esc(payUrl)}</code>
-    <div class="inv-qr-code" style="background:#fff;border-radius:10px;padding:3px">${qrSVG}</div>
+    <code id="payCode">${esc(payUrl)}</code>
+    <div class="inv-qr-code" id="payQR" style="background:#fff;border-radius:10px;padding:3px">${qrSVG}</div>
+    ${site?`<small class="muted" id="payStat" style="font-size:12px">${T("Génération du lien client…")}</small>`:""}
   </div>
   <p class="muted" style="font-size:12px">${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :")} ${(allowed.map(mLabel)).join(", ")}.</p>
   <div class="row">${btns}</div>
@@ -1035,15 +1128,23 @@ function openPay(id){
   $("#copyL").onclick=async()=>{try{await navigator.clipboard.writeText(payUrl);toast(T("Lien copié ✓"))}catch{toast(T("Lien : ")+payUrl)}};
   const mp=$("#markP");
   if(mp)mp.onclick=()=>{d.statut="paye";d.payeLe=todayISO();haptic([20,50]);save();closeSheet();render();toast(T("Encaissé 🎉 Bravo"))};
+  /* Publication serveur : uniquement ici, au moment du partage (jamais en fond).
+     Le lien affiché/QR/copie est remplacé dès que le slug est prêt. */
+  if(site)ensurePortal(d).then(res=>{
+    payUrl=res.url;
+    const c=$("#payCode");if(c)c.textContent=payUrl;
+    const q=$("#payQR");if(q)q.innerHTML=makeQR(payUrl);
+    const st=$("#payStat");if(st)st.textContent=res.server?"":T("Portail client indisponible — lien local utilisé.");
+  });
 }
 
 /* ---------- relance ---------- */
-function openRelance(id){
+async function openRelance(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const tt=totals(d), c=cliOf(d);
   const j=Math.max(0,daysLate(d.eche));
   const ton=j<=3?T("poli"):(j<=10?T("ferme"):T("mise en demeure"));
-  const payUrl=getDocUrl(d.id);
+  const payUrl=(await ensurePortal(d)).url;
   const who=(d.client||"").split("—")[0].trim();
   const msg=T("Bonjour {w}, petit rappel : facture {n} de {a} (échéance {e}, {j}j de retard). Lien pour régler : {u} Merci beaucoup 🙏 — {b}",
     {w:who,n:d.numero,a:fmt(tt.net??tt.ttc,S.biz.devise),e:d.eche,j,u:payUrl,b:S.biz.nom||""});
@@ -1093,6 +1194,49 @@ function checkClientPortalRoute(){
     const d=S.docs.find(x=>x.id===rId);
     if(d){setTimeout(()=>{goto("docs");openView(d.id)},350)}
   }catch{}
+}
+
+/* Retour de Stripe Checkout : on échange session_id contre un jeton d'abonnement
+   VÉRIFIÉ côté serveur (P0 n°3) — la preuve ne vit plus seulement en localStorage. */
+async function handleCheckoutReturn(){
+  const p=new URLSearchParams(window.location.search);
+  const clean=k=>{try{const u=new URL(window.location.href);u.searchParams.delete(k);history.replaceState({},"",u.pathname+u.search+u.hash)}catch{}};
+  if(p.get("billing")==="cancel"){clean("billing");toast(T("Paiement annulé — réessaie quand tu veux."));return}
+  const sid=p.get("session_id");if(!sid)return;
+  try{
+    const r=await fetch("/api/sub?session_id="+encodeURIComponent(sid));
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ok&&j.token){
+      S.sub={plan:j.plan,cycle:j.cycle,since:j.since,exp:j.exp,customer:j.customer,token:j.token,checkedAt:Date.now()};
+      save();render();haptic([20,50]);toast(T("Abonnement activé ✓ Bienvenue !"));
+      clean("session_id"); /* définitif : on nettoie l'URL */
+    }else if(r.status===409||r.status===401||r.status===403){
+      toast(T("Paiement non confirmé — réessaie ou contacte le support."));
+      clean("session_id");
+    }else{
+      /* transitoire (5xx, réseau) : on garde session_id → rechargement = nouvel essai */
+      toast(T("Connexion requise pour valider l'abonnement."));
+    }
+  }catch{toast(T("Connexion requise pour valider l'abonnement."))}
+}
+
+/* Rafraîchit le jeton quand on est en ligne : la source de vérité est Stripe.
+   Abonnement résilié → 401/403 → déclassement en Gratuit. Hors-ligne : le jeton
+   reste valable jusqu'à exp + 14 j de tolérance (dans isPaid). */
+async function refreshSub(){
+  if(!paymentsReady())return;
+  const s=S.sub;if(!s?.token)return;
+  if(Date.now()-(s.checkedAt||0)<6*3600e3)return;
+  s.checkedAt=Date.now();
+  try{
+    const r=await fetch("/api/sub",{headers:{"X-Sub-Token":s.token}});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ok&&j.token){s.exp=j.exp;s.token=j.token;save();return}
+    if(r.status===401||r.status===403){
+      s.plan="free";s.token=null;s.exp=0;
+      save();render();toast(T("Abonnement expiré — passe au payant pour garder tes factures illimitées."));
+    }
+  }catch{/* hors-ligne : on garde le jeton courant */}
 }
 
 /* ---------- events ---------- */
@@ -1287,4 +1431,4 @@ function initInstall(){
 }
 
 /* ---------- boot ---------- */
-load();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();initInstall();
+load();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();

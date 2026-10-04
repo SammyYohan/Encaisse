@@ -70,6 +70,12 @@ des données de démonstration.
 > ce port, son journal se remplit de `GET /health → 404` (inoffensifs). Utilise
 > plutôt `3000` (`npx serve .`) ou `python -m http.server 8080`.
 
+**Backend (`functions/`) :** pour tester le Worker avec une D1 locale :
+
+```powershell
+npx wrangler pages dev . --port 8788   # → http://localhost:8788
+```
+
 **Réinitialiser la démo :** *Réglages → Réinitialiser démo* (les compteurs de
 numérotation sont conservés — un numéro de facture n'est jamais réutilisé).
 
@@ -84,6 +90,8 @@ numérotation sont conservés — un numéro de facture n'est jamais réutilisé
 | `config.js` | **Le seul fichier à modifier** avant la mise en production |
 | `styles.css` | Styles, y compris `@media print` (sortie PDF) |
 | `sw.js` | Service worker : cache-first, network-first sur `config.js` / `i18n.js` / `sw.js` |
+| `functions/` | **Backend (Pages Functions, sans build)** : `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay` + page client serveur `/r/:slug` |
+| `schema.sql`, `wrangler.toml` | Schéma D1 (table `portal`) + config wrangler (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | Manifest PWA + icônes PNG (192, 512, maskable, apple-touch) |
 | `legal.html` | Mentions légales, CGU/CGV, confidentialité (bilingue, **cases à remplir**) |
 | `robots.txt`, `sitemap.xml`, `_headers` | SEO + en-têtes de sécurité Cloudflare |
@@ -115,9 +123,9 @@ Tout vit dans un objet `S`, persisté dans `localStorage` sous **`encaisse.v1`**
 |---|---|
 | `S.lang` | `"fr"` \| `"en"` (miroir sous `encaisse.lang`) |
 | `S.biz` | Identité de l'entreprise : `nom`, `pays`, `secteur`, `devise`, `moyens`, `adresse`, `contact`, `tvaId`, `iban` — **imprimé sur chaque facture** |
-| `S.sub` | Abonnement `{plan, cycle, since}` — ⚠️ **côté client uniquement** |
+| `S.sub` | Abonnement `{plan, cycle, since, exp, token, customer, checkedAt}` — `token` = **jeton signé HMAC** émis par `/api/sub` après un vrai Checkout Stripe ; rafraîchi en ligne (Stripe = source de vérité), tolérance hors-ligne 14 j |
 | `S.clients` | `{id, nom, tel, email, adresse, tvaId}` |
-| `S.docs` | Devis & factures : `type`, `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `demo` |
+| `S.docs` | Devis & factures : `type`, `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `portal` (`{slug, hash}` — référence de publication serveur), `demo` |
 | `S.seq` | Compteurs de numérotation `{DEV:{AAAA:n}, FAC:{AAAA:n}}` |
 
 Autres clés : `encaisse.onboarded`, `encaisse.lang`.
@@ -190,12 +198,12 @@ Pas de bibliothèque PDF : la facture est mise en forme pour l'écran et
 
 | Clé | Actuel | Sens |
 |---|---|---|
-| `DEMO_MODE` | `true` | `true` ⇒ **aucun débit**, bandeau démo, aucun plan réellement achetable. Rester à `true` tant que le Worker n'existe pas |
-| `STRIPE_LIVE` | `false` | Passe à `true` **uniquement** quand un serveur crée réellement la session Checkout |
+| `DEMO_MODE` | `true` | `true` ⇒ **aucun débit**, bandeau démo, aucun plan réellement achetable. Les functions/ existent maintenant → passe à `false` **après** la mise en place D1 + `STRIPE_SECRET_KEY` |
+| `STRIPE_LIVE` | `false` | Passe à `true` **en même temps** que `DEMO_MODE:false` — active la redirection Checkout réelle |
 | `STRIPE_PUBLIC_KEY` | renseignée | Clé *publishable* — conçue pour être visible par le navigateur |
 | `STRIPE_PAYMENT_LINK` | `""` | Payment Link statique, alternative à la session Checkout |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Partenaire agréé e-facturation (Europe) — optionnel |
-| `SITE_URL` | `""` | Origine publique, ex. `https://app.exemple.fr` — sert au lien client `/r/:id` |
+| `SITE_URL` | `""` | Origine publique, ex. `https://app.exemple.fr` — active la vraie page client `/r/:slug` (publiée au partage) |
 
 > ⚠️ `DEMO_MODE: true` est un verrou **volontaire**, pas un bug.
 
@@ -217,11 +225,38 @@ npx wrangler pages deploy . --project-name=encaisse
 
 Wrangler envoie **tout** le dossier : retirez `encaisse-export.json` au préalable.
 
+### Stripe & portail client (mise en place unique)
+
+Le backend sont les **Pages Functions** (`functions/`, JS pur — ça se déploie avec
+le site, aucun build). Activation en une fois :
+
+```powershell
+# 1. D1 (stockage du portail client)
+npx wrangler d1 create encaisse                # copier l'UUID dans wrangler.toml
+npx wrangler d1 execute encaisse --remote --file=schema.sql
+#    + dashboard : projet Pages → Settings → Functions → binding D1 nommé « DB »
+
+# 2. Clé secrète Stripe — jamais dans ce dépôt
+npx wrangler pages secret put STRIPE_SECRET_KEY --project-name=<projet>
+
+# 3. Basculer les deux drapeaux de config.js : DEMO_MODE:false, STRIPE_LIVE:true → push
+```
+
+Endpoints : `POST /api/checkout` (Checkout abonnement, prix côté serveur) ·
+`GET /api/sub` (vérification d'achat + jeton HMAC) · `POST /api/portal`
+(publie `/r/:slug`, uniquement à un partage explicite) · `GET /api/pay`
+(encaissement facture ; le montant vient de D1, jamais du payeur) · `/r/:slug`
+(facture rendue par le serveur, confirmation de paiement via `?session_id=` —
+pas encore de webhook).
+
 ### Checklist de mise en ligne
 
 ```
 □ Remplacer VOTRE-DOMAINE.TLD dans robots.txt et sitemap.xml
 □ Renseigner SITE_URL dans config.js
+□ Créer la base D1 + binding « DB » + exécuter schema.sql (voir ci-dessus)
+□ Mettre STRIPE_SECRET_KEY (wrangler pages secret put) et tester un vrai checkout
+□ Basculer DEMO_MODE:false + STRIPE_LIVE:true dans config.js
 □ Remplir legal.html (raison sociale, SIRET/RCS/EIN, TVA, e-mail, médiateur)
 □ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
 □ Ajouter le domaine dans Cloudflare (Custom domains)
@@ -260,13 +295,18 @@ est **hors-ligne + preuve de chantier + relances guidées** — ce positionnemen
 
 ### 🔴 P0 — bloque la vente
 
-1. **Page client serveur `/r/:id`** — aujourd'hui le lien ne s'ouvre que sur
-   l'appareil du marchand (état local).
-2. **Stripe Checkout** créé par un Worker Cloudflare (secret jamais dans le navigateur).
-3. **Vérification serveur de l'abonnement** — `S.sub` est côté client et falsifiable.
-4. **Envoi d'e-mail** (confirmations, relances automatiques) via cron Worker.
-5. **Avoirs** — obligatoires en FR/BE.
-6. **Partenaire agréé (PDP / Peppol)** avant toute annonce de conformité en Europe.
+1. ✅ **Page client serveur `/r/:slug`** — `functions/r/[doc].js`, adossée à D1,
+   publiée seulement lors d'un partage explicite (le lien local `?r=` reste le
+   repli hors-ligne).
+2. ✅ **Stripe Checkout** créé par les Pages Functions (`/api/checkout`) — le
+   secret reste dans `wrangler pages secret put`, le navigateur ne reçoit qu'une
+   URL de redirection.
+3. ✅ **Vérification serveur de l'abonnement** — `/api/sub` émet un jeton signé
+   HMAC (`exp`), rafraîchi en ligne, tolérance hors-ligne 14 j ; Stripe reste la
+   source de vérité.
+4. 🔴 **Envoi d'e-mail** (confirmations, relances automatiques) via cron Worker.
+5. 🔴 **Avoirs** — obligatoires en FR/BE.
+6. 🔴 **Partenaire agréé (PDP / Peppol)** avant toute annonce de conformité en Europe.
 
 ### 🟠 P1
 
@@ -285,13 +325,19 @@ d'utilisateurs.
 ## 10. Sécurité
 
 - Toute saisie utilisateur passe par `esc()` avant insertion HTML, les montants par
-  `num()` ; aucun `innerHTML` ne reçoit de donnée brute.
+  `num()` ; aucun `innerHTML` ne reçoit de donnée brute — la règle vaut aussi
+  côté serveur dans `functions/` (le rendu du portail ré-échappe les données D1).
 - `_headers` livre une **CSP** (liste d' Stripe), HSTS, `X-Frame-Options: DENY`,
-  `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`.
-- Pas de serveur ⇒ **pas de mot de passe à fuiter, pas de base à pirater**. En
-  contrepartie, les données ne vivent que dans le navigateur du client — l'export
-  JSON est l'histoire de sauvegarde.
-- Ne jamais committer la **clé secrète** Stripe : `wrangler secret put STRIPE_SECRET_KEY`.
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` ;
+  les réponses `/r/:slug` ajoutent leur propre CSP stricte, `no-store` et `noindex`.
+- **Pas de mot de passe, pas de compte.** Les données ne vivent toujours que
+  dans le navigateur du client (l'export JSON est l'histoire de sauvegarde). D1
+  ne garde qu'une *copie* des documents explicitement partagés, clé = slug
+  aléatoire de 96 bits (possession = autorisation, comme un lien Stripe) ;
+  `/api/portal` ne publie rien sans partage.
+- Ne jamais committer la **clé secrète** Stripe : `wrangler pages secret put STRIPE_SECRET_KEY`.
+  Les droits d'abonnement sont signés côté serveur (clé dérivée du secret Stripe) —
+  le navigateur ne détient qu'un jeton signé avec une expiration.
 - `encaisse-export.json` et `.dev.vars` sont ignorés par Git.
 
 ## 11. Reprise du projet & due diligence

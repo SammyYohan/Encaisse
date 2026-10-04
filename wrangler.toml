@@ -1,0 +1,14 @@
+# Encaisse — config Cloudflare pour les Pages Functions (le « Worker »).
+# Sert à `npx wrangler pages dev .` (dev local) et aux CLI wrangler.
+# Sur GitHub → Pages, configure aussi dans le dashboard :
+#   • Settings → Functions → D1 binding nommé « DB »
+#   • Settings → Secrets  → STRIPE_SECRET_KEY (`npx wrangler pages secret put STRIPE_SECRET_KEY`)
+name = "encaisse"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "encaisse"
+# À remplacer par l'UUID affiché par `npx wrangler d1 create encaisse`.
+database_id = "00000000-0000-0000-0000-000000000000"
