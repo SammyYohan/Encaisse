@@ -1,12 +1,13 @@
 /* Encaisse SW — cache-first ultra-léger.
    ⚠️ VERSION : à incrémenter à chaque release (les fichiers critiques passent en
    network-first, donc config.js et ce SW sont rechargés même avec un ancien cache). */
-const C = "encaisse-v8";
+const C = "encaisse-v9";
 const A = [
   "./", "index.html", "styles.css",
   "app.js", "i18n.js", "qr.js", "config.js",
   "manifest.webmanifest", "legal.html",
-  "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"
+  "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png",
+  "icons/apple-touch-icon.png", "icons/maskable-512.png"
 ];
 
 /* Ces fichiers doivent TOUJOURS venir du réseau : une clé/mise à jour doit

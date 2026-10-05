@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Encaisse — € et $">
+  <title>Encaisse</title>
+  <!-- Pièce biface : émeraude (haut-gauche, €) / slate (bas-droite, $) -->
+  <rect width="512" height="512" fill="#0f172a"/>
+  <path d="M0 0 H512 L0 512 Z" fill="#10b981"/>
+  <!-- La pièce : un seul cercle, deux devises -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#ffffff" stroke-width="16"/>
+  <text x="191" y="243" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="150" font-weight="700" fill="#ffffff" text-anchor="middle">€</text>
+  <text x="321" y="373" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="150" font-weight="700" fill="#ffffff" text-anchor="middle">$</text>
+</svg>
