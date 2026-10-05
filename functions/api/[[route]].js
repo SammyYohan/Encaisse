@@ -3,14 +3,16 @@
 
    POST /api/checkout  {kind:"sub", plan, cycle, zone, origin} → {url} Stripe Checkout (abonnement)
    POST /api/portal    {slug?, hash, doc, biz, cli?, lang}     → {slug} page client /r/:slug (D1)
-   POST /api/remind    {slug}                                  → envoie la relance e-mail (Brevo)
+   POST /api/remind    {slug}
+    POST /api/stripe-webhook (Stripe-Signature)                -> confirme un paiement sans retour navigateur                                  → envoie la relance e-mail (Brevo)
    GET  /api/sub       ?session_id=… → vérifie l'achat, émet le jeton d'abonnement
                        X-Sub-Token   → vérifie/rafraîchit le jeton (HMAC-SHA256)
    GET  /api/pay       ?slug=…       → 307 vers Stripe Checkout (encaissement d'une facture)
 
    Mise en place (une fois) — voir README §6 :
      npx wrangler d1 create encaisse                    → UUID dans wrangler.toml + binding « DB »
-     npx wrangler pages secret put STRIPE_SECRET_KEY    → secret, jamais dans le repo
+     npx wrangler pages secret put STRIPE_SECRET_KEY
+      npx wrangler pages secret put STRIPE_WEBHOOK_SECRET -> "Signing secret" whsec_... du endpoint webhook Stripe    → secret, jamais dans le repo
      npx wrangler pages secret put BREVO_API_KEY        → clé API Brevo (e-mails transactionnels)
      npx wrangler pages secret put EMAIL_FROM           → « Encaisse <bonjour@tondomaine.fr> »
    Le secret ne quitte jamais le serveur : le front ne reçoit qu'une URL de
@@ -202,6 +204,7 @@ export async function onRequestPost(ctx) {
   if (seg === "checkout") return postCheckout(ctx);
   if (seg === "portal") return postPortal(ctx);
   if (seg === "remind") return postRemind(ctx);
+  if (seg === "stripe-webhook") return postStripeWebhook(ctx);
   if (seg === "sub" || seg === "pay") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
 }
@@ -210,7 +213,7 @@ export async function onRequestGet(ctx) {
   const seg = routeOf(ctx.request);
   if (seg === "sub") return getSub(ctx);
   if (seg === "pay") return getPay(ctx);
-  if (seg === "checkout" || seg === "portal" || seg === "remind") return json({ error: "methode_invalide" }, 405);
+  if (seg === "checkout" || seg === "portal" || seg === "remind" || seg === "stripe-webhook") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
 }
 
@@ -293,6 +296,16 @@ async function postPortal(ctx) {
       "INSERT INTO portal (slug, payload, hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?) " +
       "ON CONFLICT(slug) DO UPDATE SET payload = excluded.payload, hash = excluded.hash, updated_at = excluded.updated_at"
     ).bind(slug, payload, hash, now, now).run();
+    /* L'appareil reste la source de vérité : s'il déclare la facture payée
+       (encaissement cash/virement constaté à la main), le serveur aligne
+       paid_at pour que le lien client et /api/pay suivent — jamais de double
+       encaissement. Le slug (96 bits) est la preuve de possession ; un contrôle
+       d'accès fort arrivera avec l'auth pro du portail (vague suivante). */
+    if (b.doc && b.doc.statut === "paye") {
+      try {
+        await env.DB.prepare("UPDATE portal SET paid_at = COALESCE(paid_at, ?) WHERE slug = ?").bind(now, slug).run();
+      } catch (e) {}
+    }
   } catch (e) {
     return json({ error: "stockage_invalide" }, 500);
   }
@@ -446,4 +459,78 @@ async function getPay(ctx) {
   });
   if (r.status >= 400 || !r.body.url) return json({ error: (r.body && r.body.error && r.body.error.message) || "stripe_erreur" }, 502);
   return Response.redirect(r.body.url, 303);
+}
+
+/* Devises ISO (minuscules) pour comparer avec Stripe : CUR[] du fichier est en majuscules. */
+const STRIPE_CUR = { "€": "eur", CHF: "chf", $: "usd" };
+
+/* Vérifie l'en-tête Stripe-Signature ("t=...,v1=...") : HMAC-SHA256 du secret
+   webhook sur "timestamp.corps_brut", fraîcheur ±300 s, comparaison constante. */
+async function verifyStripeSig(raw, header, secret) {
+  const h = String(header || "");
+  const mt = /t=(\d+)/.exec(h), mv = /v1=([0-9a-f]+)/.exec(h);
+  if (!mt || !mv || !raw) return false;
+  const t = Number(mt[1]), v1 = mv[1];
+  if (!t || Math.abs(Date.now() / 1000 - t) > 300) return false;
+  try {
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(t + "." + raw));
+    const hex = Array.from(new Uint8Array(mac), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+    if (hex.length !== v1.length) return false;
+    let diff = 0;
+    for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ v1.charCodeAt(i);
+    return diff === 0;
+  } catch (e) { return false; }
+}
+
+/* POST /api/stripe-webhook — confirmation de paiement SANS retour navigateur.
+   Stripe signe chaque appel : aucune confiance sans signature valide.
+   Idempotent (paid_at posé une seule fois) et STRICT sur le montant ET la
+   devise avant de marquer payé : un montant inattendu est ignoré (200, sans
+   retry) plutôt que validé. Les sessions d'abonnement (sans slug) sont
+   ignorées : l'abonnement reste constaté par retour navigateur (/api/sub). */
+async function postStripeWebhook(ctx) {
+  const { request, env } = ctx;
+  if (!env.DB) return json({ error: "portail_non_configure" }, 503);
+  if (!env.STRIPE_WEBHOOK_SECRET) return json({ error: "webhook_non_configure" }, 503);
+  const raw = await request.text().catch(function () { return ""; });
+  if (!await verifyStripeSig(raw, request.headers.get("stripe-signature") || "", env.STRIPE_WEBHOOK_SECRET)) {
+    return json({ error: "signature_invalide" }, 400);
+  }
+  let ev;
+  try { ev = JSON.parse(raw); } catch (e) { return json({ error: "json_invalide" }, 400); }
+  if (!ev || ev.type !== "checkout.session.completed") return json({ received: true });
+  const s = (ev.data && ev.data.object) || {};
+  const slug = (s.metadata && s.metadata.slug) || "";
+  if (!/^[0-9a-f]{24}$/.test(slug || "") || s.payment_status !== "paid") return json({ received: true });
+  const row = await env.DB.prepare("SELECT payload, paid_at FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
+  if (!row) return json({ received: true });
+  if (row.paid_at) return json({ received: true, already: true });
+  let pp;
+  try { pp = JSON.parse(row.payload); } catch (e) { return json({ received: true }); }
+  const dd = (pp && pp.doc) || {};
+  if (dd.type !== "facture") return json({ received: true });
+  const exp = totals(dd);
+  const expCur = STRIPE_CUR[((pp && pp.biz) || {}).devise] || "eur";
+  if (Number(s.amount_total) !== exp.net || String(s.currency || "").toLowerCase() !== expCur) {
+    console.warn("Webhook : montant/devise inattendus pour " + slug);
+    return json({ received: true, ignored: "montant_inattendu" });
+  }
+  const now = Date.now();
+  const up = await env.DB.prepare("UPDATE portal SET paid_at = ? WHERE slug = ? AND paid_at IS NULL").bind(now, slug).run().catch(function () { return null; });
+  if (!up || !up.meta || up.meta.changes !== 1) return json({ received: true });
+  /* Reçu e-mail best-effort (miroir du retour navigateur dans functions/r/[doc].js). */
+  try {
+    const cli = (pp && pp.cli) || {}, biz = (pp && pp.biz) || {}, lg = pp && pp.lang === "en" ? "en" : "fr";
+    if (isEmail(cli.e)) {
+      const amt = fmtCents(exp.net, biz.devise, lg);
+      const pageUrl = new URL(request.url).origin + "/r/" + slug;
+      const subject = lg === "en" ? "Payment received — " + (dd.numero || "") : "Paiement reçu — " + (dd.numero || "");
+      const body = lg === "en"
+        ? "Hello,\n\nWe confirm receipt of your payment of " + amt + " for invoice " + (dd.numero || "") + ".\n\nYour receipt is available here: " + pageUrl + "\n\nThank you for your trust!\n— " + String(biz.nom || "")
+        : "Bonjour,\n\nNous confirmons la bonne réception de votre règlement de " + amt + " pour la facture " + (dd.numero || "") + ".\n\nVotre reçu est disponible ici : " + pageUrl + "\n\nMerci pour votre confiance !\n— " + String(biz.nom || "");
+      await sendMail(env, cli.e, subject, body, biz.contact || "");
+    }
+  } catch (e) {}
+  return json({ received: true, paid: true });
 }

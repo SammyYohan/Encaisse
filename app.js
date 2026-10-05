@@ -110,7 +110,7 @@ function portalPayload(d){
 /* Publie/met à jour la page client ; retourne {url, server}. Le hash évite de
    réécrire quand le document n'a pas bougé. Jamais d'exception propagée : en cas
    d'échec on retombe sur le lien local (?r=). */
-async function ensurePortal(d){
+async function ensurePortal(d,silent){
   const site=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
   if(!site) return{url:getDocUrl(d.id),server:false};
   const payload=portalPayload(d), h=fnv1a(JSON.stringify(payload));
@@ -128,11 +128,11 @@ async function ensurePortal(d){
     const first=!d.portal?.slug;
     d.portal={slug:j.slug,hash:h};
     save();
-    if(first)toast(T("Lien client sécurisé activé ✓"));
+    if(first&&!silent)toast(T("Lien client sécurisé activé ✓"));
     return{url:site+"/r/"+j.slug,server:true};
   }catch(e){
     console.warn("Portail :",e);
-    toast(T("Portail client indisponible — lien local utilisé."));
+    if(!silent)toast(T("Portail client indisponible — lien local utilisé."));
     return{url:getDocUrl(d.id),server:false};
   }
 }
@@ -314,6 +314,9 @@ function openSheet(html){const s=$("#sheet"),sc=$("#scrim");s.innerHTML=html;s.h
 function closeSheet(){$("#sheet").hidden=true;$("#scrim").hidden=true}
 
 const itemLib=l=>loc(l&&l.lib);
+/* Import : les libellés existent en 2 formes (chaîne saisie, objet {fr,en}
+   des presets/démo) — on préserve l'objet au lieu de le casser en texte. */
+const normLib=v=>{if(typeof v==="string")return v;if(v&&typeof v==="object"){const fr=String(v.fr??v.en??""),en=String(v.en??v.fr??"");if(fr||en)return{fr:fr,en:en}}return String(v??"")};
 const cliOf=d=>S.clients.find(c=>c.id===d.clientId)||{};
 const cliName=c=>loc(c&&c.nom)||T("Client");
 
@@ -326,6 +329,8 @@ function priceLine(pays){
 /* ---------- onboarding ---------- */
 let oi=0;const NS=4;
 function setSlide(n){
+  const box=$("#onbSlides");
+  if(box)box.dataset.dir=n<oi?"prev":"next";
   oi=Math.max(0,Math.min(NS-1,n));
   $$("#onbSlides .slide").forEach((el,i)=>el.classList.toggle("is-active",i===oi));
   $$("#onbDots i").forEach((d,i)=>d.classList.toggle("is-on",i===oi));
@@ -758,7 +763,7 @@ function wireDocForm(opt){
       d.clientId=cid;d.client=cliName(S.clients.find(c=>c.id===cid)||{});d.items=items;
       d.total=items.reduce((a,l)=>a+l.q*l.p,0);d.tva=tva;d.unite=unite;d.eche=eche;
       haptic([20,40]);
-      if(!save())return;closeSheet();render();toast(`${d.numero} ${T("mis à jour ✓")}`);
+      if(!save())return;closeSheet();render();ensurePortal(d,true);toast(`${d.numero} ${T("mis à jour ✓")}`);
       return;
     }
     if(!canCreate(ntype)){closeSheet();openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}
@@ -864,9 +869,11 @@ function openSign(id){
 /* ---------- demande d'acompte ---------- */
 function openAcompte(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
+  if(d.statut==="converti"){toast(T("Devis déjà converti"));return}
   const tt=totals(d);
   const a30=Math.round(tt.ttc*0.3), a50=Math.round(tt.ttc*0.5);
-  const dec=S.biz.devise==="CHF"||S.biz.devise==="€"?0:2;
+  /* Montants en unités : 2 décimales partout (EUR/CHF/USD ont des centimes). */
+  const dec=2;
 
   openSheet(`<h2>⚡ ${T("Demander un acompte")}</h2>
   <p class="sub">${T("Sur")} ${esc(d.numero)} (${fmt(tt.ttc,S.biz.devise)}) ${T("pour")} ${esc(d.client)}</p>
@@ -897,6 +904,8 @@ function openAcompte(id){
   };
 
   $("#saveAcompte").onclick=()=>{
+    /* Une facture d'acompte reste une facture : le quota gratuit s'applique. */
+    if(!canCreate("facture")){closeSheet();openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}
     const cents=toCents($("#acompteAmt").value);
     if(cents<=0||cents>tt.ttc){toast(T("Montant d'acompte invalide"));return}
     const nid=uid(), num_=nextNum("facture");
@@ -1132,10 +1141,10 @@ function openView(id){
 
     <div class="row doc-view-actions" style="margin-top:12px">
       ${isDevis?`
-        ${!d.signature?`<button class="btn primary small" data-act="sign" data-id="${d.id}" type="button">✍️ ${T("Faire signer")}</button>`:""}
-        ${!d.acompteFactureId?`<button class="btn small" style="background:#f0fdfa;border-color:#99f6e4;color:#0f766e" data-act="acompte" data-id="${d.id}" type="button">⚡ ${T("Acompte")}</button>`:""}
+        ${d.statut==="converti"?`<span class="status s-paye">${T("Converti en facture ✓")}</span>`
+        :`${!d.signature?`<button class="btn primary small" data-act="sign" data-id="${d.id}" type="button">✍️ ${T("Faire signer")}</button>`:""}${!d.acompteFactureId?`<button class="btn small" style="background:#f0fdfa;border-color:#99f6e4;color:#0f766e" data-act="acompte" data-id="${d.id}" type="button">⚡ ${T("Acompte")}</button>`:""}`}
         <button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button>
-        <button class="btn primary small" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button>
+        ${d.statut==="converti"?"":`<button class="btn primary small" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button>`}
       `:isAvoir?`
         ${d.statut!=="paye"
           ? `<button class="btn primary small" data-act="refund" data-id="${d.id}" type="button">✓ ${T("Marquer remboursée ✓")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">✉️ ${T("E-mail")}</button>`
@@ -1357,13 +1366,18 @@ function bind(){
     if(act==="avoir")openAvoir(id);
     if(act==="shareWa")shareWhatsApp(id);
     if(act==="shareMail")shareEmail(id);
-    if(act==="paid"){if(d&&confirm(T("Confirmer encaissement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();closeSheet();toast(T("Encaissé 🎉"))}}
-    if(act==="refund"){if(d&&confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();closeSheet();toast(T("Avoir remboursé ✓"))}}
+    if(act==="paid"){if(d&&confirm(T("Confirmer encaissement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();ensurePortal(d,true);closeSheet();toast(T("Encaissé 🎉"))}}
+    if(act==="refund"){if(d&&confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();ensurePortal(d,true);closeSheet();toast(T("Avoir remboursé ✓"))}}
     if(act==="del"){if(d&&confirm(T("Supprimer {n} ? Le compteur reste inviolable.",{n:d.numero}))){S.docs=S.docs.filter(x=>x.id!==id);save();render();closeSheet()}}
     if(act==="convert"&&d){
+      if(d.statut==="converti"){toast(T("Devis déjà converti"));closeSheet();return}
       if(!canCreate("facture")){openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}
       const nid=uid(), num_=nextNum("facture");
-      const acompteDed=num(d.acompteMontant);
+      /* L'acompte ne se déduit que s'il est VRAIMENT payé (sinon la facture
+         finale serait sous-facturée et le reste à payer minoré). */
+      const af=d.acompteFactureId&&S.docs.find(x=>x.id===d.acompteFactureId);
+      const acompteDed=(af&&af.statut==="paye")?num(d.acompteMontant):0;
+      if(num(d.acompteMontant)>0&&!acompteDed)toast(T("Acompte impayé — non déduit"));
       S.docs.push({
         id:nid,type:"facture",numero:num_,clientId:d.clientId,client:d.client,
         items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",
@@ -1449,7 +1463,7 @@ function bind(){
           const data=JSON.parse(ev.target.result);
           if(!data.biz||!Array.isArray(data.docs)||!Array.isArray(data.clients)){toast(T("Fichier JSON invalide"));return}
           S={...S,...data,biz:{...S.biz,...data.biz},sub:{...S.sub,...(data.sub||{})}};
-          S.docs=data.docs.map(d=>({...d,tva:num(d.tva),items:(d.items||[]).map(i=>({lib:String(i.lib??""),q:num(i.q)||1,p:num(i.p)}))}));
+          S.docs=data.docs.map(d=>({...d,tva:num(d.tva),items:(d.items||[]).map(i=>({lib:normLib(i.lib),q:num(i.q)||1,p:num(i.p)}))}));
           S.clients=data.clients.map(c=>({id:String(c.id||uid()),nom:String(c.nom||T("Client")),tel:String(c.tel||""),email:String(c.email||""),adresse:String(c.adresse||""),tvaId:String(c.tvaId||"")}));
           migrateSeq();migrateMoyens();
           save();syncSettings();render();toast(T("Sauvegarde importée ✓"));

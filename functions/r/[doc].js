@@ -269,6 +269,10 @@ export async function onRequest(ctx) {
   }
   if (!row) return errorPage(L[lang].missing, lang, 404);
 
+  /* Le payload sert aussi a la verification du montant : on l'exige valide ici. */
+  let pp0;
+  try { pp0 = JSON.parse(row.payload); } catch (e) { return errorPage(L[lang].err, lang, 500); }
+
   /* Confirmation de paiement SANS webhook : Stripe revient avec ?session_id=…,
      on vérifie la session côté serveur et on horodate paid_at dans D1. */
   const url = new URL(request.url);
@@ -280,7 +284,15 @@ export async function onRequest(ctx) {
         headers: { Authorization: "Bearer " + env.STRIPE_SECRET_KEY }
       });
       const s = await res.json();
-      if (res.ok && s.payment_status === "paid" && s.metadata && s.metadata.slug === slug) {
+      /* Strict sur le montant ET la devise : une session valide mais d'un autre
+         montant (facture modifiee apres envoi du lien) ne doit pas marquer paye.
+         L'artisan regularise alors via "Marquer payee". */
+      const dd0 = (pp0.doc) || {};
+      const exp0 = totals(dd0);
+      const expCur0 = { "€": "eur", CHF: "chf", $: "usd" }[((pp0.biz) || {}).devise] || "eur";
+      if (res.ok && s.payment_status === "paid" && s.metadata && s.metadata.slug === slug
+        && Number(s.amount_total) === exp0.net
+        && String(s.currency || "").toLowerCase() === expCur0) {
         const now = Date.now();
         await env.DB.prepare("UPDATE portal SET paid_at = ? WHERE slug = ? AND paid_at IS NULL").bind(now, slug).run();
         row.paid_at = now;
@@ -293,7 +305,7 @@ export async function onRequest(ctx) {
      jamais bloquant pour l'affichage de la page). */
   if (justPaid && emailConfigured(env)) {
     try {
-      const pp = JSON.parse(row.payload);
+      const pp = pp0;
       const dd = pp.doc || {};
       if (dd.type === "facture" && isEmail((pp.cli || {}).e)) {
         const lg = pp.lang === "en" ? "en" : "fr";
@@ -312,8 +324,7 @@ export async function onRequest(ctx) {
     } catch (e) { /* échec d'e-mail : sans conséquence sur la page */ }
   }
 
-  let p;
-  try { p = JSON.parse(row.payload); } catch (e) { return errorPage(L[lang].err, lang, 500); }
+  const p = pp0;
   const canceled = url.searchParams.get("canceled") === "1";
   return new Response(render(slug, row, p, { justPaid: justPaid, canceled: canceled }), { headers: headers() });
 }

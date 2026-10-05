@@ -383,7 +383,9 @@
     "Service e-mail non configuré — utilise le bouton E-mail ci-dessous.": "E-mail service not configured — use the E-mail button below.",
     "Ce client n'a pas d'e-mail : complète sa fiche.": "This client has no e-mail: complete their card.",
     "Envoi impossible — réessaie plus tard.": "Could not send — try again later.",
-    "Connexion requise pour envoyer.": "Connection required to send."
+    "Connexion requise pour envoyer.": "Connection required to send.",
+    "Devis déjà converti": "Quote already converted",
+    "Acompte impayé — non déduit": "Unpaid deposit — not deducted"
   };
 
   var LANG = null;

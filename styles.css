@@ -153,8 +153,18 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .onb-bar{height:4px;background:#ffffff22;margin:0 16px;border-radius:99px;position:relative;z-index:1;overflow:hidden}
 .onb-bar i{display:block;height:100%;width:25%;background:linear-gradient(90deg,#34d399,#a7f3d0);border-radius:99px;transition:width .4s ease}
 .onb-slides{flex:1;position:relative;z-index:1;padding:10px 20px 0;overflow-x:hidden;overflow-y:auto}
-.slide{display:none;animation:rise .4s ease}
-.slide.is-active{display:block}
+.slide{display:none}
+.slide.is-active{display:block;animation:slideIn .38s cubic-bezier(.22,.9,.3,1)}
+.onb-slides[data-dir="prev"] .slide.is-active{animation-name:slideInR}
+.slide.is-active > *{animation:riseIn .5s cubic-bezier(.22,.9,.3,1) both}
+.slide.is-active > *:nth-child(2){animation-delay:.06s}
+.slide.is-active > *:nth-child(3){animation-delay:.12s}
+.slide.is-active > *:nth-child(4){animation-delay:.18s}
+.slide.is-active > *:nth-child(5){animation-delay:.24s}
+.slide.is-active > *:nth-child(n+6){animation-delay:.3s}
+@keyframes slideIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+@keyframes slideInR{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
+@keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .slide h1{font-size:30px;line-height:1.08;margin:16px 0 10px;letter-spacing:-.02em}
 .slide h1 mark{background:linear-gradient(90deg,#6ee7b7,#a7f3d0);-webkit-background-clip:text;background-clip:text;color:transparent}
 .slide p{color:#cbd5e1;font-size:14.5px;line-height:1.6;margin:0 0 12px}
