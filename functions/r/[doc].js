@@ -24,7 +24,7 @@ const L = {
     missing: "Ce document n'est plus disponible.",
     off: "Le portail client n'est pas encore activé sur ce site.",
     err: "Erreur serveur — réessaie plus tard.",
-    with: "Édité avec Encaisse", vat: "N° TVA",
+    with: "Édité avec Encaisse", vat: "N° TVA", manual: "Autres moyens acceptés : {m}",
     m: { stripe_cb: "Carte bancaire", sepa: "Prélèvement SEPA", twint: "TWINT", ach: "Prélèvement ACH", virement: "Virement", especes: "Espèces" }
   },
   en: {
@@ -44,7 +44,7 @@ const L = {
     missing: "This document is no longer available.",
     off: "The customer portal is not enabled on this site yet.",
     err: "Server error — please try again later.",
-    with: "Generated with Encaisse", vat: "VAT no.",
+    with: "Generated with Encaisse", vat: "VAT no.", manual: "Other accepted methods: {m}",
     m: { stripe_cb: "Card", sepa: "SEPA", twint: "TWINT", ach: "ACH", virement: "Bank transfer", especes: "Cash" }
   }
 };
@@ -190,11 +190,17 @@ function render(slug, row, p, opts) {
   else if (isAvoir) banner = `<div class="banner b-wait">${Lx.waitAvoir}</div>`;
   else banner = `<div class="banner b-wait">${Lx.pending}</div>`;
 
-  const moyens = (Array.isArray(biz.moyens) ? biz.moyens : []).map(k => Lx.m[k] || k).join(", ");
+  /* Seuls ces moyens passent vraiment par Stripe ; le reste (TWINT, virement,
+     espèces) est manuel et s'affiche à part — jamais sous le label Stripe. */
+  const mList = Array.isArray(biz.moyens) ? biz.moyens : [];
+  const isStripeM = k => k === "stripe_cb" || k === "sepa" || k === "ach";
+  const mStripe = mList.filter(isStripeM).map(k => Lx.m[k] || k).join(", ");
+  const mManual = mList.filter(k => !isStripeM(k)).map(k => Lx.m[k] || k).join(", ");
 
   const payBtn = (!paid && d.type === "facture" && tt.net >= 50)
     ? `<a class="pay" href="/api/pay?slug=${esc(slug)}">${tpl(Lx.pay, { a: money(tt.net, biz.devise, lang) })}</a>
-       <p class="note">${tpl(Lx.stripe, { m: moyens || "Stripe" })}</p>`
+       <p class="note">${tpl(Lx.stripe, { m: mStripe || "Stripe" })}</p>`
+      + (mManual ? `<p class="note">${tpl(Lx.manual, { m: mManual })}</p>` : "")
     : "";
 
   const avNote = isAvoir

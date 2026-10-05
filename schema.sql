@@ -17,3 +17,4 @@ CREATE TABLE IF NOT EXISTS portal (
 -- Base existante (avant les relances e-mail) :
 --   ALTER TABLE portal ADD COLUMN remind_count INTEGER DEFAULT 0;
 --   ALTER TABLE portal ADD COLUMN remind_at INTEGER;
+--   ALTER TABLE portal ADD COLUMN owner TEXT;  -- vague 2 : preuve de possession

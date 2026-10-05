@@ -150,6 +150,12 @@ const unb64u = function (str) {
   const t = String(str).replace(/-/g, "+").replace(/_/g, "/") + "===".slice((String(str).length + 3) % 4);
   return Uint8Array.from(atob(t), function (c) { return c.charCodeAt(0); });
 };
+/* Empreinte SHA-256 (preuve de possession du portail) : le serveur ne stocke
+   jamais la clé appareil, seulement son hash hexadécimal. */
+async function sha256hex(s) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(s || "")));
+  return Array.from(new Uint8Array(d), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+}
 async function hmacKey(env) {
   const raw = new TextEncoder().encode("encaisse-sub-v1:" + (env.STRIPE_SECRET_KEY || ""));
   return crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
@@ -291,11 +297,18 @@ async function postPortal(ctx) {
   const slug = typeof b.slug === "string" && /^[0-9a-f]{24}$/.test(b.slug) ? b.slug : newSlug();
   const hash = typeof b.hash === "string" ? b.hash.slice(0, 40) : "";
   const now = Date.now();
+  /* Preuve de possession (vague 2) : clé aléatoire générée par l'appareil
+     (jamais versionnée, jamais exportée). Adoption au premier partage avec
+     clé ; ensuite, sans la clé, ni écrasement ni relance — même avec le slug. */
+  const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
+  const owner = key ? await sha256hex(key) : "";
   try {
+    const prev = await env.DB.prepare("SELECT owner FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
+    if (prev && prev.owner && prev.owner !== owner) return json({ error: "acces_refuse" }, 403);
     await env.DB.prepare(
-      "INSERT INTO portal (slug, payload, hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?) " +
-      "ON CONFLICT(slug) DO UPDATE SET payload = excluded.payload, hash = excluded.hash, updated_at = excluded.updated_at"
-    ).bind(slug, payload, hash, now, now).run();
+      "INSERT INTO portal (slug, payload, hash, owner, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) " +
+      "ON CONFLICT(slug) DO UPDATE SET payload = excluded.payload, hash = excluded.hash, updated_at = excluded.updated_at, owner = COALESCE(portal.owner, excluded.owner)"
+    ).bind(slug, payload, hash, owner || null, now, now).run();
     /* L'appareil reste la source de vérité : s'il déclare la facture payée
        (encaissement cash/virement constaté à la main), le serveur aligne
        paid_at pour que le lien client et /api/pay suivent — jamais de double
@@ -327,9 +340,13 @@ async function postRemind(ctx) {
   const slug = typeof b.slug === "string" && /^[0-9a-f]{24}$/.test(b.slug) ? b.slug : "";
   if (!slug) return json({ error: "slug_invalide" }, 400);
   const row = await env.DB.prepare(
-    "SELECT payload, paid_at, remind_count, remind_at FROM portal WHERE slug = ?"
+    "SELECT payload, paid_at, remind_count, remind_at, owner FROM portal WHERE slug = ?"
   ).bind(slug).first();
   if (!row) return json({ error: "document_introuvable" }, 404);
+  if (row.owner) {
+    const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
+    if (!key || await sha256hex(key) !== row.owner) return json({ error: "acces_refuse" }, 403);
+  }
   let p;
   try { p = JSON.parse(row.payload); } catch (e) { return json({ error: "document_corrompu" }, 500); }
   const d = p.doc || {};

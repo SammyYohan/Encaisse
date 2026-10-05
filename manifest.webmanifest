@@ -1,7 +1,7 @@
 {
-  "name": "Encaisse — Quote → Compliant invoice → Paid",
+  "name": "Encaisse — Quote → Invoice → Paid",
   "short_name": "Encaisse",
-  "description": "Quote in 60s, compliant e-invoice (Factur-X / Peppol / QR-bill / US sales tax), Stripe payment link, guided reminders. Offline-first.",
+  "description": "Quote in 60s, Quote in 60s, invoice with your country's legal mentions, Stripe payment link, guided reminders. Offline-first.",
   "lang": "fr",
   "dir": "ltr",
   "start_url": ".",

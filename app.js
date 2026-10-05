@@ -33,7 +33,7 @@ const PAYS={
 const MOYENS={
   stripe_cb:{fr:"Carte bancaire (Stripe)",en:"Card (Stripe)"},
   sepa:{fr:"Prélèvement SEPA (Stripe)",en:"SEPA Direct Debit (Stripe)"},
-  twint:{fr:"TWINT (Stripe)",en:"TWINT (Stripe)"},
+  twint:{fr:"TWINT",en:"TWINT"},
   ach:{fr:"Prélèvement ACH (Stripe)",en:"ACH Direct Debit (Stripe)"},
   virement:{fr:"Virement bancaire",en:"Bank transfer"},
   especes:{fr:"Espèces",en:"Cash"}
@@ -91,6 +91,10 @@ function getDocUrl(docId){
    d'un partage explicite (aperçu seul = rien ne quitte l'appareil).
    L'appareil reste la source de vérité ; D1 reçoit une copie révocable. ---------- */
 function fnv1a(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return(h>>>0).toString(36)}
+/* Clé propriétaire de l'appareil (vague 2) : prouve au serveur que les écritures
+   portail/relance viennent du pro qui a créé le partage. Générée localement,
+   jamais versionnée, jamais dans l'export ; le serveur ne stocke que son empreinte. */
+function ownerKey(){try{let k=localStorage.getItem("encaisse.owner");if(!/^[0-9a-f]{64}$/.test(k||"")){try{const b=crypto.getRandomValues(new Uint8Array(32));k=Array.from(b,x=>x.toString(16).padStart(2,"0")).join("")}catch(e){k=Array.from({length:64},()=>"0123456789abcdef"[Math.floor(Math.random()*16)]).join("")}localStorage.setItem("encaisse.owner",k)}return k}catch(e){return ""}}
 const BLOB_MAX=400000; /* ~300 ko d'image : au-delà, la photo n'est pas publiée */
 function portalPayload(d){
   const doc=JSON.parse(JSON.stringify(d));
@@ -120,7 +124,7 @@ async function ensurePortal(d,silent){
     const timer=setTimeout(()=>ctrl.abort(),15000);
     const r=await fetch(site+"/api/portal",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({slug:d.portal?.slug||"",hash:h,...payload}),
+      body:JSON.stringify({slug:d.portal?.slug||"",hash:h,key:ownerKey(),...payload}),
       signal:ctrl.signal});
     clearTimeout(timer);
     const j=await r.json().catch(()=>({}));
@@ -1127,7 +1131,7 @@ function openView(id){
             ? `<strong>${T("Avoir client")}</strong>
                ${T("Avoir au titre de la facture {n} — consultez-le et conservez ce document.",{n:d.avoirSourceNum||"—"})}`
             : `<strong>${T("Règlement sécurisé par Stripe")}</strong>
-               ${T("Scannez ce QR code pour ouvrir la facture et payer en 1 clic (carte, SEPA, ACH, TWINT).")}`}
+               ${T("Scannez ce QR code pour ouvrir la facture et payer en 1 clic (carte, SEPA, ACH).")}`}
           <br><small style="color:var(--mut)" id="viewLink" data-u="${esc(payUrl)}">${T("Lien direct")} : ${esc(payUrl)}</small>
         </div>
       </div>
@@ -1251,13 +1255,14 @@ async function openRelance(id){
   if(srvBtn)srvBtn.onclick=async()=>{
     srvBtn.disabled=true;const old=srvBtn.textContent;srvBtn.textContent=T("Envoi…");
     try{
-      const r=await fetch("/api/remind",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:d.portal?.slug||""})});
+      const r=await fetch("/api/remind",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:d.portal?.slug||"",key:ownerKey()})});
       const j2=await r.json().catch(()=>({}));
       if(r.ok&&j2.ok){bump();haptic([20,40]);closeSheet();toast(T("Relance e-mail envoyée ✓ ({n})",{n:j2.count}));return}
       toast(
         r.status===429?T("Relance déjà envoyée il y a moins de 3 jours.")
         :r.status===409?T("Facture déjà payée — relance annulée.")
         :r.status===503?T("Service e-mail non configuré — utilise le bouton E-mail ci-dessous.")
+        :r.status===403?T("Partage protégé — rouvre la fiche depuis cet appareil.")
         :r.status===400?T("Ce client n'a pas d'e-mail : complète sa fiche.")
         :T("Envoi impossible — réessaie plus tard."));
     }catch{toast(T("Connexion requise pour envoyer."))}
@@ -1451,6 +1456,17 @@ function bind(){
     const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="encaisse-export.json";a.click();
     toast(T("Export téléchargé ✓"));
+  };
+  /* Export comptable (CSV point-virgule, BOM Excel) : documents non-démo,
+     montants en centimes + devise — lisible par tout comptable. */
+  const csvBtn=$("#csvBtn");
+  if(csvBtn)csvBtn.onclick=()=>{
+    const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+    const rows=[["numero","type","client","emis","echeance","statut","ht_centimes","tva_centimes","ttc_centimes","acompte_centimes","net_centimes","devise"].join(";")];
+    S.docs.filter(d=>!d.demo).forEach(d=>{const t=totals(d);rows.push([d.numero,d.type,d.client,d.emis,d.eche,d.statut,t.ht,t.tva,t.ttc,t.acompte,t.net,S.biz.devise].map(q).join(";"))});
+    const blob=new Blob(["\ufeff"+rows.join("\n")],{type:"text/csv;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`encaisse-compta-${todayISO().slice(0,7)}.csv`;a.click();
+    toast(T("Export CSV téléchargé ✓"));
   };
   const impBtn=$("#importBtn"), impFile=$("#importFile");
   if(impBtn&&impFile){
