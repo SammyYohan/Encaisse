@@ -10,5 +10,4 @@ pages_build_output_dir = "."
 [[d1_databases]]
 binding = "DB"
 database_name = "encaisse"
-# À remplacer par l'UUID affiché par `npx wrangler d1 create encaisse`.
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "1338a01b-3600-45ad-a246-77ea9e9135e2"
