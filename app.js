@@ -1523,7 +1523,8 @@ function bind(){
 
   $("#exportBtn").onclick=()=>{
     const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="encaisse-export.json";a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="encaisse-export.json";document.body.appendChild(a);a.click();
+    setTimeout(()=>{try{URL.revokeObjectURL(a.href)}catch{}a.remove()},4000);
     toast(T("Export téléchargé ✓"));
   };
   /* Export comptable (CSV point-virgule, BOM Excel) : documents non-démo,
@@ -1534,7 +1535,8 @@ function bind(){
     const rows=[["numero","type","client","emis","echeance","statut","ht_centimes","tva_centimes","ttc_centimes","acompte_centimes","net_centimes","devise"].join(";")];
     S.docs.filter(d=>!d.demo).forEach(d=>{const t=totals(d);rows.push([d.numero,d.type,d.client,d.emis,d.eche,d.statut,t.ht,t.tva,t.ttc,t.acompte,t.net,S.biz.devise].map(q).join(";"))});
     const blob=new Blob(["\ufeff"+rows.join("\n")],{type:"text/csv;charset=utf-8"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`encaisse-compta-${todayISO().slice(0,7)}.csv`;a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`encaisse-compta-${todayISO().slice(0,7)}.csv`;document.body.appendChild(a);a.click();
+    setTimeout(()=>{try{URL.revokeObjectURL(a.href)}catch{}a.remove()},4000);
     toast(T("Export CSV téléchargé ✓"));
   };
   const bkNow=$("#bkNowBtn");if(bkNow)bkNow.onclick=()=>{bkDirty=true;flushBackup(false)};
