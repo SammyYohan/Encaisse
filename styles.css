@@ -8,7 +8,7 @@
 }
 *{box-sizing:border-box}html,body{height:100%}
 body{margin:0;font-family:var(--f);background:radial-gradient(1200px 600px at 20% -10%,#d1fae5 0%,transparent 60%),radial-gradient(1000px 500px at 90% 0%,#ddd6fe 0%,transparent 55%),var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
-.stage{min-height:100dvh;display:grid;place-items:start center;padding:18px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.stage{min-height:100dvh;display:grid;place-items:start center;padding:calc(18px + env(safe-area-inset-top,0px)) 12px calc(10px + env(safe-area-inset-bottom,0px))}
 /* La carte remplit le viewport (moins les marges de la stage). Le dock (.tabs),
    le FAB et le toast sont en position:fixed : toujours visibles en bas d'écran. */
 .phone{position:relative;width:min(480px,100%);min-height:calc(100dvh - 29px - env(safe-area-inset-bottom,0px));background:var(--soft);border-radius:28px;overflow:hidden;box-shadow:var(--sh);border:1px solid #fff;isolation:isolate}
