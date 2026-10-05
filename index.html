@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Encaisse">
 <meta property="og:type" content="website">
@@ -185,6 +186,12 @@
         <div class="row"><button class="btn small" id="exportBtn" type="button" data-i18n="Exporter JSON">Exporter JSON</button><button class="btn small ghost" id="csvBtn" type="button" data-i18n="Exporter CSV">Exporter CSV</button><button class="btn small ghost" id="importBtn" type="button" data-i18n="Importer JSON">Importer JSON</button><button class="btn small ghost danger" id="resetBtn" type="button" data-i18n="Réinitialiser démo">Réinitialiser démo</button></div>
         <div class="row"><button class="btn small ghost" id="installBtn2" type="button" data-i18n="📲 Installer l'app">📲 Installer l'app</button></div>
         <input type="file" id="importFile" accept=".json" hidden>
+      </div>
+      <div class="card">
+        <h3 data-i18n="Sauvegarde en ligne chiffrée">Sauvegarde en ligne chiffrée</h3>
+        <p class="muted" data-i18n="Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire.">Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire.</p>
+        <div class="row"><button class="btn small" id="bkNowBtn" type="button" data-i18n="Sauvegarder maintenant">Sauvegarder maintenant</button><button class="btn small ghost" id="bkCodeBtn" type="button" data-i18n="Code de récupération">Code de récupération</button><button class="btn small ghost" id="bkRestoreBtn" type="button" data-i18n="Restaurer">Restaurer</button></div>
+        <p class="muted" id="bkState" style="font-size:12px;margin:8px 0 0"></p>
       </div>
       <div class="card">
         <h3 data-i18n="Légal">Légal</h3>

@@ -141,6 +141,71 @@ async function ensurePortal(d,silent){
   }
 }
 
+/* ---------- sauvegarde chiffrée en ligne, zéro-lecture (vague 3 : synchro sans compte) ----------
+   Tout l'état S est chiffré en AES-GCM sur l'appareil AVANT envoi : le serveur ne
+   stocke qu'un blob opaque. Restauration multi-appareils via le code de récupération
+   (= la clé propriétaire). Sans SITE_URL : 100 % local, rien ne part. */
+const BK_LS="encaisse.backup";
+const b64e=a=>{let s="";a.forEach(x=>s+=String.fromCharCode(x));return btoa(s)};
+const b64d=s=>Uint8Array.from(atob(String(s||"")),c=>c.charCodeAt(0));
+function backupSite(){return String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"")}
+async function backupKey(){try{const k=ownerKey();if(!k||!crypto.subtle)return null;const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("encaisse-backup-v1:"+k));return crypto.subtle.importKey("raw",h,{name:"AES-GCM"},false,["encrypt","decrypt"])}catch(e){return null}}
+async function backupEncrypt(){const k=await backupKey();if(!k||!crypto.getRandomValues)return null;const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},k,new TextEncoder().encode(JSON.stringify(S))));return{iv:b64e(iv),data:b64e(ct)}}
+async function backupDecrypt(p){const k=await backupKey();if(!k||!p||!p.iv||!p.data)return null;try{const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(p.iv)},k,b64d(p.data));return JSON.parse(new TextDecoder().decode(pt))}catch(e){return null}}
+let bkBusy=false,bkDirty=false,bkTimer=null;
+function bkState(){try{return JSON.parse(localStorage.getItem(BK_LS)||"{}")}catch(e){return{}}}
+function bkStateSave(s){try{localStorage.setItem(BK_LS,JSON.stringify(s))}catch(e){}}
+function scheduleBackup(){if(!backupSite())return;bkDirty=true;try{clearTimeout(bkTimer)}catch(e){}bkTimer=setTimeout(()=>{flushBackup(true)},45000)}
+async function flushBackup(auto){
+  if(bkBusy)return;if(auto&&!bkDirty)return;
+  const site=backupSite();
+  if(!site){if(!auto)toast(T("Connexion requise pour sauvegarder."));return}
+  const enc=await backupEncrypt();
+  if(!enc){if(!auto)toast(T("Échec de sauvegarde — réessaie plus tard."));return}
+  bkBusy=true;
+  try{
+    const r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"push",key:ownerKey(),blob:JSON.stringify(enc),rev:Date.now()})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||("http_"+r.status));
+    bkDirty=false;bkStateSave({rev:j.rev,at:Date.now()});syncBkState();
+    if(!auto)toast(T("Sauvegarde envoyée ✓"));
+  }catch(e){console.warn("Backup :",e);if(!auto)toast(T("Échec de sauvegarde — réessaie plus tard."))}
+  bkBusy=false;
+}
+function syncBkState(){const el=$("#bkState");if(!el)return;const s=bkState();el.textContent=s.at?T("Dernière sauvegarde : {d}",{d:new Date(s.at).toLocaleString(locale())}):T("Jamais sauvegardé")}
+function openBackupCode(){
+  const k=ownerKey()||"";
+  const pretty=k.replace(/(.{4})/g,"$1 ").trim();
+  openSheet(`<h2>${T("Code de récupération")}</h2><p class="sub">${T("Ne le perds pas : sans lui, pas de restauration.")}</p><div class="form"><div class="wa-preview" id="bkCodeView">${esc(pretty)}</div><div class="row" style="margin-top:10px"><button class="btn primary" id="bkCopy" type="button" style="flex:1">${T("Copier le code")}</button><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div></div>`);
+  $("#cancelS").onclick=closeSheet;
+  const cp=$("#bkCopy");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(k);toast(T("Code copié ✓"))}catch{toast(T("Copie manuelle"))}};
+}
+function openBackupRestore(){
+  const site=backupSite();if(!site){toast(T("Connexion requise pour sauvegarder."));return}
+  openSheet(`<h2>${T("Restaurer")}</h2><p class="sub">${T("Colle ton code de récupération :")}</p><div class="form"><label>${T("Code de récupération")}<input id="bkCode" autocomplete="off" placeholder="a1b2…" maxlength="80"></label><div class="row"><button class="btn primary" id="bkGo" type="button" style="flex:1">${T("Restaurer")}</button><button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button></div></div>`);
+  $("#cancelS").onclick=closeSheet;
+  $("#bkGo").onclick=async()=>{
+    const code=String($("#bkCode").value||"").toLowerCase().replace(/[^0-9a-f]/g,"");
+    if(!/^[0-9a-f]{64}$/.test(code)){toast(T("Code invalide (64 caractères)."));return}
+    const btn=$("#bkGo");btn.disabled=true;
+    try{
+      const r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"pull",key:code})});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok||!j.blob){toast(r.status===404?T("Sauvegarde introuvable pour ce code."):T("Échec de sauvegarde — réessaie plus tard."));btn.disabled=false;return}
+      /* La clé de déchiffrement, c'est le code saisi : on l'adopte comme clé
+         d'appareil (sans elle, le jeton d'abonnement lié ne suivrait pas). */
+      try{localStorage.setItem("encaisse.owner",code)}catch(e){}
+      const data=await backupDecrypt(JSON.parse(j.blob));
+      if(!data||!data.biz||!Array.isArray(data.docs)||!Array.isArray(data.clients)){toast(T("Sauvegarde illisible."));btn.disabled=false;return}
+      const when=j.updated_at?new Date(j.updated_at).toLocaleString(locale()):"";
+      if(!confirm(T("Écraser cet appareil avec la sauvegarde du {d} ?",{d:when}))){btn.disabled=false;return}
+      data.docs.forEach(d=>{d.items=(d.items||[]).map(i=>({lib:normLib(i.lib),q:num(i.q)||1,p:num(i.p)}));d.tva=num(d.tva)});
+      S=data;migrateSeq();migrateMoyens();save();closeSheet();syncSettings();render();toast(T("Restauration terminée ✓"));
+    }catch(e){toast(T("Connexion requise pour sauvegarder."))}
+    btn.disabled=false;
+  };
+}
+
 /* ---------- monétisation : 1 prix par zone, marges calculées ---------- */
 const PLANS={
   EUR:{zone:{fr:"Europe · €",en:"Europe · €"},dev:"€",soloM:19,proM:39,soloA:182,proA:374,fee:.015,feeFixe:.25,infra:.6},
@@ -215,7 +280,7 @@ function detectLang(){
   try{const st=localStorage.getItem("encaisse.lang");if(st==="en"||st==="fr")return st}catch{}
   return (navigator.language||"fr").toLowerCase().startsWith("fr")?"fr":"en";
 }
-function save(){try{localStorage.setItem(LS,JSON.stringify(S));return true}catch(err){toast(T("Stockage plein : supprime une photo ou un vieux document"));return false}}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S));scheduleBackup();return true}catch(err){toast(T("Stockage plein : supprime une photo ou un vieux document"));return false}}
 /* Pas encore de données : la démo est créée à la fin de l'onboarding
    (voir finishOnb), UNE SEULE FOIS, avec le bon pays et le bon secteur. */
 let needSeed=false;
@@ -1287,6 +1352,7 @@ function syncSettings(){
   if(!S.biz.moyens.length)S.biz.moyens=[...allowed];
   $("#payToggles").innerHTML=`<div class="preset-label" style="width:100%;margin-bottom:6px">${T("Moyens de paiement acceptés")} (${T("Stripe uniquement")}) :</div>`+
     allowed.map(k=>`<button type="button" class="${S.biz.moyens.includes(k)?"is-on":""}" data-m="${k}">${esc(mLabel(k))}</button>`).join("");
+  syncBkState();
 }
 
 /* ---------- portail client ---------- */
@@ -1308,7 +1374,10 @@ async function handleCheckoutReturn(){
   if(p.get("billing")==="cancel"){clean("billing");toast(T("Paiement annulé — réessaie quand tu veux."));return}
   const sid=p.get("session_id");if(!sid)return;
   try{
-    const r=await fetch("/api/sub?session_id="+encodeURIComponent(sid));
+    /* Liaison à l'appareil (vague 3, anti-partage) : le jeton émis sera lié
+       à cette preuve ; copié ailleurs, il sera refusé (403). */
+    const oh=ownerKey()||"";
+    const r=await fetch("/api/sub?session_id="+encodeURIComponent(sid)+(oh?"&oh="+oh:""));
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.ok&&j.token){
       S.sub={plan:j.plan,cycle:j.cycle,since:j.since,exp:j.exp,customer:j.customer,token:j.token,checkedAt:Date.now()};
@@ -1333,7 +1402,7 @@ async function refreshSub(){
   if(Date.now()-(s.checkedAt||0)<6*3600e3)return;
   s.checkedAt=Date.now();
   try{
-    const r=await fetch("/api/sub",{headers:{"X-Sub-Token":s.token}});
+    const r=await fetch("/api/sub",{headers:{"X-Sub-Token":s.token,"X-Sub-Oh":ownerKey()||""}});
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.ok&&j.token){s.exp=j.exp;s.token=j.token;save();return}
     if(r.status===401||r.status===403){
@@ -1468,6 +1537,9 @@ function bind(){
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`encaisse-compta-${todayISO().slice(0,7)}.csv`;a.click();
     toast(T("Export CSV téléchargé ✓"));
   };
+  const bkNow=$("#bkNowBtn");if(bkNow)bkNow.onclick=()=>{bkDirty=true;flushBackup(false)};
+  const bkCode=$("#bkCodeBtn");if(bkCode)bkCode.onclick=openBackupCode;
+  const bkRes=$("#bkRestoreBtn");if(bkRes)bkRes.onclick=openBackupRestore;
   const impBtn=$("#importBtn"), impFile=$("#importFile");
   if(impBtn&&impFile){
     impBtn.onclick=()=>impFile.click();
@@ -1496,6 +1568,8 @@ function bind(){
 
   const up=()=>{const off=!navigator.onLine;const em=$("#dotNet").querySelector("em");if(em)em.textContent=off?T("Hors-ligne · tout marche"):T("En ligne")};
   window.addEventListener("online",up);window.addEventListener("offline",up);up();
+  window.addEventListener("online",()=>flushBackup(true));
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)flushBackup(true)});
 
   const db=$("#demoBar");if(db)db.hidden=paymentsReady();
 

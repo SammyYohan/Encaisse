@@ -4,7 +4,8 @@
    POST /api/checkout  {kind:"sub", plan, cycle, zone, origin} → {url} Stripe Checkout (abonnement)
    POST /api/portal    {slug?, hash, doc, biz, cli?, lang}     → {slug} page client /r/:slug (D1)
    POST /api/remind    {slug}
-    POST /api/stripe-webhook (Stripe-Signature)                -> confirme un paiement sans retour navigateur                                  → envoie la relance e-mail (Brevo)
+    POST /api/stripe-webhook (Stripe-Signature)                -> confirme un paiement sans retour navigateur
+    POST /api/backup        {op:"push"|"pull", key, ...}          -> sauvegarde chiffrée zéro-lecture                                  → envoie la relance e-mail (Brevo)
    GET  /api/sub       ?session_id=… → vérifie l'achat, émet le jeton d'abonnement
                        X-Sub-Token   → vérifie/rafraîchit le jeton (HMAC-SHA256)
    GET  /api/pay       ?slug=…       → 307 vers Stripe Checkout (encaissement d'une facture)
@@ -28,7 +29,7 @@ const CUR = { "€": "EUR", CHF: "CHF", $: "USD" };
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, X-Sub-Token",
+  "Access-Control-Allow-Headers": "Content-Type, X-Sub-Token, X-Sub-Oh",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Max-Age": "86400"
 };
@@ -211,6 +212,7 @@ export async function onRequestPost(ctx) {
   if (seg === "portal") return postPortal(ctx);
   if (seg === "remind") return postRemind(ctx);
   if (seg === "stripe-webhook") return postStripeWebhook(ctx);
+  if (seg === "backup") return postBackup(ctx);
   if (seg === "sub" || seg === "pay") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
 }
@@ -219,7 +221,7 @@ export async function onRequestGet(ctx) {
   const seg = routeOf(ctx.request);
   if (seg === "sub") return getSub(ctx);
   if (seg === "pay") return getPay(ctx);
-  if (seg === "checkout" || seg === "portal" || seg === "remind" || seg === "stripe-webhook") return json({ error: "methode_invalide" }, 405);
+  if (seg === "checkout" || seg === "portal" || seg === "remind" || seg === "stripe-webhook" || seg === "backup") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
 }
 
@@ -398,12 +400,16 @@ async function getSub(ctx) {
   if (rateLimited("sb:" + ipOf(request), 60)) return json({ error: "trop_de_requetes" }, 429);
   if (!env.STRIPE_SECRET_KEY) return json({ error: "stripe_non_configure" }, 503);
   const url = new URL(request.url);
+  const oh = url.searchParams.get("oh") || request.headers.get("X-Sub-Oh") || "";
   const sid = url.searchParams.get("session_id");
-  if (sid) return subFromSession(env, sid);
+  if (sid) return subFromSession(env, sid, oh);
   const token = request.headers.get("X-Sub-Token") || url.searchParams.get("token");
   if (!token) return json({ error: "jeton_requis" }, 400);
   const p = await verifyToken(env, token);
   if (!p || !p.sid) return json({ error: "jeton_invalide" }, 401);
+  /* Liaison a l'appareil (vague 3, anti-partage) : un jeton emis avec une preuve
+     ne fonctionne qu'avec elle. Jetons historiques (sans oh) : acceptes comme avant. */
+  if (p.oh && p.oh !== oh) return json({ error: "appareil_inconnu" }, 403);
   const r = await stripe(env, "subscriptions/" + encodeURIComponent(p.sid), "GET");
   /* 404/400 = abonnement réellement introuvable → 403 (le front déclasse).
      5xx/429 = transitoire → 502, le front GARDE le plan courant. */
@@ -415,7 +421,7 @@ async function getSub(ctx) {
   return json({ ok: true, plan: p.plan, cycle: p.cycle, exp: exp, token: newTok });
 }
 
-async function subFromSession(env, sessionId) {
+async function subFromSession(env, sessionId, oh) {
   if (!/^cs_[A-Za-z0-9_]{4,80}$/.test(String(sessionId || ""))) return json({ ok: false, error: "session_invalide" }, 400);
   const r = await stripe(env, "checkout/sessions/" + encodeURIComponent(sessionId) + "?expand[]=subscription", "GET");
   const s = r.body || {};
@@ -431,7 +437,8 @@ async function subFromSession(env, sessionId) {
   const cycle = md.cycle === "yearly" ? "yearly" : "monthly";
   const customer = typeof sub.customer === "string" ? sub.customer : (sub.customer && sub.customer.id) || "";
   const exp = subExp(sub);
-  const token = await signToken(env, { v: 1, sid: sub.id, plan: plan, cycle: cycle, customer: customer, exp: exp });
+  const oh64 = /^[0-9a-f]{64}$/i.test(oh || "") ? String(oh).toLowerCase() : "";
+  const token = await signToken(env, { v: 1, sid: sub.id, plan: plan, cycle: cycle, customer: customer, exp: exp, oh: oh64 });
   return json({ ok: true, plan: plan, cycle: cycle, since: new Date().toISOString().slice(0, 10), exp: exp, customer: customer, token: token });
 }
 
@@ -550,4 +557,37 @@ async function postStripeWebhook(ctx) {
     }
   } catch (e) {}
   return json({ received: true, paid: true });
+}
+
+/* POST /api/backup — sauvegarde chiffrée zéro-lecture (vague 3 : synchro sans compte).
+   L'appareil chiffre en AES-GCM AVANT envoi ; le serveur ne voit qu'un blob opaque
+   (ni Cloudflare ni nous ne pouvons le lire). Auth = preuve de possession comme
+   /api/portal. Last-writer-wins. Table créée seule si besoin (zéro migration manuelle). */
+async function postBackup(ctx) {
+  const { request, env } = ctx;
+  if (!env.DB) return json({ error: "portail_non_configure" }, 503);
+  if (rateLimited("bk:" + ipOf(request), 200)) return json({ error: "trop_de_requetes" }, 429);
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS backup (owner TEXT PRIMARY KEY, blob TEXT NOT NULL, rev INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL)").run().catch(function () {});
+  let b;
+  try { b = await request.json(); } catch (e) { return json({ error: "json_invalide" }, 400); }
+  const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
+  if (!key) return json({ error: "cle_requise" }, 400);
+  const owner = await sha256hex(key);
+  if (b.op === "pull") {
+    const row = await env.DB.prepare("SELECT blob, rev, updated_at FROM backup WHERE owner = ?").bind(owner).first().catch(function () { return null; });
+    if (!row) return json({ error: "sauvegarde_introuvable" }, 404);
+    return json({ ok: true, blob: row.blob, rev: row.rev, updated_at: row.updated_at });
+  }
+  if (b.op !== "push") return json({ error: "requete_invalide" }, 400);
+  const blob = String(b.blob || "");
+  if (!blob) return json({ error: "requete_invalide" }, 400);
+  if (blob.length > 2000000) return json({ error: "trop_gros" }, 413);
+  const rev = Math.max(1, Math.floor(Number(b.rev) || 0) || Date.now());
+  const now = Date.now();
+  const r = await env.DB.prepare(
+    "INSERT INTO backup (owner, blob, rev, updated_at) VALUES (?, ?, ?, ?) " +
+    "ON CONFLICT(owner) DO UPDATE SET blob = excluded.blob, rev = excluded.rev, updated_at = excluded.updated_at"
+  ).bind(owner, blob, rev, now).run().catch(function () { return null; });
+  if (!r) return json({ error: "stockage_invalide" }, 500);
+  return json({ ok: true, rev: rev });
 }
