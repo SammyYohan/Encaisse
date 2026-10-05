@@ -8,9 +8,11 @@
 }
 *{box-sizing:border-box}html,body{height:100%}
 body{margin:0;font-family:var(--f);background:radial-gradient(1200px 600px at 20% -10%,#d1fae5 0%,transparent 60%),radial-gradient(1000px 500px at 90% 0%,#ddd6fe 0%,transparent 55%),var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
-.stage{min-height:100dvh;display:grid;place-items:start center;padding:18px 12px calc(30px + env(safe-area-inset-bottom,0px))}
-.phone{position:relative;width:min(480px,100%);min-height:min(920px,94dvh);background:var(--soft);border-radius:28px;overflow:hidden;box-shadow:var(--sh);border:1px solid #fff;isolation:isolate}
-@media(min-width:560px){.phone{min-height:860px}}
+.stage{min-height:100dvh;display:grid;place-items:start center;padding:18px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+/* La carte remplit le viewport (moins les marges de la stage). Le dock (.tabs),
+   le FAB et le toast sont en position:fixed : toujours visibles en bas d'écran. */
+.phone{position:relative;width:min(480px,100%);min-height:calc(100dvh - 29px - env(safe-area-inset-bottom,0px));background:var(--soft);border-radius:28px;overflow:hidden;box-shadow:var(--sh);border:1px solid #fff;isolation:isolate}
+@media(min-width:560px){.phone{min-height:max(860px,calc(100dvh - 29px - env(safe-area-inset-bottom,0px)))}}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input,select,textarea{font:inherit;width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
 input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
@@ -106,11 +108,11 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .act-list .btn.danger{background:#fff5f5}
 
 /* tabs + fab */
-.tabs{position:absolute;left:12px;right:12px;bottom:12px;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:20px;padding:6px;box-shadow:var(--sh);z-index:6}
+.tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));width:min(456px,calc(100% - 48px));display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:20px;padding:6px;box-shadow:var(--sh);z-index:6}
 .tabs button{display:grid;place-items:center;gap:2px;font-size:11px;font-weight:800;color:var(--mut);padding:8px 4px;border-radius:14px}
 .tabs button i{font-style:normal;font-size:16px}
 .tabs button.is-on{background:var(--ink);color:#fff}
-.fab{position:absolute;right:18px;bottom:86px;z-index:7;display:flex;align-items:center;gap:6px;background:var(--ink);color:#fff;font-size:22px;font-weight:900;line-height:1;border-radius:99px;padding:13px 16px;box-shadow:0 12px 30px rgba(2,6,23,.35);transition:transform .15s}
+.fab{position:fixed;right:calc((100% - min(480px,100% - 24px))/2 + 18px);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:7;display:flex;align-items:center;gap:6px;background:var(--ink);color:#fff;font-size:22px;font-weight:900;line-height:1;border-radius:99px;padding:13px 16px;box-shadow:0 12px 30px rgba(2,6,23,.35);transition:transform .15s}
 .fab.off{display:none}
 .fab span{font-size:13px;font-weight:800}.fab:active{transform:scale(.94)}
 
@@ -150,7 +152,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .onb-top .brand{color:#fff}.onb-top .link{color:#e2e8f0}
 .onb-bar{height:4px;background:#ffffff22;margin:0 16px;border-radius:99px;position:relative;z-index:1;overflow:hidden}
 .onb-bar i{display:block;height:100%;width:25%;background:linear-gradient(90deg,#34d399,#a7f3d0);border-radius:99px;transition:width .4s ease}
-.onb-slides{flex:1;position:relative;z-index:1;padding:10px 20px 0;overflow:hidden}
+.onb-slides{flex:1;position:relative;z-index:1;padding:10px 20px 0;overflow-x:hidden;overflow-y:auto}
 .slide{display:none;animation:rise .4s ease}
 .slide.is-active{display:block}
 .slide h1{font-size:30px;line-height:1.08;margin:16px 0 10px;letter-spacing:-.02em}
@@ -207,7 +209,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .slide .fine{font-size:11.5px;color:#94a3b8}
 
 /* toast */
-.toast{position:absolute;left:50%;bottom:170px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 15px;border-radius:99px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:all .3s;z-index:30;max-width:90%;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(180px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 15px;border-radius:99px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:all .3s;z-index:30;max-width:90%;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
