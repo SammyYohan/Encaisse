@@ -8,11 +8,14 @@
 
 const L = {
   fr: {
-    devis: "Devis", facture: "Facture",
+    devis: "Devis", facture: "Facture", avoir: "Avoir",
     billed: "Facturé à", emitted: "Émis le", due: "Échéance", ref: "Réf. client",
+    srcFact: "Facture d'origine",
     desig: "Désignation", qty: "Qté", pu: "P.U.", ht: "Total HT",
     tva: "TVA", ttc: "Total TTC", acompte: "Acompte déjà réglé", net: "Net à payer",
     pending: "En attente de paiement", paid: "Payé ✓",
+    refunded: "Avoir remboursé ✓", waitAvoir: "Avoir émis — remboursement en cours",
+    avTxt: "Avoir au titre de la facture {n} — annule ou diminue son montant.",
     signed: "Bon pour accord signé ✓", signedOn: "Signé par le client le {d}",
     waitDevis: "Devis — en attente de votre accord",
     pay: "Payer {a} ✓", stripe: "Règlement sécurisé par Stripe — {m}",
@@ -25,11 +28,14 @@ const L = {
     m: { stripe_cb: "Carte bancaire", sepa: "Prélèvement SEPA", twint: "TWINT", ach: "Prélèvement ACH", virement: "Virement", especes: "Espèces" }
   },
   en: {
-    devis: "Quote", facture: "Invoice",
+    devis: "Quote", facture: "Invoice", avoir: "Credit note",
     billed: "Billed to", emitted: "Issued", due: "Due", ref: "Customer ref",
+    srcFact: "Original invoice",
     desig: "Description", qty: "Qty", pu: "Unit price", ht: "Subtotal",
     tva: "VAT", ttc: "Total incl. tax", acompte: "Deposit already paid", net: "Amount due",
     pending: "Awaiting payment", paid: "Paid ✓",
+    refunded: "Credit note refunded ✓", waitAvoir: "Credit note issued — refund in progress",
+    avTxt: "Credit note for invoice {n} — cancels or reduces its amount.",
     signed: "Approved & signed ✓", signedOn: "Signed by the customer on {d}",
     waitDevis: "Quote — awaiting your approval",
     pay: "Pay {a} ✓", stripe: "Secure payment by Stripe — {m}",
@@ -71,6 +77,35 @@ function totals(d) {
   const ttc = ht + tva;
   const acompte = Math.max(0, Number(d.acompteDeduction) || 0);
   return { ht, tva, ttc, acompte, net: Math.max(0, ttc - acompte) };
+}
+
+/* ---------- e-mails transactionnels (Brevo) — miroir de functions/api/[[route]].js ---------- */
+function parseFrom(v) {
+  const m = String(v || "").match(/^\s*([^<]*)<\s*([^>]+)\s*>$/);
+  return m ? { name: (m[1] || "Encaisse").trim().replace(/^"|"$/g, ""), email: m[2].trim() }
+           : { name: "Encaisse", email: String(v || "").trim() };
+}
+const isEmail = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v || ""));
+const emailConfigured = env => !!(env.BREVO_API_KEY && env.EMAIL_FROM);
+
+async function sendMail(env, to, subject, text, replyTo) {
+  if (!emailConfigured(env)) return false;
+  if (!isEmail(to)) return false;
+  const payload = {
+    sender: parseFrom(env.EMAIL_FROM),
+    to: [{ email: String(to) }],
+    subject: String(subject).slice(0, 200),
+    textContent: String(text).slice(0, 10000)
+  };
+  if (isEmail(replyTo)) payload.replyTo = { email: String(replyTo) };
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return res.ok;
+  } catch (e) { return false; }
 }
 
 /* ---------- gabarit ---------- */
@@ -131,6 +166,9 @@ function render(slug, row, p, opts) {
   const biz = p.biz || {};
   const tt = totals(d);
   const isDevis = d.type === "devis";
+  const isAvoir = d.type === "avoir";
+  /* Avoir : montants affichés en négatif (crédit) et AUCUN bouton de paiement. */
+  const neg = isAvoir ? "− " : "";
   const paid = !!row.paid_at || d.statut === "paye";
   const unite = d.unite ? " " + esc(d.unite) : "";
   const taxLabel = biz.pays === "US" ? "Sales tax" : Lx.tva;
@@ -139,23 +177,28 @@ function render(slug, row, p, opts) {
     <tr>
       <td>${esc(locv(l.lib, lang) || "")}</td>
       <td class="n">${fmtQ(l.q)}${unite}</td>
-      <td class="n">${money(l.p, biz.devise, lang)}</td>
-      <td class="n"><b>${money((Number(l.q) || 0) * (Number(l.p) || 0), biz.devise, lang)}</b></td>
+      <td class="n">${neg}${money(l.p, biz.devise, lang)}</td>
+      <td class="n"><b>${neg}${money((Number(l.q) || 0) * (Number(l.p) || 0), biz.devise, lang)}</b></td>
     </tr>`).join("");
 
   let banner = "";
   if (opts.justPaid) banner = `<div class="banner b-ok">${Lx.ok}</div>`;
   else if (opts.canceled) banner = `<div class="banner b-wait">${Lx.canceled}</div>`;
-  else if (paid) banner = `<div class="banner b-ok">${Lx.paid}</div>`;
+  else if (paid) banner = `<div class="banner b-ok">${isAvoir ? Lx.refunded : Lx.paid}</div>`;
   else if (isDevis && d.signature) banner = `<div class="banner b-ok">${Lx.signed}<br><small style="font-weight:400">${tpl(Lx.signedOn, { d: d.signedAt || d.emis || "" })}</small></div>`;
   else if (isDevis) banner = `<div class="banner b-wait">${Lx.waitDevis}</div>`;
+  else if (isAvoir) banner = `<div class="banner b-wait">${Lx.waitAvoir}</div>`;
   else banner = `<div class="banner b-wait">${Lx.pending}</div>`;
 
   const moyens = (Array.isArray(biz.moyens) ? biz.moyens : []).map(k => Lx.m[k] || k).join(", ");
 
-  const payBtn = (!paid && !isDevis && tt.net >= 50)
+  const payBtn = (!paid && d.type === "facture" && tt.net >= 50)
     ? `<a class="pay" href="/api/pay?slug=${esc(slug)}">${tpl(Lx.pay, { a: money(tt.net, biz.devise, lang) })}</a>
        <p class="note">${tpl(Lx.stripe, { m: moyens || "Stripe" })}</p>`
+    : "";
+
+  const avNote = isAvoir
+    ? `<p class="note">${tpl(Lx.avTxt, { n: d.avoirSourceNum || d.numero || "" })}</p>`
     : "";
 
   const proof = d.photo ? `<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:#667085;margin-bottom:4px">${Lx.proof}</div><img class="proof" src="${esc(d.photo)}" alt="${Lx.proof}"></div>` : "";
@@ -174,7 +217,7 @@ function render(slug, row, p, opts) {
 <meta name="robots" content="noindex,nofollow">
 <title>${esc(d.numero || "")} · ${esc(biz.nom || "Encaisse")}</title>
 <style>${CSS}</style></head><body><div class="wrap">
-<header><b>${esc(biz.nom || "Encaisse")}</b><span>${esc(isDevis ? Lx.devis : Lx.facture)} ${esc(d.numero || "")}</span></header>
+<header><b>${esc(biz.nom || "Encaisse")}</b><span>${esc(isDevis ? Lx.devis : isAvoir ? Lx.avoir : Lx.facture)} ${esc(d.numero || "")}</span></header>
 <div class="card">
   ${banner}
   <div class="party">
@@ -185,7 +228,9 @@ function render(slug, row, p, opts) {
     </div>
     <div style="text-align:right">
       <small>${Lx.emitted}</small>${esc(d.emis || "—")}
-      <small style="margin-top:6px">${Lx.due}</small>${esc(d.eche || "—")}
+      ${isAvoir
+        ? `<small style="margin-top:6px">${Lx.srcFact}</small>${esc(d.avoirSourceNum || "—")}`
+        : `<small style="margin-top:6px">${Lx.due}</small>${esc(d.eche || "—")}`}
     </div>
   </div>
   ${proof}
@@ -196,11 +241,12 @@ function render(slug, row, p, opts) {
     <tbody>${rows}</tbody>
   </table>
   <div class="tot">
-    <div><span>${Lx.ht}</span><span>${money(tt.ht, biz.devise, lang)}</span></div>
-    <div><span>${esc(taxLabel)} (${fmtQ(d.tva)}%)</span><span>${money(tt.tva, biz.devise, lang)}</span></div>
-    <div class="grand"><span>${Lx.ttc}</span><span>${money(tt.ttc, biz.devise, lang)}</span></div>
+    <div><span>${Lx.ht}</span><span>${neg}${money(tt.ht, biz.devise, lang)}</span></div>
+    <div><span>${esc(taxLabel)} (${fmtQ(d.tva)}%)</span><span>${neg}${money(tt.tva, biz.devise, lang)}</span></div>
+    <div class="grand"><span>${Lx.ttc}</span><span>${neg}${money(tt.ttc, biz.devise, lang)}</span></div>
     ${acompteRows}
   </div>
+  ${avNote}
   ${sig}
   ${payBtn}
 </div>
@@ -241,6 +287,29 @@ export async function onRequest(ctx) {
         justPaid = true;
       }
     } catch (e) { /* Stripe injoignable : la page reste affichée, sans badge */ }
+  }
+
+  /* Reçu au client par e-mail dès le paiement confirmé (best-effort :
+     jamais bloquant pour l'affichage de la page). */
+  if (justPaid && emailConfigured(env)) {
+    try {
+      const pp = JSON.parse(row.payload);
+      const dd = pp.doc || {};
+      if (dd.type === "facture" && isEmail((pp.cli || {}).e)) {
+        const lg = pp.lang === "en" ? "en" : "fr";
+        const bb = pp.biz || {};
+        const tt2 = totals(dd);
+        const pageUrl = url.origin + "/r/" + slug;
+        const amt = money(tt2.net, bb.devise, lg);
+        const subject = lg === "en" ? "Payment received — " + (dd.numero || "") : "Paiement reçu — " + (dd.numero || "");
+        const body = lg === "en"
+          ? "Hello,\n\nWe confirm receipt of your payment of " + amt + " for invoice " + (dd.numero || "") +
+            ".\n\nYour receipt is available here: " + pageUrl + "\n\nThank you for your trust!\n— " + String(bb.nom || "")
+          : "Bonjour,\n\nNous confirmons la bonne réception de votre règlement de " + amt + " pour la facture " + (dd.numero || "") +
+            ".\n\nVotre reçu est disponible ici : " + pageUrl + "\n\nMerci pour votre confiance !\n— " + String(bb.nom || "");
+        await sendMail(env, pp.cli.e, subject, body, bb.contact || "");
+      }
+    } catch (e) { /* échec d'e-mail : sans conséquence sur la page */ }
   }
 
   let p;

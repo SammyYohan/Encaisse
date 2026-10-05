@@ -125,8 +125,8 @@ Everything lives in one JSON object `S`, persisted to `localStorage` under
 | `S.biz` | Business identity: `nom`, `pays`, `secteur`, `devise`, `moyens`, `adresse`, `contact`, `tvaId`, `iban` — **printed on every invoice** |
 | `S.sub` | Subscription: `{plan, cycle, since, exp, token, customer, checkedAt}` — `token` is an **HMAC-signed entitlement** issued by `/api/sub` after a real Stripe Checkout; refreshed when online (Stripe = source of truth), 14-day offline grace |
 | `S.clients` | `{id, nom, tel, email, adresse, tvaId}` |
-| `S.docs` | Quotes & invoices: `type`, `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `portal` (`{slug, hash}` — server publication ref), `demo` |
-| `S.seq` | Numbering counters, `{DEV:{YYYY:n}, FAC:{YYYY:n}}` |
+| `S.docs` | Quotes, invoices & credit notes: `type` (`devis` \| `facture` \| `avoir`), `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `avoirSourceId`/`avoirSourceNum`/`avoirNums` (credit-note links), `portal` (`{slug, hash}` — server publication ref), `demo` |
+| `S.seq` | Numbering counters, `{DEV:{YYYY:n}, FAC:{YYYY:n}, AVT:{YYYY:n}}` |
 
 Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`.
 
@@ -136,7 +136,8 @@ Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`.
 
 - Counters are chronological and **never reset to zero**, including after
   *Reset demo* — invoices must not repeat numbers.
-- Numbers are produced by `nextNum(type)` → `FAC-2026-0001`, `DEV-2026-0001`.
+- Numbers are produced by `nextNum(type)` → `FAC-2026-0001`, `DEV-2026-0001`,
+  `AVT-2026-0001` (credit notes get their own dedicated **AVT** series).
 - Seeding demo data runs **once**, at the end of onboarding (`needSeed` flag), so the
   counters are not advanced twice.
 
@@ -145,12 +146,15 @@ Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`.
 | | Free | Solo | Pro |
 |---|---|---|---|
 | Quotes | **unlimited** | unlimited | unlimited |
+| Credit notes (avoirs) | **unlimited** | unlimited | unlimited |
 | Invoices / month | **3** (`FREE_MONTHLY`) | unlimited | unlimited |
 | Monthly — EUR 🇪🇺 / USD 🇺🇸 | 0 | 19 | 39 |
 | Monthly — CHF 🇨🇭 | 0 | 29 | 59 |
 | Yearly (−20 %) | 0 | 182 / 278 | 374 / 566 |
 
 - Quotes are the acquisition channel → never gated.
+- Avoirs are the *legal correction* of an invoice already issued (refund/cancel)
+  → never gated either; they can only be created from an existing invoice.
 - `canCreate(type)` gates **only** `type === "facture"`, and is checked on save,
   convert-to-invoice and duplicate.
 - Stripe fee assumptions used by the margin display: 1.5 % + €0.25 (EUR),
@@ -184,7 +188,8 @@ Do not translate the key. The dictionary must stay complete — check with a
 
 ### 4.6 Offline & caching
 
-`sw.js` caches the whole app (`encaisse-v4`). `config.js`, `i18n.js` and `sw.js`
+`sw.js` caches the whole app (constant `C`, currently `encaisse-v8`).
+`config.js`, `i18n.js` and `sw.js`
 are **network-first** so a key or a translation ships immediately even with a stale
 cache. **Bump the `C` constant on every release.**
 
@@ -228,7 +233,7 @@ npx wrangler pages deploy . --project-name=encaisse
 
 Wrangler uploads **everything** in the folder — make sure `encaisse-export.json` is removed.
 
-### Stripe & customer portal (one-time setup)
+### Stripe, e-mails & customer portal (one-time setup)
 
 The backend is **Pages Functions** (`functions/`, plain JS — it deploys with the
 site, no build step). One-time activation:
@@ -242,14 +247,30 @@ npx wrangler d1 execute encaisse --remote --file=schema.sql
 # 2. Stripe secret — never in this repository
 npx wrangler pages secret put STRIPE_SECRET_KEY --project-name=<project>
 
-# 3. Flip the two flags in config.js: DEMO_MODE:false, STRIPE_LIVE:true → push
+# 3. E-mails transactionnels (Brevo) — payment receipts + server-side reminders
+#    Create an account at app.brevo.com, generate an API key (v3), then:
+npx wrangler pages secret put BREVO_API_KEY --project-name=<project>
+npx wrangler pages secret put EMAIL_FROM     --project-name=<project>
+#    EMAIL_FROM format: "Encaisse <bonjour@tondomaine.fr>" — the sender address
+#    must be verified in Brevo (Settings → Senders & domains).
+#    Without these two secrets the endpoints answer 503 and the app silently
+#    falls back to mailto: — nothing breaks, e-mails simply stay off.
+
+# 4. Flip the two flags in config.js: DEMO_MODE:false, STRIPE_LIVE:true → push
 ```
 
 Endpoints: `POST /api/checkout` (subscription Checkout, server-side prices) ·
 `GET /api/sub` (purchase check + HMAC entitlement token) · `POST /api/portal`
 (publishes `/r/:slug`, only on an explicit share) · `GET /api/pay` (invoice
-payment; amount comes from D1, never from the payer) · `/r/:slug`
-(server-rendered invoice, confirms payment via `?session_id=` — no webhook yet).
+payment; amount comes from D1, never from the payer) · `POST /api/remind`
+(1-click reminder e-mailed by the server via Brevo, 72 h anti-doublon per
+document) · `/r/:slug` (server-rendered invoice, confirms payment via
+`?session_id=` and e-mails the receipt to the customer — no webhook yet).
+
+> **Automated (unattended) reminders are not possible on Pages Functions** —
+> Cloudflare does not expose cron triggers there. They require a small dedicated
+> Worker with a cron trigger reading the same D1 table (roadmap P1). The
+> reminder sent from the app is server-side and immediate instead.
 
 ### Go-live checklist
 
@@ -258,6 +279,7 @@ payment; amount comes from D1, never from the payer) · `/r/:slug`
 □ Set SITE_URL in config.js
 □ Create D1 database + binding "DB" + run schema.sql (see above)
 □ Put STRIPE_SECRET_KEY (wrangler pages secret put) and test a real checkout
+□ Put BREVO_API_KEY + EMAIL_FROM (optional — receipt & reminder e-mails)
 □ Flip DEMO_MODE:false + STRIPE_LIVE:true in config.js
 □ Fill in legal.html (legal name, registration number, VAT, e-mail, ombudsman)
 □ Fill Réglages → My business (address, VAT number, IBAN) — printed on invoices
@@ -304,15 +326,24 @@ unlimited invoicing. The only defensible wedge is
 3. ✅ **Server-side subscription verification** — `/api/sub` issues an
    HMAC-signed token (`exp`), refreshed when online, 14-day offline grace;
    Stripe remains the source of truth.
-4. 🔴 **E-mail sending** (payment confirmations, automated reminders) via a Worker cron.
-5. 🔴 **Credit notes (avoirs)** — legally required in FR/BE.
+4. ✅ **E-mail sending** (Brevo, REST — no SDK): payment receipt mailed by the
+   server when `/r/:slug?session_id=` confirms the payment, plus a 1-click
+   server-side reminder (`POST /api/remind`, 72 h anti-doublon). *Fully
+   unattended* reminders need a cron trigger, which Pages Functions don't
+   support → separate Worker, moved to P1.
+5. ✅ **Credit notes (avoirs)** — legally required in FR/BE: dedicated `AVT`
+   series, created from an invoice (full or partial, editable until refunded),
+   negative amounts in preview/portal/print, refund tracking, never gated on
+   the free plan.
 6. 🔴 **Certified e-invoicing partner (PDP / Peppol)** before any "compliant" claim in the EU.
 
 ### 🟠 P1
 
 Recurring invoices · time & expense tracking · FEC/accounting export ·
 per-document multi-currency · full customer portal · US sales-tax rate lookup ·
-D1 schema for quotes/invoices.
+D1 schema for quotes/invoices · **unattended reminder Worker (cron trigger)** —
+Pages Functions have no scheduled handler, so automatic reminders need a small
+companion Worker reading the same `portal` table.
 
 ### 🟡 P2
 
@@ -338,6 +369,10 @@ D1 5 GB and 5 M reads/day — ample for the first thousands of users.
   `wrangler pages secret put STRIPE_SECRET_KEY`. Subscription entitlements are
   HMAC-signed server-side (key derived from the Stripe secret) — the browser
   only ever holds a signed token with an expiry.
+- E-mail credentials (`BREVO_API_KEY`, `EMAIL_FROM`) are Pages secrets, never
+  committed. `POST /api/remind` is rate-limited per IP, only acts on documents
+  the user explicitly shared (96-bit slug), enforces a 72 h gap per document
+  and refuses paid invoices.
 - `encaisse-export.json` and `.dev.vars` are git-ignored.
 
 ## 11. Handover & due diligence
@@ -347,9 +382,9 @@ What an acquirer should know on day one:
 | Item | Status |
 |---|---|
 | Revenue / paying customers | None — payments are simulated (`DEMO_MODE`) |
-| Backend / database | **Does not exist yet** (roadmap P0) |
-| Users' personal data held by us | **None** — all data is on the user's device |
-| Third-party accounts needed to transfer | Cloudflare, Stripe, the domain registrar, GitHub |
+| Backend / database | **Exists**: Pages Functions (`functions/`) + D1 table `portal` — secrets (Stripe, Brevo) live in Cloudflare, never in the repo |
+| Users' personal data held by us | **Only copies of explicitly shared documents** in D1 (customer e-mail + document payload); everything else stays on the user's device |
+| Third-party accounts needed to transfer | Cloudflare, Stripe, Brevo (e-mails), the domain registrar, GitHub |
 | Stripe | Publishable key committed (harmless by design). **Secret key not present** |
 | Legal identity | `legal.html` still has `[TO COMPLETE]` placeholders — **must be filled before any commercial use** |
 | Tax / invoicing compliance | Certified EU platform **not yet connected** (see §7) |
@@ -358,7 +393,7 @@ What an acquirer should know on day one:
 | Automated checks | Scripts were run ad hoc during development (parse, i18n completeness, jsdom user flow) — **not committed** |
 
 Suggested first tasks for a new maintainer: reproduce §2, read `VEILLE.md`, fill the
-legal placeholders, then start P0 item 1.
+legal placeholders, then connect P0 item 6 (certified e-invoicing partner).
 
 ## 12. Third-party assets & licensing
 

@@ -98,9 +98,13 @@ function portalPayload(d){
   if(doc.photo&&doc.photo.length>BLOB_MAX)doc.photo=null;
   if(doc.signature&&doc.signature.length>BLOB_MAX)doc.signature=null;
   const b=S.biz;
+  /* cli : contact client — sert au serveur pour la confirmation de règlement
+     et les relances e-mail (uniquement sur les documents explicitement partagés). */
+  const c=S.clients.find(x=>x.id===d.clientId)||{};
   return{doc,
     biz:{nom:b.nom||"",devise:b.devise,pays:b.pays,adresse:b.adresse||"",tvaId:b.tvaId||"",
          iban:b.iban||"",contact:b.contact||"",moyens:b.moyens||[]},
+    cli:{e:String(c.email||"").slice(0,120),n:String(cliName(c)||"").slice(0,80)},
     lang:lang()};
 }
 /* Publie/met à jour la page client ; retourne {url, server}. Le hash évite de
@@ -285,9 +289,9 @@ function seed(targetPays="FR", targetSecteur="artisan", targetBiz=""){
 function nomCli(id){return (S.clients.find(c=>c.id===id)||{}).nom||T("Client")}
 function nextNum(type){
   const y=String(new Date().getFullYear());
-  const k=type==="devis"?"DEV":"FAC";
+  const k=type==="devis"?"DEV":type==="avoir"?"AVT":"FAC";
   S.seq[k]=S.seq[k]||{};S.seq[k][y]=((S.seq[k][y]||0)+1);
-  return `${k==="DEV"?"DEV":"FAC"}-${y}-${String(S.seq[k][y]).padStart(4,"0")}`;
+  return `${k}-${y}-${String(S.seq[k][y]).padStart(4,"0")}`;
 }
 function totals(doc){
   const ht=doc.items.reduce((a,l)=>a+l.q*l.p,0);
@@ -297,6 +301,8 @@ function totals(doc){
   const net=Math.max(0,ttc-acompte);
   return{ht,tva,ttc,acompte,net};
 }
+/* Affichage monétaire d'un document : un avoir s'affiche en négatif (crédit). */
+function amtOf(d){const t=totals(d);return (d.type==="avoir"?"−":"")+fmt(t.net??t.ttc,S.biz.devise)}
 /* ---------- toast / sheet ---------- */
 let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600)}
 function openSheet(html){const s=$("#sheet"),sc=$("#scrim");s.innerHTML=html;s.hidden=false;sc.hidden=false;requestAnimationFrame(()=>{
@@ -386,6 +392,7 @@ function relanceStage(d){
   return["s-retard",T("Mise en demeure · {j}j",{j})];
 }
 function docStatus(d){
+  if(d.type==="avoir")return d.statut==="paye"?["s-paye",T("Remboursée ✓")]:["s-envoye",T("Avoir émis")];
   if(d.statut==="paye")return["s-paye",T("Payée ✓")];
   if(d.type==="devis"){
     if(d.statut==="converti")return["s-paye",T("Converti en facture ✓")];
@@ -427,13 +434,12 @@ function render(){
 
 function cardHTML(d){
   const[cls,lab]=docStatus(d);
-  const t=totals(d);
   const sigBadge=d.signature?`<span class="sig-signed-badge">✓ ${T("Signé")}</span>`:"";
   const isAcompteBadge=d.isAcompte?`<span class="sig-signed-badge" style="background:#e0f2fe;color:#0369a1">${T("Acompte")}</span>`:"";
   const acompteDedBadge=d.acompteDeduction?`<span class="sig-signed-badge" style="background:#fef3c7;color:#92400e">-${T("Acompte déduit")}</span>`:"";
   return `<article class="doc" data-id="${d.id}">
-  <div class="doc-top"><div><b>${d.type==="devis"?"🧾":"💰"} ${esc(d.numero)}</b> ${sigBadge} ${isAcompteBadge} ${acompteDedBadge}<br><small>${esc(d.client)} · ${T("émise")} ${esc(d.emis)} · ${T("échéance")} ${esc(d.eche)}${d.demo?` · <em>${T("exemple")}</em>`:""}</small></div><span class="status ${cls}">${esc(lab)}</span></div>
-  <div class="doc-meta"><span>${T("{n} ligne(s)",{n:d.items.length})}${d.photo?" · 📷":""} · ${taxLbl()} ${num(d.tva)}%</span><span class="doc-amt">${fmt(t.net??t.ttc,S.biz.devise)}</span></div>
+  <div class="doc-top"><div><b>${d.type==="devis"?"🧾":d.type==="avoir"?"↩️":"💰"} ${esc(d.numero)}</b> ${sigBadge} ${isAcompteBadge} ${acompteDedBadge}<br><small>${esc(d.client)} · ${T("émise")} ${esc(d.emis)} · ${d.type==="avoir"?`${T("Facture d'origine")} ${esc(d.avoirSourceNum||"—")}`:`${T("échéance")} ${esc(d.eche)}`}${d.demo?` · <em>${T("exemple")}</em>`:""}</small></div><span class="status ${cls}">${esc(lab)}</span></div>
+  <div class="doc-meta"><span>${T("{n} ligne(s)",{n:d.items.length})}${d.photo?" · 📷":""} · ${taxLbl()} ${num(d.tva)}%</span><span class="doc-amt">${amtOf(d)}</span></div>
   <div class="doc-actions">${actionsHTML(d)}</div></article>`;
 }
 
@@ -446,16 +452,20 @@ function actionsHTML(d){
     if(d.statut==="converti")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn go" data-act="dup" data-id="${d.id}" type="button">↻ ${T("Refaire")}</button>${moreBtn(d)}`;
     return `<button class="chip-btn go" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button><button class="chip-btn" data-act="pay" data-id="${d.id}" type="button">📤 ${T("Partager")}</button><button class="chip-btn" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button>${moreBtn(d)}`;
   }
+  if(d.type==="avoir"){
+    if(d.statut==="paye")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn" data-act="pay" data-id="${d.id}" type="button">📤 ${T("Partager")}</button>${moreBtn(d)}`;
+    return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn go" data-act="refund" data-id="${d.id}" type="button">✓ ${T("Marquer remboursée ✓")}</button>${moreBtn(d)}`;
+  }
   if(d.statut==="paye")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Reçu / Imprimer")}</button><button class="chip-btn go" data-act="dup" data-id="${d.id}" type="button">↻ ${T("Refaire")}</button>${moreBtn(d)}`;
   return `<button class="chip-btn pay" data-act="pay" data-id="${d.id}" type="button">💳 ${T("Lien paiement")}</button><button class="chip-btn go" data-act="paid" data-id="${d.id}" type="button">✓ ${T("Marquer payée ✓")}</button><button class="chip-btn" data-act="relance" data-id="${d.id}" type="button">🔔 ${T("Relancer")}</button>${moreBtn(d)}`;
 }
 /* Toutes les actions d'un document, dans une feuille (cible tactile pleine largeur). */
 function openDocActions(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
-  const tt=totals(d), isDevis=d.type==="devis", paid=d.statut==="paye", conv=isDevis&&d.statut==="converti";
+  const isDevis=d.type==="devis", isAvoir=d.type==="avoir", paid=d.statut==="paye", conv=isDevis&&d.statut==="converti";
   const B=(act,label,cls="")=>`<button class="btn${cls?" "+cls:""}" data-act="${act}" data-id="${d.id}" type="button">${label}</button>`;
   const c=cliOf(d), wa=(c.tel||"").replace(/[^0-9]/g,""), mail=(c.email||"").trim();
-  let h=`<h2>${T("Actions")} · ${esc(d.numero)}</h2><p class="sub">${esc(d.client)} · ${fmt(tt.net??tt.ttc,S.biz.devise)}</p><div class="act-list">`;
+  let h=`<h2>${T("Actions")} · ${esc(d.numero)}</h2><p class="sub">${esc(d.client)} · ${amtOf(d)}</p><div class="act-list">`;
   h+=B("view",`👁 ${T("Aperçu / Imprimer")}`);
   if(!paid&&!conv){
     if(isDevis){
@@ -463,15 +473,23 @@ function openDocActions(id){
       if(!d.acompteFactureId)h+=B("acompte",`⚡ ${T("Acompte")}`);
       h+=B("convert",`→ ${T("Facturer")}`,"primary");
       h+=B("pay",`📤 ${T("Partager")}`);
+    }else if(isAvoir){
+      h+=B("pay",`📤 ${T("Partager")}`,"primary");
+      h+=B("refund",`✓ ${T("Marquer remboursée ✓")}`);
+      h+=B("edit",`✎ ${T("Modifier")}`);
     }else{
       h+=B("pay",`💳 ${T("Lien paiement")}`,"primary");
       h+=B("relance",`🔔 ${T("Relancer")}`);
       h+=B("paid",`✓ ${T("Marquer payée ✓")}`,"primary");
+      h+=B("edit",`✎ ${T("Modifier")}`);
     }
-    h+=B("edit",`✎ ${T("Modifier")}`);
   }
+  /* L'avoir est le correctif LÉGAL d'une facture : accessible même après
+     paiement (remboursement) et hors plafond gratuit. */
+  if(d.type==="facture")h+=B("avoir",`↩️ ${T("Émettre un avoir")}`);
+  if(d.avoirNums&&d.avoirNums.length)h+=`<p class="sub" style="margin:4px 0 0">↩️ ${T("Avoirs émis")} : ${esc(d.avoirNums.join(", "))}</p>`;
   if(!conv){if(wa)h+=B("shareWa","💬 WhatsApp");if(mail)h+=B("shareMail",`✉️ ${T("E-mail")}`)}
-  h+=B("dup",`↻ ${T("Refaire")}`);
+  if(!isAvoir)h+=B("dup",`↻ ${T("Refaire")}`);
   if(isDevis||!paid)h+=B("del",`🗑 ${T("Supprimer")}`,"danger");
   h+=`</div><div class="row"><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div>`;
   openSheet(h);
@@ -756,9 +774,9 @@ function wireDocForm(opt){
 
 function openEdit(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
-  if(d.statut==="paye"){toast(T("Une facture payée ne peut plus être modifiée"));return}
+  if(d.statut==="paye"){toast(d.type==="avoir"?T("Un avoir remboursé ne peut plus être modifié"):T("Une facture payée ne peut plus être modifiée"));return}
   const cliOpts=S.clients.map(c=>`<option value="${c.id}" ${c.id===d.clientId?"selected":""}>${esc(cliName(c))}</option>`).join("");
-  openSheet(`<h2>${T("Modifier")} ${esc(d.numero)}</h2><p class="sub">${d.type==="devis"?T("Devis"):T("Facture")} · ${T("Modifie les lignes ou les conditions")}</p>
+  openSheet(`<h2>${T("Modifier")} ${esc(d.numero)}</h2><p class="sub">${d.type==="devis"?T("Devis"):d.type==="avoir"?T("Avoir"):T("Facture")} · ${T("Modifie les lignes ou les conditions")}</p>
   <div class="form" style="margin-top:10px">
     <label>${T("Client")}<select id="fCli">${cliOpts}</select></label>
     ${presetChipsHTML()}
@@ -896,6 +914,38 @@ function openAcompte(id){
   };
 }
 
+/* ---------- avoir (credit note — obligatoire en FR/BE) ----------
+   Seul correctif LÉGAL d'une facture : reprend ses lignes, série AVT
+   chronologique propre (nextNum("avoir")), jamais compté dans le plafond
+   gratuit (canCreate ne plafonne que type==="facture"). Modifiable tant
+   qu'il n'est pas « remboursé » — permet un avoir partiel. */
+function openAvoir(id){
+  const d=S.docs.find(x=>x.id===id);if(!d||d.type!=="facture")return;
+  const tt=totals(d);
+  openSheet(`<h2>↩️ ${T("Émettre un avoir")}</h2>
+  <p class="sub">${T("Reprend les lignes de {n} ({a}) pour {c}. Série AVT dédiée — modifiable tant qu'il n'est pas remboursé.",{n:d.numero,a:fmt(tt.net??tt.ttc,S.biz.devise),c:d.client})}</p>
+  <div class="row" style="margin-top:8px">
+    <button class="btn primary" id="mkAvoir" type="button" style="flex:1">${T("Créer l'avoir ✓")}</button>
+    <button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button>
+  </div>`);
+  $("#cancelS").onclick=closeSheet;
+  $("#mkAvoir").onclick=()=>{
+    const nid=uid(), num_=nextNum("avoir");
+    S.docs.push({
+      id:nid,type:"avoir",numero:num_,clientId:d.clientId,client:d.client,
+      items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",
+      statut:"envoye",emis:todayISO(),eche:todayISO(),relances:0,photo:d.photo||null,
+      avoirSourceId:d.id,avoirSourceNum:d.numero
+    });
+    d.avoirNums=(d.avoirNums||[]).concat(num_);
+    haptic([20,40]);
+    if(!save())return;
+    render();closeSheet();
+    toast(`${T("Avoir")} ${num_} ${T("créée ✓")}`);
+    openView(nid);
+  };
+}
+
 /* ---------- partage : WhatsApp, e-mail, lien ---------- */
 async function docMessage(d){
   const tt=totals(d);
@@ -907,6 +957,10 @@ async function docMessage(d){
   if(d.type==="devis"){
     return T("Bonjour {w}, voici votre devis {n} d'un montant de {a} ({b}).\nConsultez-le et validez-le ici : {u}\n\nRestant à votre entière disposition 🙏",
       {w:who,n:d.numero,a:amt,b:biz,u:payUrl});
+  }
+  if(d.type==="avoir"){
+    return T("Bonjour {w}, voici votre avoir {n} émis au titre de la facture {f}, d'un montant de {a} ({b}).\nConsultez-le ici : {u}\n\nMerci pour votre compréhension 🙏",
+      {w:who,n:d.numero,f:d.avoirSourceNum||"—",a:amt,b:biz,u:payUrl});
   }
   if(d.statut==="paye"){
     return T("Bonjour {w}, nous confirmons la bonne réception de votre règlement pour la facture {n} ({a}).\nVotre reçu est disponible ici : {u}\n\nMerci pour votre confiance ! 🙏 — {b}",
@@ -932,7 +986,7 @@ async function shareEmail(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const mail=(cliOf(d).email||"").trim();
   if(!mail){toast(T("Ce client n'a pas d'e-mail."));return}
-  const subject=d.type==="devis"?`${T("Devis")} ${d.numero}`:`${T("Facture")} ${d.numero}`;
+  const subject=d.type==="devis"?`${T("Devis")} ${d.numero}`:d.type==="avoir"?`${T("Avoir")} ${d.numero}`:`${T("Facture")} ${d.numero}`;
   const msg=await docMessage(d);
   const url=`mailto:${encodeURIComponent(mail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
   haptic([15,30]);window.location.href=url;
@@ -952,13 +1006,14 @@ function openView(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const tt=totals(d);
   const pCfg=PAYS[S.biz.pays]||PAYS.FR;
-  const isDevis=d.type==="devis";
+  const isDevis=d.type==="devis", isAvoir=d.type==="avoir";
+  const neg=isAvoir?"− ":""; /* avoir : montants en négatif (crédit) */
   const rows=d.items.map(l=>`
     <tr>
       <td><b>${esc(itemLib(l))}</b></td>
       <td style="text-align:center">${num(l.q)}${d.unite?" "+esc(d.unite):""}</td>
-      <td style="text-align:right">${fmt(num(l.p),S.biz.devise)}</td>
-      <td style="text-align:right"><b>${fmt(num(l.q)*num(l.p),S.biz.devise)}</b></td>
+      <td style="text-align:right">${neg}${fmt(num(l.p),S.biz.devise)}</td>
+      <td style="text-align:right"><b>${neg}${fmt(num(l.q)*num(l.p),S.biz.devise)}</b></td>
     </tr>`).join("");
 
   const payUrl=getDocUrl(d.id);
@@ -1007,9 +1062,9 @@ function openView(id){
           <span class="inv-fiscal-pill">${esc(fiscalMention())}</span>
         </div>
         <div class="inv-meta-right">
-          <div class="inv-doc-num">${isDevis?T("DEVIS"):T("FACTURE")}</div>
+          <div class="inv-doc-num">${isDevis?T("DEVIS"):isAvoir?T("AVOIR"):T("FACTURE")}</div>
           <b style="font-size:14px;color:var(--ink)">${esc(d.numero)}</b>
-          <div class="inv-dates">${T("Émis le")} : ${esc(d.emis)}<br>${T("Échéance")} : ${esc(d.eche)}</div>
+          <div class="inv-dates">${T("Émis le")} : ${esc(d.emis)}${isAvoir?`<br>${T("Facture d'origine")} : ${esc(d.avoirSourceNum||"—")}`:`<br>${T("Échéance")} : ${esc(d.eche)}`}</div>
         </div>
       </div>
 
@@ -1047,9 +1102,9 @@ function openView(id){
       </table>
 
       <div class="inv-totals">
-        <div class="inv-tot-row"><span>${T("Total HT")} :</span><span>${fmt(tt.ht,S.biz.devise)}</span></div>
-        <div class="inv-tot-row"><span>${taxLbl()} (${num(d.tva)}%) :</span><span>${fmt(tt.tva,S.biz.devise)}</span></div>
-        <div class="inv-tot-row grand"><span>${T("Total TTC")} :</span><span>${fmt(tt.ttc,S.biz.devise)}</span></div>
+        <div class="inv-tot-row"><span>${T("Total HT")} :</span><span>${neg}${fmt(tt.ht,S.biz.devise)}</span></div>
+        <div class="inv-tot-row"><span>${taxLbl()} (${num(d.tva)}%) :</span><span>${neg}${fmt(tt.tva,S.biz.devise)}</span></div>
+        <div class="inv-tot-row grand"><span>${T("Total TTC")} :</span><span>${neg}${fmt(tt.ttc,S.biz.devise)}</span></div>
         ${acompteLine}
         ${d.acompteDeduction?`<div class="inv-tot-row grand" style="color:var(--acc-d)"><span>${T("Net à payer")} :</span><span>${fmt(tt.net,S.biz.devise)}</span></div>`:""}
       </div>
@@ -1059,14 +1114,19 @@ function openView(id){
       <div class="inv-qr-section">
         <div class="inv-qr-code" id="viewQR">${qrSVG}</div>
         <div class="inv-qr-text">
-          <strong>${T("Règlement sécurisé par Stripe")}</strong>
-          ${T("Scannez ce QR code pour ouvrir la facture et payer en 1 clic (carte, SEPA, ACH, TWINT).")}
+          ${isAvoir
+            ? `<strong>${T("Avoir client")}</strong>
+               ${T("Avoir au titre de la facture {n} — consultez-le et conservez ce document.",{n:d.avoirSourceNum||"—"})}`
+            : `<strong>${T("Règlement sécurisé par Stripe")}</strong>
+               ${T("Scannez ce QR code pour ouvrir la facture et payer en 1 clic (carte, SEPA, ACH, TWINT).")}`}
           <br><small style="color:var(--mut)" id="viewLink" data-u="${esc(payUrl)}">${T("Lien direct")} : ${esc(payUrl)}</small>
         </div>
       </div>
 
       <div class="inv-legal-footer">
-        <b>${T("Mentions légales")} :</b> ${T("Numérotation chronologique inviolable. Modalités de paiement")} : ${esc(moyensText)}. ${T("En cas de retard, pénalités légales et indemnité forfaitaire de 40 € (art. L441-10 C. com.) applicables. Archivage")} ${esc(loc(pCfg.archive))}.
+        <b>${T("Mentions légales")} :</b> ${isAvoir
+          ? T("Avoir conforme — annule ou réduit la facture {n}. Numérotation chronologique inviolable. Archivage {a}.",{n:esc(d.avoirSourceNum||"—"),a:esc(loc(pCfg.archive))})
+          : `${T("Numérotation chronologique inviolable. Modalités de paiement")} : ${esc(moyensText)}. ${T("En cas de retard, pénalités légales et indemnité forfaitaire de 40 € (art. L441-10 C. com.) applicables. Archivage")} ${esc(loc(pCfg.archive))}.`}
       </div>
     </div>
 
@@ -1076,10 +1136,14 @@ function openView(id){
         ${!d.acompteFactureId?`<button class="btn small" style="background:#f0fdfa;border-color:#99f6e4;color:#0f766e" data-act="acompte" data-id="${d.id}" type="button">⚡ ${T("Acompte")}</button>`:""}
         <button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button>
         <button class="btn primary small" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button>
+      `:isAvoir?`
+        ${d.statut!=="paye"
+          ? `<button class="btn primary small" data-act="refund" data-id="${d.id}" type="button">✓ ${T("Marquer remboursée ✓")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">✉️ ${T("E-mail")}</button>`
+          : `<span class="status s-paye">${T("Avoir remboursé ✓")}</span>`}
       `:`
         ${d.statut!=="paye"
           ? `<button class="btn primary small" data-act="pay" data-id="${d.id}" type="button">${T("Lien de paiement")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="paid" data-id="${d.id}" type="button">${T("Marquer payée ✓")}</button>`
-          : `<span class="status s-paye">${T("Facture payée ✓")}</span>`}
+          : `<span class="status s-paye">${T("Facture payée ✓")}</span><button class="btn small" data-act="avoir" data-id="${d.id}" type="button">↩️ ${T("Émettre un avoir")}</button>`}
       `}
       <button class="btn ghost small" id="cancelS2" type="button">${T("Fermer")}</button>
     </div>
@@ -1104,30 +1168,34 @@ function openView(id){
 /* ---------- lien de paiement ---------- */
 function openPay(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
-  const tt=totals(d);
   const allowed=PAYS[S.biz.pays]?.moyens||[];
   const btns=allowed.map(k=>`<button class="chip-btn" type="button" data-m="${k}">${esc(mLabel(k))}</button>`).join("");
   let payUrl=getDocUrl(d.id);
   const site=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
   const qrSVG=makeQR(payUrl);
-  openSheet(`<h2>${d.type==="devis"?T("Partager le document"):T("Lien de paiement")}</h2>
-  <p class="sub">${esc(d.numero)} · ${fmt(tt.net??tt.ttc,S.biz.devise)} · ${esc(d.client)}</p>
+  openSheet(`<h2>${d.type==="devis"?T("Partager le document"):d.type==="avoir"?T("Partager l'avoir"):T("Lien de paiement")}</h2>
+  <p class="sub">${esc(d.numero)} · ${amtOf(d)} · ${esc(d.client)}</p>
   <div class="paylink">
     <code id="payCode">${esc(payUrl)}</code>
     <div class="inv-qr-code" id="payQR" style="background:#fff;border-radius:10px;padding:3px">${qrSVG}</div>
     ${site?`<small class="muted" id="payStat" style="font-size:12px">${T("Génération du lien client…")}</small>`:""}
   </div>
-  <p class="muted" style="font-size:12px">${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :")} ${(allowed.map(mLabel)).join(", ")}.</p>
+  <p class="muted" style="font-size:12px">${d.type==="facture"
+    ? `${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :")} ${(allowed.map(mLabel)).join(", ")}.`
+    : T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code.")}</p>
   <div class="row">${btns}</div>
   <div class="row" style="margin-top:10px">
     <button class="btn ghost" id="copyL" type="button">${T("Copier le lien")}</button>
     <button class="btn wa" data-act="shareWa" data-id="${d.id}" type="button">💬 WhatsApp →</button>
     <button class="btn" data-act="shareMail" data-id="${d.id}" type="button">✉️ ${T("E-mail →")}</button>
     ${d.type==="facture"?`<button class="btn primary" id="markP" type="button">${T("Marquer payée ✓")}</button>`:""}
+    ${d.type==="avoir"&&d.statut!=="paye"?`<button class="btn primary" id="refundP" type="button">✓ ${T("Marquer remboursée ✓")}</button>`:""}
   </div>`);
   $("#copyL").onclick=async()=>{try{await navigator.clipboard.writeText(payUrl);toast(T("Lien copié ✓"))}catch{toast(T("Lien : ")+payUrl)}};
   const mp=$("#markP");
   if(mp)mp.onclick=()=>{d.statut="paye";d.payeLe=todayISO();haptic([20,50]);save();closeSheet();render();toast(T("Encaissé 🎉 Bravo"))};
+  const rp=$("#refundP");
+  if(rp)rp.onclick=()=>{if(!confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero})))return;d.statut="paye";d.payeLe=todayISO();haptic([20,50]);save();closeSheet();render();toast(T("Avoir remboursé ✓"))};
   /* Publication serveur : uniquement ici, au moment du partage (jamais en fond).
      Le lien affiché/QR/copie est remplacé dès que le slug est prêt. */
   if(site)ensurePortal(d).then(res=>{
@@ -1144,13 +1212,19 @@ async function openRelance(id){
   const tt=totals(d), c=cliOf(d);
   const j=Math.max(0,daysLate(d.eche));
   const ton=j<=3?T("poli"):(j<=10?T("ferme"):T("mise en demeure"));
-  const payUrl=(await ensurePortal(d)).url;
+  /* ensurePortal rafraîchit la copie D1 (statut/echéance) : le serveur ne
+     relancera jamais sur des données périmées. */
+  const portal=await ensurePortal(d), payUrl=portal.url;
   const who=(d.client||"").split("—")[0].trim();
   const msg=T("Bonjour {w}, petit rappel : facture {n} de {a} (échéance {e}, {j}j de retard). Lien pour régler : {u} Merci beaucoup 🙏 — {b}",
     {w:who,n:d.numero,a:fmt(tt.net??tt.ttc,S.biz.devise),e:d.eche,j,u:payUrl,b:S.biz.nom||""});
   const tel=(c.tel||"").replace(/[^0-9]/g,"");
   const mail=(c.email||"").trim();
+  /* E-mail envoyé PAR LE SERVEUR (Brevo) : bouton principal dès que le
+     portail est actif. Sinon repli mailto (fonctionne partout, hors-ligne). */
+  const srv=(portal.server&&mail)?`<button class="btn primary" id="sendSrv" type="button">✉️ ${T("Envoyer la relance (e-mail)")}</button>`:"";
   const actions=[
+    srv,
     `<button class="btn ghost" id="copyM" type="button">${T("Copier")}</button>`,
     tel?`<a class="btn wa" style="text-decoration:none;text-align:center" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent(msg)}" id="sendW">💬 WhatsApp →</a>`:"",
     mail?`<a class="btn" style="text-decoration:none;text-align:center" href="mailto:${esc(mail)}?subject=${encodeURIComponent(d.numero)}&body=${encodeURIComponent(msg)}" id="sendE">✉️ ${T("E-mail →")}</a>`:""
@@ -1164,6 +1238,22 @@ async function openRelance(id){
   const bump=()=>{d.relances=num(d.relances)+1;haptic([20,40]);save();render()};
   const w=$("#sendW");if(w)w.onclick=bump;
   const e=$("#sendE");if(e)e.onclick=bump;
+  const srvBtn=$("#sendSrv");
+  if(srvBtn)srvBtn.onclick=async()=>{
+    srvBtn.disabled=true;const old=srvBtn.textContent;srvBtn.textContent=T("Envoi…");
+    try{
+      const r=await fetch("/api/remind",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:d.portal?.slug||""})});
+      const j2=await r.json().catch(()=>({}));
+      if(r.ok&&j2.ok){bump();haptic([20,40]);closeSheet();toast(T("Relance e-mail envoyée ✓ ({n})",{n:j2.count}));return}
+      toast(
+        r.status===429?T("Relance déjà envoyée il y a moins de 3 jours.")
+        :r.status===409?T("Facture déjà payée — relance annulée.")
+        :r.status===503?T("Service e-mail non configuré — utilise le bouton E-mail ci-dessous.")
+        :r.status===400?T("Ce client n'a pas d'e-mail : complète sa fiche.")
+        :T("Envoi impossible — réessaie plus tard."));
+    }catch{toast(T("Connexion requise pour envoyer."))}
+    srvBtn.disabled=false;srvBtn.textContent=old;
+  };
 }
 
 /* ---------- réglages ---------- */
@@ -1264,9 +1354,11 @@ function bind(){
     if(act==="relance")openRelance(id);
     if(act==="sign")openSign(id);
     if(act==="acompte")openAcompte(id);
+    if(act==="avoir")openAvoir(id);
     if(act==="shareWa")shareWhatsApp(id);
     if(act==="shareMail")shareEmail(id);
     if(act==="paid"){if(d&&confirm(T("Confirmer encaissement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();closeSheet();toast(T("Encaissé 🎉"))}}
+    if(act==="refund"){if(d&&confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();closeSheet();toast(T("Avoir remboursé ✓"))}}
     if(act==="del"){if(d&&confirm(T("Supprimer {n} ? Le compteur reste inviolable.",{n:d.numero}))){S.docs=S.docs.filter(x=>x.id!==id);save();render();closeSheet()}}
     if(act==="convert"&&d){
       if(!canCreate("facture")){openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}

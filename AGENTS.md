@@ -16,12 +16,12 @@ python -m http.server 8080
 ## Architecture facts you would otherwise guess wrong
 
 - **Script order matters** (`index.html`): `config.js` → `i18n.js` → `qr.js` → `app.js` (defer). All top-level `function` declarations in `app.js` are on `window` — that is intentional (used to drive the UI from test harnesses).
-- **Backend**: `functions/` = Cloudflare Pages Functions (plain ESM JS, deploys with the site, no build): `POST /api/checkout`, `GET /api/sub`, `POST /api/portal`, `GET /api/pay`, customer page `GET /r/:slug`. D1 binding must be named `DB` (schema: `schema.sql`). Stripe secret only via `wrangler pages secret put STRIPE_SECRET_KEY`. `DEMO_MODE`/`STRIPE_LIVE` flip only **after** D1 + secret are configured — never in this repo before.
+- **Backend**: `functions/` = Cloudflare Pages Functions (plain ESM JS, deploys with the site, no build): `POST /api/checkout`, `GET /api/sub`, `POST /api/portal`, `POST /api/remind` (server-sent reminder e-mail via Brevo), `GET /api/pay`, customer page `GET /r/:slug` (receipt e-mail on confirmed payment). D1 binding must be named `DB` (schema: `schema.sql`). Stripe secret only via `wrangler pages secret put STRIPE_SECRET_KEY`; e-mail needs `BREVO_API_KEY` + `EMAIL_FROM` secrets (absent ⇒ endpoints answer 503 and the app silently falls back to `mailto:`). Pages Functions have **no cron trigger** — unattended reminders are P1 (separate Worker). `DEMO_MODE`/`STRIPE_LIVE` flip only **after** D1 + secret are configured — never in this repo before.
 - **State**: one object `S` in `localStorage` under `encaisse.v1` (plus `encaisse.onboarded`, `encaisse.lang`). No accounts, no session — the app never requires a server; D1 only holds *copies* of explicitly shared documents (table `portal`).
 - **Money is integer cents** (`toCents()`). Never use floats for amounts.
-- **Document numbers are never reused**: `S.seq` counters are chronological and are *not* reset by *Settings → Reset demo*. Demo seeding runs once at the end of onboarding (`needSeed`) — don't run it twice or counters advance twice.
+- **Document numbers are never reused**: `S.seq` counters are chronological (`DEV`/`FAC`/`AVT` — credit notes have their own **AVT** series) and are *not* reset by *Settings → Reset demo*. Demo seeding runs once at the end of onboarding (`needSeed`) — don't run it twice or counters advance twice.
 - **i18n**: the French string *is* the key. `T("Marquer payée ✓")` looks up the English pair in `i18n.js`; missing keys fall back to French (never a crash). To add a string: write the French literal, add the EN pair to `i18n.js`, never translate the key. Markup uses `data-i18n` / `data-i18n-html` / `data-i18n-ph`. Verify coverage by grepping `data-i18n` values against the `EN` dictionary — an absent value silently renders French.
-- **Service worker** (`sw.js`): bump the `C` constant (`"encaisse-v4"`) on every release. `config.js`, `i18n.js` and `sw.js` are network-first; everything else cache-first.
+- **Service worker** (`sw.js`): bump the `C` constant (`"encaisse-v8"`) on every release. `config.js`, `i18n.js` and `sw.js` are network-first; everything else cache-first.
 - **Print/PDF**: no PDF library — `@media print` in `styles.css` + browser "Save as PDF".
 - **XSS**: all user input goes through `esc()` before HTML insertion; amounts through `num()`. Keep it that way; `_headers` ships a strict CSP (Stripe allow-list) — new external origins must be added there too.
 
@@ -30,7 +30,7 @@ python -m http.server 8080
 - Scope is **FR · BE · CH · US, Stripe only**, currencies EUR/CHF/USD. No other payment providers, countries, or FCFA/CAD.
 - `DEMO_MODE: true` in `config.js` is a deliberate safety lock, **not a bug** — leave it until a Cloudflare Worker creates real Stripe Checkout Sessions. Stripe **secret** key never belongs in this repo (`wrangler secret put`).
 - `encaisse-export.json` (real user data) and `.dev.vars` are git-ignored and must never be committed or uploaded (wrangler deploys *everything* in the folder).
-- Quotes are the acquisition channel → never gate them. `canCreate()` gates only `type === "facture"` (3/month on Free).
+- Quotes are the acquisition channel → never gate them, and credit notes (avoirs) are the legal correction of an invoice → never gate them either. `canCreate()` gates only `type === "facture"` (3/month on Free).
 - French is the source language for code comments, i18n keys, and docs (`README.fr.md` mirrors `README.md`).
 
 ## Sources of truth

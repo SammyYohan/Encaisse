@@ -351,7 +351,39 @@
     "Paiement non confirmé — réessaie ou contacte le support.": "Payment not confirmed — retry or contact support.",
     "Portail client indisponible — lien local utilisé.": "Customer portal unavailable — local link used.",
     "Redirection vers le paiement sécurisé…": "Redirecting to secure payment…",
-    "🇺🇸 United States · Sales tax": "🇺🇸 United States · Sales tax"
+    "🇺🇸 United States · Sales tax": "🇺🇸 United States · Sales tax",
+
+    /* --- P0 n°5 : avoirs (credit notes — obligatoires FR/BE) --- */
+    "Avoir": "Credit note",
+    "AVOIR": "CREDIT NOTE",
+    "Avoir émis": "Credit note issued",
+    "Avoir remboursé ✓": "Credit note refunded ✓",
+    "Remboursée ✓": "Refunded ✓",
+    "Marquer remboursée ✓": "Mark as refunded ✓",
+    "Émettre un avoir": "Issue a credit note",
+    "Avoirs émis": "Credit notes issued",
+    "Facture d'origine": "Original invoice",
+    "Reprend les lignes de {n} ({a}) pour {c}. Série AVT dédiée — modifiable tant qu'il n'est pas remboursé.": "Copies the lines of {n} ({a}) for {c}. Dedicated AVT series — editable until refunded.",
+    "Créer l'avoir ✓": "Create the credit note ✓",
+    "Confirmer le remboursement de {n} ?": "Confirm refund of {n}?",
+    "Un avoir remboursé ne peut plus être modifié": "A refunded credit note can no longer be edited",
+    "Avoir client": "Customer credit note",
+    "Avoir au titre de la facture {n} — consultez-le et conservez ce document.": "Credit note for invoice {n} — review it and keep this document.",
+    "Avoir conforme — annule ou réduit la facture {n}. Numérotation chronologique inviolable. Archivage {a}.": "Compliant credit note — cancels or reduces invoice {n}. Sequential numbering, never reused. Records kept {a}.",
+    "Partager l'avoir": "Share the credit note",
+    "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code.": "Send this link by e-mail/WhatsApp or have the QR code scanned.",
+    "Bonjour {w}, voici votre avoir {n} émis au titre de la facture {f}, d'un montant de {a} ({b}).\nConsultez-le ici : {u}\n\nMerci pour votre compréhension 🙏": "Hello {w}, here is credit note {n} issued for invoice {f}, for {a} ({b}).\nReview it here: {u}\n\nThank you for your understanding 🙏",
+
+    /* --- P0 n°4 : e-mails transactionnels (Brevo) --- */
+    "Envoyer la relance (e-mail)": "Send the reminder (e-mail)",
+    "Envoi…": "Sending…",
+    "Relance e-mail envoyée ✓ ({n})": "Reminder e-mail sent ✓ ({n})",
+    "Relance déjà envoyée il y a moins de 3 jours.": "A reminder was already sent less than 3 days ago.",
+    "Facture déjà payée — relance annulée.": "Invoice already paid — reminder canceled.",
+    "Service e-mail non configuré — utilise le bouton E-mail ci-dessous.": "E-mail service not configured — use the E-mail button below.",
+    "Ce client n'a pas d'e-mail : complète sa fiche.": "This client has no e-mail: complete their card.",
+    "Envoi impossible — réessaie plus tard.": "Could not send — try again later.",
+    "Connexion requise pour envoyer.": "Connection required to send."
   };
 
   var LANG = null;
