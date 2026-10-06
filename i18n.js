@@ -410,23 +410,64 @@
     "Acompte impayé — non déduit": "Unpaid deposit — not deducted"
   };
 
+  /* 24 langues officielles de l'UE (nom natif = libellé affiché, norme Switch) :
+     fr + en sont inline (instantanés) ; les 22 autres se chargent à la demande
+     depuis lang/<code>.js puis sont mises en cache (SW) pour le hors-ligne. */
+  var LANGS = {
+    fr: "Français", en: "English", bg: "Български", es: "Español", cs: "Čeština",
+    da: "Dansk", de: "Deutsch", et: "Eesti", el: "Ελληνικά", ga: "Gaeilge",
+    hr: "Hrvatski", it: "Italiano", lv: "Latviešu", lt: "Lietuvių", hu: "Magyar",
+    mt: "Malti", nl: "Nederlands", pl: "Polski", pt: "Português", ro: "Română",
+    sk: "Slovenčina", sl: "Slovenščina", fi: "Suomi", sv: "Svenska"
+  };
+  var LOADED = { fr: null, en: EN };
+  function loadLang(code) {
+    return new Promise(function (resolve) {
+      if (LOADED[code] !== undefined) return resolve(LOADED[code]);
+      var s = document.createElement("script");
+      s.src = "lang/" + code + ".js";
+      s.onload = function () {
+        var d = (window.ENCAISSE_LANGS || {})[code];
+        LOADED[code] = d || null;
+        try { s.remove(); } catch (e) {}
+        resolve(LOADED[code]);
+      };
+      s.onerror = function () { LOADED[code] = null; try { s.remove(); } catch (e) {} resolve(null); };
+      document.head.appendChild(s);
+    });
+  }
+  /* Changement de langue complet : charge le dictionnaire si besoin, applique,
+     persiste. Le français reste la langue de repli (clé absente => français). */
+  function setAppLang(code) {
+    code = LANGS[code] ? code : "en";
+    var done = function () { setLang(code); applyI18n(); return code; };
+    if (code === "fr" || code === "en" || LOADED[code] !== undefined) { done(); return Promise.resolve(code); }
+    return loadLang(code).then(done);
+  }
+
   var LANG = null;
 
   function detect() {
     try {
       var stored = localStorage.getItem("encaisse.lang");
-      if (stored === "en" || stored === "fr") return stored;
+      if (stored && LANGS[stored]) return stored;
     } catch (e) {}
-    var nav = (navigator.language || "fr").toLowerCase();
-    return nav.indexOf("fr") === 0 ? "fr" : "en";
+    var nav = "";
+    try { nav = (navigator.language || navigator.userLanguage || "fr").toLowerCase(); } catch (e) {}
+    var pre = nav.split("-")[0];
+    if (LANGS[pre]) return pre;
+    return "en";
   }
 
   function t(s, vars) {
     if (s == null) return s;
     var out = String(s);
-    if (LANG !== "fr") {
-      var d = EN[out];
-      if (d !== undefined) out = d;
+    if (LANG === "en") {
+      var e = EN[out];
+      if (e !== undefined) out = e;
+    } else if (LANG !== "fr") {
+      var dd = LOADED[LANG];
+      if (dd && dd[out] !== undefined) out = dd[out];
     }
     if (vars) {
       for (var k in vars) {
@@ -439,7 +480,7 @@
   }
 
   function setLang(l) {
-    LANG = l === "en" ? "en" : "fr";
+    LANG = LANGS[l] ? l : "fr";
     window.ENCAISSE_LANG = LANG;
     try { localStorage.setItem("encaisse.lang", LANG); } catch (e) {}
     document.documentElement.lang = LANG;
@@ -461,8 +502,10 @@
   LANG = detect();
   window.ENCAISSE_LANG = LANG;
   window.ENCAISSE_I18N = EN;
+  window.ENCAISSE_LANG_LIST = LANGS;
   window.t = t;
   window.setLang = setLang;
+  window.setAppLang = setAppLang;
   window.getLang = function () { return LANG; };
   window.applyI18n = applyI18n;
 })();

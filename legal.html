@@ -34,8 +34,9 @@
   .cta a.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
   .todo{background:#fffbeb;border:1px dashed #f59e0b;border-radius:10px;padding:10px 14px;font-size:14px;color:#92400e}
   footer{color:var(--mut);font-size:13px;text-align:center;padding:20px}
+  html .en{display:none}
   html[data-lang="en"] .fr{display:none}
-  html[data-lang="fr"] .en{display:none}
+  html[data-lang="en"] .en{display:block}
 </style>
 </head>
 <body>
@@ -217,16 +218,20 @@
 <script src="i18n.js"></script>
 <script>
   (function () {
-    document.documentElement.setAttribute("data-lang", window.ENCAISSE_LANG || "fr");
-    document.documentElement.lang = window.ENCAISSE_LANG || "fr";
+    document.documentElement.lang = "fr";
     var b = document.getElementById("langBtn");
+    /* Documents juridiques disponibles en FR et EN uniquement : toute autre
+       langue d'interface retombe sur le français (version faisant foi). */
+    function current() { return window.ENCAISSE_LANG === "en" ? "en" : "fr"; }
     function paint() {
-      var l = window.ENCAISSE_LANG || "fr";
+      var l = current();
+      document.documentElement.setAttribute("data-lang", l);
+      document.documentElement.lang = l;
       b.textContent = l === "fr" ? "EN" : "FR";
       b.classList.toggle("is-on", l === "en");
     }
     b.addEventListener("click", function () {
-      window.setLang((window.ENCAISSE_LANG === "fr") ? "en" : "fr");
+      window.setLang(current() === "fr" ? "en" : "fr");
       paint();
     });
     document.getElementById("printBtn").addEventListener("click", function (e) { e.preventDefault(); window.print(); });

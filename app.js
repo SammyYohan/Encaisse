@@ -6,7 +6,7 @@ const LS="encaisse.v1", LS_ON="encaisse.onboarded";
 
 /* ---------- i18n (clé = texte source FR, voir i18n.js) ---------- */
 const T=(s,v)=>typeof window.t==="function"?window.t(s,v):s;
-const lang=()=>window.ENCAISSE_LANG==="en"?"en":"fr";
+const lang=()=>{try{return window.getLang()||"fr"}catch(e){return "fr"}};
 const loc=v=>(v&&typeof v==="object")?(v[lang()]||v.fr):v;
 
 /* ---------- pays : Europe + US uniquement ---------- */
@@ -54,7 +54,9 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const toCents=v=>Math.round(Number(String(v).replace(/[\s\u00a0\u202f']/g,"").replace(",", "."))*100)||0;
 const num=v=>Math.max(0,Number(v)||0);
 const CUR={"€":"EUR","CHF":"CHF","$":"USD"};
-const locale=()=>lang()==="en"?(S&&S.biz&&S.biz.pays==="US"?"en-US":"en-GB"):"fr-FR";
+/* Formats natifs par langue (nombres, dates, dictée) : l'anglais US reste en-US. */
+const BCP47={fr:"fr-FR",en:"en-US",bg:"bg-BG",es:"es-ES",cs:"cs-CZ",da:"da-DK",de:"de-DE",et:"et-EE",el:"el-GR",ga:"ga-IE",hr:"hr-HR",it:"it-IT",lv:"lv-LV",lt:"lt-LT",hu:"hu-HU",mt:"mt-MT",nl:"nl-NL",pl:"pl-PL",pt:"pt-PT",ro:"ro-RO",sk:"sk-SK",sl:"sl-SI",fi:"fi-FI",sv:"sv-SE"};
+const locale=()=>lang()==="en"?(S&&S.biz&&S.biz.pays==="US"?"en-US":"en-GB"):(BCP47[lang()]||"fr-FR");
 const fmt=(c,dev)=>{
   const n=(Number(c)||0)/100, cur=CUR[dev]||"EUR";
   try{return new Intl.NumberFormat(locale(),{style:"currency",currency:cur,maximumFractionDigits:2}).format(n)}
@@ -276,10 +278,8 @@ const FREE_MONTHLY=3;
 
 let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",clients:[],docs:[],seq:{DEV:{},FAC:{}}};
 
-function detectLang(){
-  try{const st=localStorage.getItem("encaisse.lang");if(st==="en"||st==="fr")return st}catch{}
-  return (navigator.language||"fr").toLowerCase().startsWith("fr")?"fr":"en";
-}
+/* Langue = source unique i18n (24 langues UE, voir i18n.js) ; repli français. */
+function detectLang(){try{if(window.getLang)return window.getLang()}catch(e){}return "fr"}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S));scheduleBackup();return true}catch(err){toast(T("Stockage plein : supprime une photo ou un vieux document"));return false}}
 /* Pas encore de données : la démo est créée à la fin de l'onboarding
    (voir finishOnb), UNE SEULE FOIS, avec le bon pays et le bon secteur. */
@@ -310,7 +310,7 @@ function migrateMoyens(){
   const list=(S.biz.moyens||[]).map(m=>LEGACY_M[m]||m).filter(k=>MOYENS[k]);
   S.biz.moyens=list.length?[...new Set(list)]:[...PAYS[S.biz.pays].moyens];
   (S.clients||[]).forEach(c=>{if(c&&typeof c==="object"){c.tel=c.tel||"";c.email=c.email||"";c.adresse=c.adresse||"";c.tvaId=c.tvaId||""}});
-  S.lang=(S.lang==="en"||S.lang==="fr")?S.lang:detectLang();
+  S.lang=(window.ENCAISSE_LANG_LIST&&window.ENCAISSE_LANG_LIST[S.lang])?S.lang:detectLang();
 }
 
 function seed(targetPays="FR", targetSecteur="artisan", targetBiz=""){
@@ -410,8 +410,14 @@ function initOnb(){
   if(localStorage.getItem(LS_ON)){$("#onb").hidden=true;return}
   document.querySelector("#app")?.classList.add("onb-on");
   setSlide(0);
-  const langBtn=$("#onbLang");
-  if(langBtn){langBtn.textContent=lang()==="fr"?"EN":"FR";langBtn.onclick=()=>{setLang(lang()==="fr"?"en":"fr");applyI18n();setSlide(oi);refreshOnbPrice()}}
+  /* Sélecteur de langue : les 24 langues UE, noms natifs (norme : on ne traduit
+     jamais le nom d'une langue). Recharge + réapplique tout à chaque choix. */
+  const langSel=$("#onbLangSel");
+  if(langSel){
+    const list=window.ENCAISSE_LANG_LIST||{fr:"Français",en:"English"};
+    langSel.innerHTML=Object.keys(list).map(k=>`<option value="${k}"${k===lang()?" selected":""}>${list[k]}</option>`).join("");
+    langSel.onchange=()=>{setAppLang(langSel.value).then(()=>{setSlide(oi);refreshOnbPrice()})};
+  }
   const upd=refreshOnbPrice;
   upd();
   $("#onbNext").onclick=()=>{ if(oi<NS-1){setSlide(oi+1);return} finishOnb(); };
@@ -810,7 +816,7 @@ function wireDocForm(opt){
 
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(SR){const db=$("#dictBtn");db.hidden=false;db.onclick=()=>{
-    try{const r=new SR();r.lang=lang()==="fr"?"fr-FR":"en-US";r.interimResults=false;db.textContent=`🎙 ${T("Écoute…")}`;
+    try{const r=new SR();r.lang=BCP47[lang()]||"fr-FR";r.interimResults=false;db.textContent=`🎙 ${T("Écoute…")}`;
       r.onresult=ev=>{const txt=ev.results[0][0].transcript.trim();const rows=$$(".line",linesEl);const empty=rows.map(l=>l.children[0]).find(i=>!i.value.trim());
         if(empty)empty.value=txt.slice(0,80);else addL(txt.slice(0,80),1,"");calc();db.textContent=`🎙 ${T("Dicter la prestation")}`;toast(T("Dictée ajoutée ✓"))};
       r.onerror=()=>{db.textContent=`🎙 ${T("Dicter la prestation")}`;toast(T("Dictée impossible hors-ligne"))};
@@ -931,7 +937,7 @@ function openSign(id){
   $("#sigSave").onclick=()=>{
     if(!hasDrawn){toast(T("Fais signer le client avant de valider"));return}
     d.signature=canvas.toDataURL("image/png");
-    d.signedAt=new Date().toLocaleDateString(lang()==="fr"?"fr-FR":"en-US",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
+    d.signedAt=new Date().toLocaleDateString(BCP47[lang()]||"fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
     haptic([30,50,30]);save();closeSheet();render();
     toast(T("Devis signé ✓ Bon pour accord validé !"));
   };
@@ -1342,7 +1348,7 @@ function syncSettings(){
   $("#paysSel").value=S.biz.pays;
   $("#devSel").value=S.biz.devise;
   $("#secSel").value=S.biz.secteur||"artisan";
-  if($("#langSel"))$("#langSel").value=lang();
+  if($("#langSel")){const ls=$("#langSel"),list=window.ENCAISSE_LANG_LIST||{fr:"Français",en:"English"};ls.innerHTML=Object.keys(list).map(k=>`<option value="${k}">${list[k]}</option>`).join("");ls.value=lang()}
   document.querySelector('input[name="biz"]').value=S.biz.nom||"";
   const set=(n,v)=>{const el=document.querySelector(`[name="${n}"]`);if(el)el.value=v||""};
   set("adresse",S.biz.adresse);set("contact",S.biz.contact);set("tvaId",S.biz.tvaId);set("iban",S.biz.iban);
@@ -1505,8 +1511,9 @@ function bind(){
     S.biz.contact=String(f.get("contact")||"").slice(0,80);
     S.biz.tvaId=String(f.get("tvaId")||"").slice(0,40);
     S.biz.iban=String(f.get("iban")||"").slice(0,40);
-    const wantLang=f.get("lang")==="en"?"en":"fr";
-    if(wantLang!==lang()){setLang(wantLang);applyI18n()}
+    const wl=String(f.get("lang")||"fr");
+    const wantLang=(window.ENCAISSE_LANG_LIST&&window.ENCAISSE_LANG_LIST[wl])?wl:"fr";
+    if(wantLang!==lang()){setAppLang(wantLang).then(()=>{syncSettings();render()})}
     save();syncSettings();render();
     toast(T("Activité enregistrée ✓"));
   };
@@ -1632,3 +1639,5 @@ function initInstall(){
 
 /* ---------- boot ---------- */
 load();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();
+/* Langue non-inline (dict chargé à la demande) : rattrapage une fois chargé. */
+if(window.setAppLang&&(lang()!=="fr"&&lang()!=="en")){setAppLang(lang()).then(()=>{try{syncSettings()}catch(e){}try{render()}catch(e){}try{if(!localStorage.getItem("encaisse.onboarded")){setSlide(0);refreshOnbPrice()}}catch(e){}})}
