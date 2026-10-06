@@ -301,7 +301,9 @@ async function postPortal(ctx) {
   const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
   const owner = key ? await sha256hex(key) : "";
   try {
-    /* Migration douce : garantit les colonnes si la base a été créée avec une version antérieure */
+    /* Base neuve sans schema.sql : crée la table (schéma identique à schema.sql),
+       puis migration douce des colonnes pour les bases antérieures. */
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS portal (slug TEXT PRIMARY KEY, payload TEXT NOT NULL, hash TEXT NOT NULL, owner TEXT, paid_at INTEGER, remind_count INTEGER DEFAULT 0, remind_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)").run().catch(function () {});
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN owner TEXT").run().catch(function () {});
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_count INTEGER DEFAULT 0").run().catch(function () {});
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_at INTEGER").run().catch(function () {});
@@ -428,7 +430,9 @@ async function getSub(ctx) {
   if (!p || !p.sid) return json({ error: "jeton_invalide" }, 401);
   /* Liaison a l'appareil (vague 3, anti-partage) : un jeton emis avec une preuve
      ne fonctionne qu'avec elle. Jetons historiques (sans oh) : acceptes comme avant. */
-  if (p.oh && p.oh !== oh) return json({ error: "appareil_inconnu" }, 403);
+  /* Comparaison insensible à la casse (stockage lowercassé à l'émission). */
+  const ohNorm = String(oh || "").toLowerCase();
+  if (p.oh && p.oh !== ohNorm) return json({ error: "appareil_inconnu" }, 403);
   const r = await stripe(env, "subscriptions/" + encodeURIComponent(p.sid), "GET");
   /* 404/400 = abonnement réellement introuvable → 403 (le front déclasse).
      5xx/429 = transitoire → 502, le front GARDE le plan courant. */
@@ -459,6 +463,10 @@ async function subFromSession(env, sessionId, oh) {
   const customer = typeof sub.customer === "string" ? sub.customer : (sub.customer && sub.customer.id) || "";
   const exp = subExp(sub);
   const oh64 = /^[0-9a-f]{64}$/i.test(oh || "") ? String(oh).toLowerCase() : "";
+  /* Liaison d'appareil obligatoire pour tout NOUVEAU jeton : un jeton né sans
+     oh resterait copiable à vie (le contrôle ne porte que sur p.oh présent).
+     Les jetons historiques sans oh restent acceptés en lecture (grand-père). */
+  if (!oh64) return json({ ok: false, error: "appareil_requis" }, 400);
   const token = await signToken(env, { v: 1, sid: sub.id, plan: plan, cycle: cycle, customer: customer, exp: exp, oh: oh64 });
   return json({ ok: true, plan: plan, cycle: cycle, since: new Date().toISOString().slice(0, 10), exp: exp, customer: customer, token: token });
 }

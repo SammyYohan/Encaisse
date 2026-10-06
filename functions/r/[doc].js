@@ -112,7 +112,7 @@ async function sendMail(env, to, subject, text, replyTo) {
 const CSS = `
 *{box-sizing:border-box}
 body{margin:0;background:#f6f7f9;color:#101828;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+.wrap{max-width:640px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(48px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}
 header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0 14px}
 header b{font-size:17px}
 header span{font-size:11px;color:#667085;text-transform:uppercase;letter-spacing:.08em}
@@ -141,7 +141,7 @@ footer{font-size:11px;color:#98a2b3;text-align:center;margin-top:16px;line-heigh
 
 function errorPage(msg, lang, status) {
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow"><title>Encaisse</title>
 <style>${CSS}</style></head><body><div class="wrap"><header><b>Encaisse</b></header>
 <div class="card"><div class="banner b-wait">${esc(msg)}</div></div></div></body></html>`;
@@ -219,7 +219,7 @@ function render(slug, row, p, opts) {
     .filter(Boolean).map(esc).join(" · ");
 
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>${esc(d.numero || "")} · ${esc(biz.nom || "Encaisse")}</title>
 <style>${CSS}</style></head><body><div class="wrap">

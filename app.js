@@ -83,10 +83,13 @@ function makeQR(text){
    - Site publié (SITE_URL + slug portail) : vraie page SERVEUR /r/:slug —
      le CLIENT la voit sur SON appareil. C'est le seul cas utilisable par un tiers.
    - Sinon : ?r=ID — ne fonctionne que DANS LE MÊME navigateur (test local). */
+/* Base d'origine du backend (SITE_URL configuré) ou relatif ("") : une seule
+   source pour portail, relances, abonnement et sauvegarde. */
+function siteBase(){return String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"")}
+
 function getDocUrl(docId){
-  const cfg=window.ENCAISSE_CONFIG||{};
   const id=encodeURIComponent(docId);
-  const site=String(cfg.SITE_URL||"").replace(/\/+$/,"");
+  const site=siteBase();
   const d=S.docs.find(x=>x.id===docId);
   if(site&&d?.portal?.slug) return site+"/r/"+d.portal.slug;
   return `${window.location.origin}${window.location.pathname}?r=${id}`;
@@ -120,7 +123,7 @@ function portalPayload(d){
    réécrire quand le document n'a pas bougé. Jamais d'exception propagée : en cas
    d'échec on retombe sur le lien local (?r=). */
 async function ensurePortal(d,silent){
-  const site=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
+  const site=siteBase();
   if(!site) return{url:getDocUrl(d.id),server:false};
   const payload=portalPayload(d), h=fnv1a(JSON.stringify(payload));
   if(d.portal?.slug&&d.portal.hash===h) return{url:site+"/r/"+d.portal.slug,server:true};
@@ -153,7 +156,7 @@ async function ensurePortal(d,silent){
 const BK_LS="encaisse.backup";
 const b64e=a=>{let s="";a.forEach(x=>s+=String.fromCharCode(x));return btoa(s)};
 const b64d=s=>Uint8Array.from(atob(String(s||"")),c=>c.charCodeAt(0));
-function backupSite(){return String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"")}
+function backupSite(){return siteBase()}
 async function backupKey(){try{const k=ownerKey();if(!k||!crypto.subtle)return null;const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("encaisse-backup-v1:"+k));return crypto.subtle.importKey("raw",h,{name:"AES-GCM"},false,["encrypt","decrypt"])}catch(e){return null}}
 async function backupEncrypt(){const k=await backupKey();if(!k||!crypto.getRandomValues)return null;const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},k,new TextEncoder().encode(JSON.stringify(S))));return{iv:b64e(iv),data:b64e(ct)}}
 async function backupDecrypt(p){const k=await backupKey();if(!k||!p||!p.iv||!p.data)return null;try{const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(p.iv)},k,b64d(p.data));return JSON.parse(new TextDecoder().decode(pt))}catch(e){return null}}
@@ -685,9 +688,9 @@ async function activatePlan(plan){
     /* Paiement réel : le serveur crée la session Stripe Checkout (le prix vient
        de SA table, jamais du client) puis on quitte l'app vers Stripe. */
     try{
-      const r=await fetch("/api/checkout",{
+      const r=await fetch(siteBase()+"/api/checkout",{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({kind:"sub",plan,cycle:S.sub?.cycle||"monthly",zone:zoneKey(),origin:location.origin})});
+        body:JSON.stringify({kind:"sub",plan,cycle:S.sub?.cycle||"monthly",zone:zoneKey()})});
       const j=await r.json().catch(()=>({}));
       if(r.ok&&j.url){toast(T("Redirection vers le paiement sécurisé…"));location.href=j.url;return}
       throw new Error(j.error||("http_"+r.status));
@@ -1061,6 +1064,7 @@ async function docMessage(d){
 }
 async function shareWhatsApp(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
+  if(!siteBase())toast(T("Lien local : ne fonctionne que sur cet appareil. Renseigne SITE_URL (config.js) pour un vrai lien client."));
   const tel=(cliOf(d).tel||"").replace(/[^0-9]/g,"");
   if(!tel){toast(T("Ce client n'a pas de téléphone : ajoute un e-mail ou copie le lien."));return}
   /* on ouvre la fenêtre AVANT l'attente (anti popup-blocker), puis on navigue */
@@ -1074,6 +1078,7 @@ async function shareWhatsApp(id){
 }
 async function shareEmail(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
+  if(!siteBase())toast(T("Lien local : ne fonctionne que sur cet appareil. Renseigne SITE_URL (config.js) pour un vrai lien client."));
   const mail=(cliOf(d).email||"").trim();
   if(!mail){toast(T("Ce client n'a pas d'e-mail."));return}
   const subject=d.type==="devis"?`${T("Devis")} ${d.numero}`:d.type==="avoir"?`${T("Avoir")} ${d.numero}`:`${T("Facture")} ${d.numero}`;
@@ -1110,7 +1115,7 @@ function openView(id){
   const qrSVG=makeQR(payUrl);
   /* Sans SITE_URL le lien est local (même navigateur uniquement) : on le
      signale dans l'aperçu pour éviter un partage inutilisable. */
-  const siteOff=!String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
+  const siteOff=!siteBase();
   const biz=S.biz, cli=cliOf(d);
 
   const acompteLine=d.acompteDeduction?`
@@ -1247,7 +1252,7 @@ function openView(id){
   const c2=$("#cancelS2");if(c2)c2.onclick=closeSheet;
   /* QR = partage : si le lien serveur n'existe pas encore, on le publie et on
      rafraîchit le QR + le lien affiché (site publié uniquement). */
-  const siteV=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
+  const siteV=siteBase();
   if(siteV)ensurePortal(d).then(res=>{
     const lk=document.getElementById("viewLink");
     if(lk&&lk.dataset.u!==res.url){
@@ -1264,7 +1269,7 @@ function openPay(id){
   const allowed=PAYS[S.biz.pays]?.moyens||[];
   const btns=allowed.map(k=>`<button class="chip-btn" type="button" data-m="${k}">${esc(mLabel(k))}</button>`).join("");
   let payUrl=getDocUrl(d.id);
-  const site=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
+  const site=siteBase();
   const qrSVG=makeQR(payUrl);
   openSheet(`<h2>${d.type==="devis"?T("Partager le document"):d.type==="avoir"?T("Partager l'avoir"):T("Lien de paiement")}</h2>
   <p class="sub">${esc(d.numero)} · ${amtOf(d)} · ${esc(d.client)}</p>
@@ -1343,7 +1348,7 @@ async function openRelance(id){
     try{
       /* Même origine que la publication du portail (SITE_URL) : en relatif
          on raterait le backend quand l'app est ouverte depuis une autre origine. */
-      const remindBase=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
+      const remindBase=siteBase();
       const r=await fetch(remindBase+"/api/remind",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:d.portal?.slug||"",key:ownerKey()})});
       const j2=await r.json().catch(()=>({}));
       if(r.ok&&j2.ok){bump();haptic([20,40]);closeSheet();toast(T("Relance e-mail envoyée ✓ ({n})",{n:j2.count}));return}
@@ -1401,13 +1406,13 @@ async function handleCheckoutReturn(){
     /* Liaison à l'appareil (vague 3, anti-partage) : le jeton émis sera lié
        à cette preuve ; copié ailleurs, il sera refusé (403). */
     const oh=ownerKey()||"";
-    const r=await fetch("/api/sub?session_id="+encodeURIComponent(sid)+(oh?"&oh="+oh:""));
+    const r=await fetch(siteBase()+"/api/sub?session_id="+encodeURIComponent(sid)+(oh?"&oh="+oh:""));
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.ok&&j.token){
       S.sub={plan:j.plan,cycle:j.cycle,since:j.since,exp:j.exp,customer:j.customer,token:j.token,checkedAt:Date.now()};
       save();render();haptic([20,50]);toast(T("Abonnement activé ✓ Bienvenue !"));
       clean("session_id"); /* définitif : on nettoie l'URL */
-    }else if(r.status===409||r.status===401||r.status===403){
+    }else if(r.status===400||r.status===409||r.status===401||r.status===403){
       toast(T("Paiement non confirmé — réessaie ou contacte le support."));
       clean("session_id");
     }else{
@@ -1426,7 +1431,7 @@ async function refreshSub(){
   if(Date.now()-(s.checkedAt||0)<6*3600e3)return;
   s.checkedAt=Date.now();
   try{
-    const r=await fetch("/api/sub",{headers:{"X-Sub-Token":s.token,"X-Sub-Oh":ownerKey()||""}});
+    const r=await fetch(siteBase()+"/api/sub",{headers:{"X-Sub-Token":s.token,"X-Sub-Oh":ownerKey()||""}});
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.ok&&j.token){s.exp=j.exp;s.token=j.token;save();return}
     if(r.status===401||r.status===403){
