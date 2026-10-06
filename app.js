@@ -408,6 +408,7 @@ function setSlide(n){
 }
 function initOnb(){
   if(localStorage.getItem(LS_ON)){$("#onb").hidden=true;return}
+  document.querySelector("#app")?.classList.add("onb-on");
   setSlide(0);
   const langBtn=$("#onbLang");
   if(langBtn){langBtn.textContent=lang()==="fr"?"EN":"FR";langBtn.onclick=()=>{setLang(lang()==="fr"?"en":"fr");applyI18n();setSlide(oi);refreshOnbPrice()}}
@@ -438,6 +439,7 @@ function finishOnb(){
   }
   localStorage.setItem(LS_ON,"1");
   $("#onb").hidden=true;
+  document.querySelector("#app")?.classList.remove("onb-on");
   applyI18n();syncSettings();render();
   try{updateInstallBar()}catch{}
   toast(T("Compte créé ✓ {n} factures gratuites par mois · devis illimités",{n:FREE_MONTHLY}));
@@ -919,7 +921,7 @@ function openSign(id){
 
   let drawing=false,hasDrawn=false;
   const getPos=e=>{const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
-  canvas.addEventListener("pointerdown",e=>{e.preventDefault();drawing=true;hasDrawn=true;const p=getPos(e);ctx.beginPath();ctx.moveTo(p.x,p.y)});
+  canvas.addEventListener("pointerdown",e=>{e.preventDefault();try{canvas.setPointerCapture(e.pointerId)}catch{}drawing=true;hasDrawn=true;const p=getPos(e);ctx.beginPath();ctx.moveTo(p.x,p.y)});
   canvas.addEventListener("pointermove",e=>{if(!drawing)return;e.preventDefault();const p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke()});
   const stopDraw=()=>{drawing=false};
   canvas.addEventListener("pointerup",stopDraw);

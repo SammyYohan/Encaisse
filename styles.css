@@ -14,7 +14,7 @@ body{margin:0;font-family:var(--f);background:radial-gradient(1200px 600px at 20
 .phone{position:relative;width:min(480px,100%);min-height:calc(100dvh - 29px - env(safe-area-inset-bottom,0px));background:var(--soft);border-radius:28px;overflow:hidden;box-shadow:var(--sh);border:1px solid #fff;isolation:isolate}
 @media(min-width:560px){.phone{min-height:max(860px,calc(100dvh - 29px - env(safe-area-inset-bottom,0px)))}}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-input,select,textarea{font:inherit;width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+input,select,textarea{font:inherit;font-size:16px;width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)} /* 16px partout : en dessous, iOS zoome auto au focus (les labels .form restent à 13px) */
 input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .link{color:var(--acc-d);font-weight:700}
 .muted{color:var(--mut)}.pad{padding:14px 16px 0}.count{background:var(--ink);color:#fff;border-radius:99px;font-size:12px;padding:2px 9px;margin-left:6px}
@@ -108,11 +108,11 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .act-list .btn.danger{background:#fff5f5}
 
 /* tabs + fab */
-.tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));width:min(456px,calc(100% - 48px));display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:20px;padding:6px;box-shadow:var(--sh);z-index:6}
+.tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));width:min(456px,calc(100% - 48px));display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:20px;padding:6px;box-shadow:var(--sh);z-index:6;-webkit-user-select:none;user-select:none}
 .tabs button{display:grid;place-items:center;gap:2px;font-size:11px;font-weight:800;color:var(--mut);padding:8px 4px;border-radius:14px}
 .tabs button i{font-style:normal;font-size:16px}
 .tabs button.is-on{background:var(--ink);color:#fff}
-.fab{position:fixed;right:calc((100% - min(480px,100% - 24px))/2 + 18px);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:7;display:flex;align-items:center;gap:6px;background:var(--ink);color:#fff;font-size:22px;font-weight:900;line-height:1;border-radius:99px;padding:13px 16px;box-shadow:0 12px 30px rgba(2,6,23,.35);transition:transform .15s}
+.fab{position:fixed;right:calc((100% - min(480px,100% - 24px))/2 + 18px);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:7;-webkit-user-select:none;user-select:none;display:flex;align-items:center;gap:6px;background:var(--ink);color:#fff;font-size:22px;font-weight:900;line-height:1;border-radius:99px;padding:13px 16px;box-shadow:0 12px 30px rgba(2,6,23,.35);transition:transform .15s}
 .fab.off{display:none}
 .fab span{font-size:13px;font-weight:800}.fab:active{transform:scale(.94)}
 
@@ -127,7 +127,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .ios-steps li::marker{color:var(--acc-d)}
 .lines{display:grid;gap:8px;margin:10px 0}
 .line{display:grid;grid-template-columns:minmax(0,1fr) 64px 96px 30px;gap:6px}
-.line input{padding:9px 10px;font-size:13px}
+.line input{padding:11px 10px} /* taille héritée de la règle de base (16px anti-zoom iOS) */
 @media(max-width:400px){.line{grid-template-columns:minmax(0,1fr) minmax(0,56px) minmax(0,84px) minmax(0,28px);gap:5px}}
 .total{display:flex;justify-content:space-between;align-items:center;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-weight:800}
 .paylink{background:#0f172a;color:#fff;border-radius:14px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
@@ -138,6 +138,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 
 /* onboarding */
 .onb{position:absolute;inset:0;z-index:20;background:#0b1226;color:#fff;display:flex;flex-direction:column;overflow:hidden}
+/* Pendant l'onboarding, le contenu de l'app derrière l'overlay est masqué :
+   la carte fait exactement la hauteur de l'écran, la nav (pastilles +
+   Continuer) est donc TOUJOURS visible, sans scroll à deviner. */
+.phone.onb-on>.top,.phone.onb-on>.demo-bar,.phone.onb-on>.install-bar,.phone.onb-on>#views,.phone.onb-on>.fab,.phone.onb-on>.tabs{display:none}
 .onb[hidden]{display:none}
 .onb-bg{position:absolute;inset:0;overflow:hidden}
 .blob{position:absolute;filter:blur(60px);opacity:.7;animation:float 9s ease-in-out infinite alternate}
@@ -152,7 +156,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .onb-top .brand{color:#fff}.onb-top .link{color:#e2e8f0}
 .onb-bar{height:4px;background:#ffffff22;margin:0 16px;border-radius:99px;position:relative;z-index:1;overflow:hidden}
 .onb-bar i{display:block;height:100%;width:25%;background:linear-gradient(90deg,#34d399,#a7f3d0);border-radius:99px;transition:width .4s ease}
-.onb-slides{flex:1;position:relative;z-index:1;padding:10px 20px 0;overflow-x:hidden;overflow-y:auto}
+.onb-slides{flex:1;position:relative;z-index:1;padding:10px 20px 0;overflow-x:hidden;overflow-y:auto;touch-action:pan-y} /* pan-y : le swipe horizontal reste à l'app, le scroll vertical au navigateur */
 .slide{display:none}
 .slide.is-active{display:block;animation:slideIn .38s cubic-bezier(.22,.9,.3,1)}
 .onb-slides[data-dir="prev"] .slide.is-active{animation-name:slideInR}
