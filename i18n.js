@@ -407,7 +407,39 @@
     "Envoi impossible — réessaie plus tard.": "Could not send — try again later.",
     "Connexion requise pour envoyer.": "Connection required to send.",
     "Devis déjà converti": "Quote already converted",
-    "Acompte impayé — non déduit": "Unpaid deposit — not deducted"
+    "Acompte impayé — non déduit": "Unpaid deposit — not deducted",
+
+    /* --- Mise en production : mentions honnêtes, relances J+3/J+7/J+15, offre Pro réelle --- */
+    "Document PDF édité par l'artisan · transmission e-facture via PDP agréée requise entre assujettis (réception obligatoire depuis le 01/09/2026)": "PDF issued by the tradesperson · e-invoice transmission via a certified PDP required between VAT-registered parties (receiving mandatory since 1 Sep 2026)",
+    "Document PDF · Peppol-BIS obligatoire en B2B depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis": "PDF document · Peppol-BIS mandatory in B2B since 1 Jan 2026 — this PDF alone is not enough between VAT-registered parties",
+    "Document PDF avec mentions suisses · QR affiché = lien de paiement Stripe (pas un QR SIX bancaire)": "PDF with Swiss mandatory details · displayed QR = Stripe payment link (not a SIX bank QR)",
+    "Document PDF · sales tax d'État/local saisie à la main — à faire valider par ton comptable": "PDF document · state/local sales tax entered by hand — have your accountant validate it",
+    "Sauvegarde chiffrée multi-appareils": "Encrypted multi-device backup",
+    "Support prioritaire": "Priority support",
+    "Bonjour {w}, facture {n} de {a} impayée depuis {j}j (échéance {e}). Merci de régler ici : {u} — sans règlement sous 7 jours, des pénalités légales s'appliqueront. Cordialement, {b}": "Hello {w}, invoice {n} for {a} unpaid for {j}d (due {e}). Please pay here: {u} — without payment within 7 days, statutory late penalties will apply. Regards, {b}",
+    "Mise en demeure — facture {n} de {a} impayée depuis {j}j (échéance {e}). Dernier rappel avant recouvrement : réglez ici {u}. Pénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables. — {b}": "Formal notice — invoice {n} for {a} unpaid for {j}d (due {e}). Final reminder before collection: pay here {u}. Statutory penalties + €40 flat recovery fee (French Commercial Code L441-10) apply. — {b}",
+    "Image horodatée — à archiver avec le devis (ne remplace pas une signature certifiée)": "Timestamped image — archive with the quote (not a certified e-signature)",
+    "Numérotation inviolable, jamais remise à zéro, montants en centimes, journal horodaté. Conservation {a} à ta charge : exporte en JSON/CSV et active la sauvegarde chiffrée — téléphone perdu = historique perdu sans sauvegarde. CSV = liste simple, pas un FEC.": "Tamper-proof numbering, never reset, amounts in cents, timestamped log. Retention {a} is on you: export JSON/CSV and enable the encrypted backup — lost phone = lost history without a backup. CSV = simple list, not a FEC.",
+    "⚠️ B2B : Peppol-BIS obligatoire depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis.": "⚠️ B2B: Peppol-BIS mandatory since 1 Jan 2026 — this PDF alone is not enough between VAT-registered parties.",
+    "⚠️ Entre assujettis : transmission via PDP agréée requise (réception obligatoire depuis le 01/09/2026).": "⚠️ Between VAT-registered parties: transmission via a certified PDP required (receiving mandatory since 1 Sep 2026).",
+    "Devis en 60 secondes sur chantier, même sans réseau. Facture PDF avec les mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.": "A quote in 60 seconds on site, even with no signal. PDF invoice with your country's mandatory details. Payment link. Guided reminders. One single flow, perfectly finished.",
+    "PDF + mentions FR": "PDF + FR details",
+    "PDF + mentions BE": "PDF + BE details",
+    "PDF + mentions CH": "PDF + CH details",
+    "Sales tax US (manuelle)": "US sales tax (manual)",
+    "E-facture certifiée (PDP France, Peppol Belgique, QR SIX) : via plateforme agréée à brancher. Ce document reste un PDF.": "Certified e-invoicing (French PDP, Belgian Peppol, SIX QR): via a certified platform to connect. This document remains a PDF.",
+    "🇫🇷 France · PDF + mentions": "🇫🇷 France · PDF + details",
+    "🇧🇪 Belgique · PDF + mentions": "🇧🇪 Belgium · PDF + details",
+    "🇨🇭 Suisse · PDF + mentions": "🇨🇭 Switzerland · PDF + details",
+    "🇺🇸 United States · Sales tax (manuelle)": "🇺🇸 United States · Sales tax (manual)",
+    "PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "PDF with your country's details. Certified e-invoicing (FR PDP from 09/2027, BE Peppol-BIS mandatory) via a certified platform to connect. Payments by Stripe. Demo output until API keys are connected.",
+    "🇫🇷 France — PDF + mentions (PDP à brancher)": "🇫🇷 France — PDF + details (PDP to connect)",
+    "🇧🇪 Belgique — PDF + mentions (Peppol à brancher)": "🇧🇪 Belgium — PDF + details (Peppol to connect)",
+    "🇨🇭 Suisse — PDF + mentions": "🇨🇭 Switzerland — PDF + details",
+    "🇺🇸 United States — Sales tax (manuelle)": "🇺🇸 United States — Sales tax (manual)",
+    "Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire. Seule protection contre perte ou vol du téléphone.": "Encrypted copy of the whole device. Even we cannot read it. Your only protection against loss or theft of the phone.",
+    "Fait foi de bon pour accord": "Timestamped approval image (not a certified signature)",
+    "Identité éditeur à compléter dans legal.html avant tout encaissement réel. Interface FR/EN ; régime fiscal FR · BE · CH · US uniquement.": "Publisher identity must be completed in legal.html before any real collection. FR/EN interface; FR · BE · CH · US tax rules only."
   };
 
   /* 24 langues officielles de l'UE (nom natif = libellé affiché, norme Switch) :

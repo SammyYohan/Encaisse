@@ -9,23 +9,26 @@ const T=(s,v)=>typeof window.t==="function"?window.t(s,v):s;
 const lang=()=>{try{return window.getLang()||"fr"}catch(e){return "fr"}};
 const loc=v=>(v&&typeof v==="object")?(v[lang()]||v.fr):v;
 
-/* ---------- pays : Europe + US uniquement ---------- */
+/* ---------- pays : Europe + US uniquement ----------
+   Libellés = pays uniquement (jamais de promesse de conformité).
+   La transmission certifiée (PDP France, Peppol Belgique, QR SIX) exige une
+   plateforme agréée branchée — voir fiscalMention() + avertissement produit. */
 const PAYS={
-  FR:{label:"🇫🇷 Factur-X",nom:{fr:"France",en:"France"},devise:"€",tva:20,archive:"10 ans",prefix:"FR",
-    rule:{fr:"Facturation électronique : réception obligatoire depuis le 01/09/2026, émission TPE/PME depuis le 01/09/2027 via une plateforme agréée (PDP). Formats Factur-X / UBL / CII (EN 16931). Mentions : raison sociale, adresse, SIRET, n° TVA intracom., date d'échéance.",
-          en:"E-invoicing: receiving mandatory since 1 Sep 2026, SMEs must issue via a registered platform (PDP) from 1 Sep 2027. Formats Factur-X / UBL / CII (EN 16931). Required: legal name, address, SIRET, EU VAT number, due date."},
+  FR:{label:"🇫🇷 France",nom:{fr:"France",en:"France"},devise:"€",tva:20,archive:"10 ans",prefix:"FR",
+    rule:{fr:"Facturation électronique : réception obligatoire depuis le 01/09/2026, émission TPE/PME depuis le 01/09/2027 via une plateforme agréée (PDP). Formats Factur-X / UBL / CII (EN 16931). Mentions : raison sociale, adresse, SIRET, n° TVA intracom., date d'échéance. Ce document reste un PDF : la transmission certifiée exige une PDP branchée.",
+          en:"E-invoicing: receiving mandatory since 1 Sep 2026, SMEs must issue via a registered platform (PDP) from 1 Sep 2027. Formats Factur-X / UBL / CII (EN 16931). Required: legal name, address, SIRET, EU VAT number, due date. This document is a PDF: certified transmission needs a connected PDP."},
     moyens:["stripe_cb","sepa","virement","especes"]},
-  BE:{label:"🇧🇪 Peppol",nom:{fr:"Belgique",en:"Belgium"},devise:"€",tva:21,archive:"10 ans",prefix:"BE",
-    rule:{fr:"Peppol-BIS obligatoire en B2B depuis le 01/01/2026 (réception ET émission). Un PDF envoyé par e-mail n'est pas une e-facture. Amendes 1 500 – 5 000 €. Mentions : raison sociale, adresse, TVA BE, date d'échéance.",
-          en:"Peppol-BIS mandatory for B2B since 1 Jan 2026 (receiving AND issuing). A PDF sent by e-mail is not a valid e-invoice. Fines €1,500–€5,000. Required: legal name, address, BE VAT number, due date."},
+  BE:{label:"🇧🇪 Belgique",nom:{fr:"Belgique",en:"Belgium"},devise:"€",tva:21,archive:"10 ans",prefix:"BE",
+    rule:{fr:"Peppol-BIS obligatoire en B2B depuis le 01/01/2026 (réception ET émission). Un PDF envoyé par e-mail n'est pas une e-facture. Amendes 1 500 – 5 000 €. Ce document reste un PDF : inutilisable seul entre assujettis sans point d'accès Peppol. Mentions : raison sociale, adresse, TVA BE, date d'échéance.",
+          en:"Peppol-BIS mandatory for B2B since 1 Jan 2026 (receiving AND issuing). A PDF sent by e-mail is not a valid e-invoice. Fines €1,500–€5,000. This document is a PDF: not enough alone between VAT-registered parties without a Peppol access point. Required: legal name, address, BE VAT number, due date."},
     moyens:["stripe_cb","sepa","virement","especes"]},
-  CH:{label:"🇨🇭 QR-facture",nom:{fr:"Suisse",en:"Switzerland"},devise:"CHF",tva:8.1,archive:"10 ans",prefix:"CH",
-    rule:{fr:"QR-facture (SIX) exigée pour les supports de paiement papier : adresse du payeur en clair (ou QRR/SCOR selon l'IBAN). TVA 8,1 % (taux normal). Mentions : raison sociale, adresse, n° IDE, date d'échéance.",
-          en:"Swiss QR-bill (SIX) required for paper payment slips: creditor address in clear text (QRR/SCOR depending on the IBAN). VAT 8.1% (standard rate). Required: legal name, address, UID number, due date."},
+  CH:{label:"🇨🇭 Suisse",nom:{fr:"Suisse",en:"Switzerland"},devise:"CHF",tva:8.1,archive:"10 ans",prefix:"CH",
+    rule:{fr:"QR-facture (SIX) exigée pour les supports de paiement papier : le QR généré ici ouvre le lien de paiement Stripe, pas un paiement bancaire SIX. TVA 8,1 % (taux normal). Mentions : raison sociale, adresse, n° IDE, date d'échéance.",
+          en:"Swiss QR-bill (SIX) required for paper payment slips: the QR here opens the Stripe payment link, not a SIX bank payment. VAT 8.1% (standard rate). Required: legal name, address, UID number, due date."},
     moyens:["stripe_cb","twint","virement","especes"]},
-  US:{label:"🇺🇸 Sales tax",nom:{fr:"États-Unis",en:"United States"},devise:"$",tva:0,archive:"7 ans",prefix:"US",
-    rule:{fr:"Pas de TVA fédérale : la sales tax dépend de l'État et de la ville (economic nexus, dès ~100 000 $ de ventes ou 200 transactions). Saisis ton taux local, ton n° EIN et ton resale certificate. Conservation des écritures : 7 ans (IRS).",
-          en:"No federal VAT: sales tax is set by state and locality (economic nexus, from ~$100k of sales or 200 transactions). Enter your local rate, EIN and resale certificate. Records kept 7 years (IRS)."},
+  US:{label:"🇺🇸 États-Unis",nom:{fr:"États-Unis",en:"United States"},devise:"$",tva:0,archive:"7 ans",prefix:"US",
+    rule:{fr:"Pas de TVA fédérale : la sales tax dépend de l'État et de la ville (economic nexus, dès ~100 000 $ de ventes ou 200 transactions). Taux saisi à la main — fais-le valider par ton comptable. Conservation des écritures : 7 ans (IRS).",
+          en:"No federal VAT: sales tax is set by state and locality (economic nexus, from ~$100k of sales or 200 transactions). Rate entered by hand — have your accountant validate it. Records kept 7 years (IRS)."},
     moyens:["stripe_cb","ach","virement","especes"]}
 };
 
@@ -276,7 +279,7 @@ const planOf=()=>PLANS[zoneKey()];
 const fmtP=v=>{const z=zoneKey();if(z==="EUR")return v+" €";if(z==="CHF")return v+" CHF";return "$"+v};
 const FREE_MONTHLY=3;
 
-let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",clients:[],docs:[],seq:{DEV:{},FAC:{}}};
+let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",clients:[],docs:[],seq:{DEV:{},FAC:{},AVT:{}}};
 
 /* Langue = source unique i18n (24 langues UE, voir i18n.js) ; repli français. */
 function detectLang(){try{if(window.getLang)return window.getLang()}catch(e){}return "fr"}
@@ -300,9 +303,10 @@ function load(){
 }
 function migrateSeq(){
   const y=String(new Date().getFullYear());
-  for(const k of ["DEV","FAC"]){const v=(S.seq||{})[k];
+  for(const k of ["DEV","FAC","AVT"]){const v=(S.seq||{})[k];
     if(typeof v==="number"){S.seq[k]={[y]:v}}
     else if(!v||typeof v!=="object"){S.seq[k]={}}}
+  if(!S.seq)S.seq={DEV:{},FAC:{},AVT:{}};
 }
 function migrateMoyens(){
   if(!PAYS[S.biz.pays])S.biz.pays="FR";
@@ -318,7 +322,7 @@ function seed(targetPays="FR", targetSecteur="artisan", targetBiz=""){
   const cur=P.devise, tva=P.tva;
   const mult=cur==="CHF"?1.12:(cur==="$"?1.08:1);
   const rP=v=>cur==="€"?v:Math.round(v*mult/5)*5;
-  const keepSeq=(S&&S.seq&&S.seq.FAC)?S.seq:{DEV:{},FAC:{}};
+  const keepSeq=(S&&S.seq)?S.seq:{DEV:{},FAC:{},AVT:{}};
   const dom={FR:["Awa Diallo — Paris 11e","Marc Dupont — Lyon 6e","Boulangerie Saint-Germain"],
              BE:["Awa Diallo — Bruxelles","Marc Dupont — Liège","Boulangerie Saint-Gilles"],
              CH:["Awa Diallo — Genève","Marc Dupont — Lausanne","Boulangerie de Nyon"],
@@ -663,7 +667,7 @@ function openPaywall(reason){
     +`<div class="cycle" id="cyc"><button class="${onM}" data-c="monthly" type="button">${T("Mensuel")}</button><button class="${onY}" data-c="yearly" type="button">${T("Annuel -20%")}</button></div>`
     +`<div class="plans">`
     +`<div class="plan"><b>${T("Solo — pour démarrer")}</b><span class="p">${fmtP(solo)}${per}</span><small>${T("Marge nette ~{m}% après frais + infra",{m:soloMarge})}</small><ul><li>${T("Devis + factures")} <b>${T("illimités")}</b></li><li>${T("Lien de paiement Stripe + relances")}</li><li>${T("Facture")} ${esc(paysNom)} + ${T("archivage")} ${PAYS[S.biz.pays]?.archive}</li></ul><button class="btn primary" data-sub="solo" type="button">${T("Choisir Solo")}</button></div>`
-    +`<div class="plan is-pro"><b>${T("Pro — pour encaisser plus")}</b><span class="p">${fmtP(pro)}${per}</span><small>${T("Marge nette ~{m}% après frais + infra",{m:proMarge})}</small><ul><li>${T("Tout Solo")} +</li><li>${T("Prévision cash 30j + export comptable")}</li><li>${T("3 utilisateurs + support prioritaire")}</li></ul><button class="btn primary" data-sub="pro" type="button">${T("Choisir Pro")}</button></div>`
+    +`<div class="plan is-pro"><b>${T("Pro — pour encaisser plus")}</b><span class="p">${fmtP(pro)}${per}</span><small>${T("Marge nette ~{m}% après frais + infra",{m:proMarge})}</small><ul><li>${T("Tout Solo")} +</li><li>${T("Sauvegarde chiffrée multi-appareils")}</li><li>${T("Support prioritaire")}</li></ul><button class="btn primary" data-sub="pro" type="button">${T("Choisir Pro")}</button></div>`
     +`</div>`
     +`<p class="muted" style="font-size:12px">${T("Sans engagement. 0% commission sur tes encaissements : tu paies uniquement tes frais Stripe (1,5 % en zone euro, 2,9 % aux États-Unis).")}</p>`
     +`<button class="btn ghost" id="cancelS" type="button">${T("Plus tard")}</button>`;
@@ -753,7 +757,7 @@ function openNew(prefillClient){
   <div class="grid3"><label>${taxLbl()} %<input id="fTva" inputmode="decimal" value="${PAYS[S.biz.pays]?.tva??20}"></label><label>${T("Unité")}<input id="fUnit" maxlength="12" value="${esc(sLabel(sec().unit))}" placeholder="${T("h, pce…")}"></label><label>${T("Échéance")}<input id="fEche" type="date" value="${addDays(todayISO(),15)}"></label></div>
   <div class="total"><span>${T("Total TTC estimé")}</span><b id="fTot">0</b></div>
   <div class="row"><button class="btn primary" id="saveDoc" type="button" style="flex:1">${T("Créer le devis ✓")}</button><button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button></div>
-  <small class="muted">${T("Numérotation inviolable")} ${esc(loc(PAYS[S.biz.pays]?.nom))} · ${T("preuve horodatée")} · ${T("archivage")} ${PAYS[S.biz.pays]?.archive||"10 ans"}. <em>${T("Démo : rendu à valider par ton comptable tant que la plateforme d'e-invoicing n'est pas branchée.")}</em></small></div>`);
+  <small class="muted">${T("Numérotation inviolable")} ${esc(loc(PAYS[S.biz.pays]?.nom))} · ${T("preuve horodatée")} · ${T("archivage")} ${PAYS[S.biz.pays]?.archive||"10 ans"}. <em>${T("Démo : rendu à valider par ton comptable tant que la plateforme d'e-invoicing n'est pas branchée.")}</em>${S.biz.pays==="BE"?" "+T("⚠️ B2B : Peppol-BIS obligatoire depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis."):""}${S.biz.pays==="FR"?" "+T("⚠️ Entre assujettis : transmission via PDP agréée requise (réception obligatoire depuis le 01/09/2026)."):""}</small></div>`);
 
   wireDocForm({mode:"new"});
 }
@@ -909,7 +913,7 @@ function openSign(id){
     <canvas id="sigCanvas" class="sig-canvas" width="380" height="140"></canvas>
     <div class="sig-actions">
       <button class="chip-btn" id="sigClear" type="button">${T("Effacer")}</button>
-      <span class="muted" style="font-size:11px">${T("Fait foi de bon pour accord")}</span>
+      <span class="muted" style="font-size:11px">${T("Image horodatée — à archiver avec le devis (ne remplace pas une signature certifiée)")}</span>
     </div>
   </div>
   <div class="row">
@@ -1078,13 +1082,13 @@ async function shareEmail(id){
   haptic([15,30]);window.location.href=url;
 }
 
-/* ---------- mentions fiscales courtes ---------- */
+/* ---------- mentions fiscales courtes (honnêtes : PDF, pas e-facture certifiée) ---------- */
 function fiscalMention(){
   const p=S.biz.pays, id=S.biz.tvaId;
-  if(p==="FR")return T("Facture éditée en PDF · échange structuré EN 16931 (Factur-X / UBL / CII) entre assujettis TVA")+(id?` · ${T("N° TVA intracom.")} ${id}`:"");
-  if(p==="BE")return T("Facture éditée en PDF · e-facture Peppol-BIS obligatoire entre assujettis TVA depuis le 01/01/2026")+(id?` · TVA BE ${id}`:"");
-  if(p==="CH")return T("QR-facture suisse (SIX) · adresses structurées obligatoires")+(id?` · IDE ${id}`:"");
-  return T("Sales tax n'est pas la TVA : taux d'État/local à appliquer")+(id?` · EIN ${id}`:"");
+  if(p==="FR")return T("Document PDF édité par l'artisan · transmission e-facture via PDP agréée requise entre assujettis (réception obligatoire depuis le 01/09/2026)")+(id?` · ${T("N° TVA intracom.")} ${id}`:"");
+  if(p==="BE")return T("Document PDF · Peppol-BIS obligatoire en B2B depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis")+(id?` · TVA BE ${id}`:"");
+  if(p==="CH")return T("Document PDF avec mentions suisses · QR affiché = lien de paiement Stripe (pas un QR SIX bancaire)")+(id?` · IDE ${id}`:"");
+  return T("Document PDF · sales tax d'État/local saisie à la main — à faire valider par ton comptable")+(id?` · EIN ${id}`:"");
 }
 
 /* ---------- aperçu facture / devis conforme & imprimable ---------- */
@@ -1292,18 +1296,24 @@ function openPay(id){
   });
 }
 
-/* ---------- relance ---------- */
+/* ---------- relance : 3 tons réellement distincts (J+3 poli / J+7 ferme / J+15 mise en demeure) ---------- */
+function relanceMsg(d, j, payUrl){
+  const tt=totals(d);
+  const who=(d.client||"").split("—")[0].trim();
+  const v={w:who,n:d.numero,a:fmt(tt.net??tt.ttc,S.biz.devise),e:d.eche,j,u:payUrl,b:S.biz.nom||""};
+  if(j<=3)return T("Bonjour {w}, petit rappel : facture {n} de {a} (échéance {e}, {j}j de retard). Lien pour régler : {u} Merci beaucoup 🙏 — {b}", v);
+  if(j<=10)return T("Bonjour {w}, facture {n} de {a} impayée depuis {j}j (échéance {e}). Merci de régler ici : {u} — sans règlement sous 7 jours, des pénalités légales s'appliqueront. Cordialement, {b}", v);
+  return T("Mise en demeure — facture {n} de {a} impayée depuis {j}j (échéance {e}). Dernier rappel avant recouvrement : réglez ici {u}. Pénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables. — {b}", v);
+}
 async function openRelance(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
-  const tt=totals(d), c=cliOf(d);
+  const c=cliOf(d);
   const j=Math.max(0,daysLate(d.eche));
   const ton=j<=3?T("poli"):(j<=10?T("ferme"):T("mise en demeure"));
   /* ensurePortal rafraîchit la copie D1 (statut/echéance) : le serveur ne
      relancera jamais sur des données périmées. */
   const portal=await ensurePortal(d), payUrl=portal.url;
-  const who=(d.client||"").split("—")[0].trim();
-  const msg=T("Bonjour {w}, petit rappel : facture {n} de {a} (échéance {e}, {j}j de retard). Lien pour régler : {u} Merci beaucoup 🙏 — {b}",
-    {w:who,n:d.numero,a:fmt(tt.net??tt.ttc,S.biz.devise),e:d.eche,j,u:payUrl,b:S.biz.nom||""});
+  const msg=relanceMsg(d, j, payUrl);
   const tel=(c.tel||"").replace(/[^0-9]/g,"");
   const mail=(c.email||"").trim();
   /* E-mail envoyé PAR LE SERVEUR (Brevo) : bouton principal dès que le
@@ -1354,7 +1364,7 @@ function syncSettings(){
   set("adresse",S.biz.adresse);set("contact",S.biz.contact);set("tvaId",S.biz.tvaId);set("iban",S.biz.iban);
   $("#ruleLine").textContent="📌 "+loc(PAYS[S.biz.pays]?.rule||"");
   const al=$("#archiveLine");
-  if(al)al.textContent=T("Numérotation inviolable, jamais remise à zéro, montants en centimes, journal horodaté. Conservation {a}. Export comptable en 1 clic.",{a:loc(PAYS[S.biz.pays]?.archive||"10 ans")});
+  if(al)al.textContent=T("Numérotation inviolable, jamais remise à zéro, montants en centimes, journal horodaté. Conservation {a} à ta charge : exporte en JSON/CSV et active la sauvegarde chiffrée — téléphone perdu = historique perdu sans sauvegarde. CSV = liste simple, pas un FEC.",{a:loc(PAYS[S.biz.pays]?.archive||"10 ans")});
   const allowed=PAYS[S.biz.pays]?.moyens||[];
   S.biz.moyens=(S.biz.moyens||[]).filter(k=>allowed.includes(k));
   if(!S.biz.moyens.length)S.biz.moyens=[...allowed];

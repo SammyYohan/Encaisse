@@ -55,11 +55,13 @@
 
 <main class="wrap">
 
+<div class="todo" id="legalWarn" style="margin-bottom:18px">⚠️ <b>Version d'évaluation — identité éditeur non renseignée.</b> Les champs [À COMPLÉTER] ci-dessous bloquent tout encaissement réel : raison sociale, adresse, immatriculation, TVA, e-mail support, médiateur (FR), for juridique (CH), DPO. Voir README §6 checklist. Tant que ce bandeau est affiché, <code>DEMO_MODE</code> doit rester à <code>true</code>.</div>
+
 <!-- ============ MENTIONS LÉGALES ============ -->
 <section id="mentions">
   <div class="fr">
     <h1>Mentions légales <small>Encaisse — devis, factures, encaissement</small></h1>
-    <div class="todo">À compléter avant mise en ligne : raison sociale, forme juridique, adresse du siège, numéro d'immatriculation (SIRET / RCS / EIN), numéro de TVA, nom du responsable légal et e-mail de contact.</div>
+    <div class="todo">À compléter avant mise en ligne : raison sociale, forme juridique, adresse du siège, numéro d'immatriculation (SIRET / RCS / EIN), numéro de TVA, nom du responsable légal et e-mail de contact. Format e-mail : support@[tondomaine]. Taux / siret fictifs interdits.</div>
     <h2>1. Éditeur du site</h2>
     <p><b>Raison sociale :</b> [À COMPLÉTER] · <b>Forme juridique :</b> [À COMPLÉTER] · <b>Adresse :</b> [À COMPLÉTER]</p>
     <p><b>Immatriculation :</b> SIRET / RCS / Company No. [À COMPLÉTER] · <b>TVA :</b> [À COMPLÉTER ou « non assujetti »]</p>
@@ -107,22 +109,22 @@
     <p>L'utilisateur garantit l'exactitude des informations saisies et de la identité de son entreprise (dénomination, adresse, numéro d'identification fiscale, régime de TVA). Il est responsable de la confidentialité de son appareil.</p>
 
     <h2>3. Offres et tarifs</h2>
-    <p><b>Gratuit :</b> devis illimités, 3 factures par mois, sans carte bancaire.</p>
+    <p><b>Gratuit :</b> devis illimités, avoirs illimités, 3 factures par mois, sans carte bancaire. Prévision cash 30 jours et exports JSON/CSV inclus pour tous (le CSV est une liste simple, pas un FEC).</p>
     <ul>
-      <li><b>Solo — zone euro et dollar :</b> 19 € / 19 $ par mois, ou 182 € / 182 $ par an (−20 %). Factures illimitées, lien de paiement Stripe, relances.</li>
-      <li><b>Pro — zone euro et dollar :</b> 39 € / 39 $ par mois, ou 374 € / 374 $ par an. Tout Solo, plus prévision cash 30 jours, export comptable (JSON, CSV) et 3 utilisateurs.</li>
+      <li><b>Solo — zone euro et dollar :</b> 19 € / 19 $ par mois, ou 182 € / 182 $ par an (−20 %). Devis + factures illimités, lien de paiement Stripe, relances J+3/J+7/J+15.</li>
+      <li><b>Pro — zone euro et dollar :</b> 39 € / 39 $ par mois, ou 374 € / 374 $ par an. Tout Solo, plus sauvegarde chiffrée multi-appareils et support prioritaire.</li>
       <li><b>Solo — Suisse :</b> 29 CHF par mois, ou 278 CHF par an. <b>Pro — Suisse :</b> 59 CHF par mois, ou 566 CHF par an.</li>
     </ul>
-    <p>Les prix s'affichent dans la devise du pays choisi dans l'application. L'abonnement se renouvelle automatiquement jusqu'à résiliation. Aucun prélèvement n'est effectué tant que le tunnel de paiement n'est pas activé par l'éditeur.</p>
+    <p>Pas de compte multi-utilisateur : l'app est mono-artisan, données sur l'appareil. La sauvegarde chiffrée permet de retrouver ses documents sur un second appareil avec le code de récupération. Les prix s'affichent dans la devise du pays choisi dans l'application. L'abonnement se renouvelle automatiquement jusqu'à résiliation. Aucun prélèvement n'est effectué tant que le tunnel de paiement n'est pas activé par l'éditeur (DEMO_MODE).</p>
 
     <h2>4. Paiement</h2>
     <p>Les paiements en ligne sont traités par <b>Stripe</b> (carte bancaire, SEPA, ACH). L'éditeur ne conserve aucune donnée de carte bancaire. Les frais de transaction Stripe sont à la charge du client professionnel, en plus de l'abonnement, et sont payés directement à Stripe. Les autres moyens affichés (virement, espèces, TWINT) sont des règlements manuels hors Stripe, constatés par l'utilisateur lui-même dans l'application.</p>
 
     <h2>5. Facturation et conformité</h2>
-    <p>Le logiciel génère des documents aux formats et mentions prévus pour la France, la Belgique, la Suisse et les États-Unis. L'éditeur ne garantit pas à lui seul la conformité : l'utilisateur doit faire valider ses modèles par son comptable, en particulier pour les formats structurés (Factur-X, Peppol-BIS, QR-facture) et les taux de taxe locale utilisés.</p>
+    <p>Le logiciel génère des <b>PDF avec les mentions du pays</b> (raison sociale, adresse, identifiant fiscal, échéance). <b>Ce ne sont pas des e-factures certifiées :</b> France — transmission entre assujettis via plateforme agréée (PDP) requise (réception obligatoire depuis le 01/09/2026, émission TPE/PME dès le 01/09/2027) ; Belgique — Peppol-BIS obligatoire en B2B depuis le 01/01/2026, un PDF seul ne suffit pas (amendes 1 500 – 5 000 €) ; Suisse — le QR affiché ouvre le lien Stripe, pas un QR SIX bancaire ; États-Unis — sales tax saisie à la main. L'utilisateur doit faire valider ses modèles et ses taux par son comptable.</p>
 
     <h2>6. Responsabilité</h2>
-    <p>Le service est fourni « en l'état ». L'éditeur ne saurait être tenu des pertes d'exploitation, de la perte de données locale due à un défaut de sauvegarde de l'utilisateur, ou des conséquences d'un usage non conforme des documents produits.</p>
+    <p>Le service est fourni « en l'état ». Données stockées en local (~5 Mo) : en cas de perte, vol ou nettoyage du navigateur sans sauvegarde chiffrée ni export JSON/CSV, l'historique est perdu. La signature au doigt est une image horodatée archivée avec le devis, pas une signature électronique certifiée. L'éditeur ne saurait être tenu des pertes d'exploitation ou des conséquences d'un usage non conforme des documents produits.</p>
 
     <h2>7. Résiliation</h2>
     <p>Résiliation possible à tout moment par e-mail au support ([E-MAIL À COMPLÉTER]), effective à la fin de la période payée, sans frais. Les documents restent exportables en JSON et CSV après résiliation. En cas de litige de consommation (France), réclamation préalable écrite obligatoire avant toute médiation.</p>
@@ -142,22 +144,22 @@
     <p>The user guarantees the accuracy of the information entered, including their business identity (legal name, address, tax identification number, VAT status). They are responsible for keeping their device secure.</p>
 
     <h2>3. Plans and pricing</h2>
-    <p><b>Free:</b> unlimited quotes, 3 invoices per month, no card required.</p>
+    <p><b>Free:</b> unlimited quotes, unlimited credit notes, 3 invoices per month, no card required. 30-day cash forecast and JSON/CSV exports included for everyone (CSV is a simple list, not a FEC).</p>
     <ul>
-      <li><b>Solo — euro and dollar zones:</b> €19 / $19 per month, or €182 / $182 per year (−20%). Unlimited invoices, Stripe payment link, reminders.</li>
-      <li><b>Pro — euro and dollar zones:</b> €39 / $39 per month, or €374 / $374 per year. Everything in Solo, plus 30-day cash forecast, accounting export (JSON, CSV) and 3 users.</li>
+      <li><b>Solo — euro and dollar zones:</b> €19 / $19 per month, or €182 / $182 per year (−20%). Unlimited quotes + invoices, Stripe payment link, D+3/D+7/D+15 reminders.</li>
+      <li><b>Pro — euro and dollar zones:</b> €39 / $39 per month, or €374 / $374 per year. Everything in Solo, plus encrypted multi-device backup and priority support.</li>
       <li><b>Solo — Switzerland:</b> CHF 29 per month, or CHF 278 per year. <b>Pro — Switzerland:</b> CHF 59 per month, or CHF 566 per year.</li>
     </ul>
-    <p>Prices are shown in the currency of the country selected in the app. Subscriptions renew automatically until cancelled. No charge is made until the publisher enables the payment flow.</p>
+    <p>No multi-user accounts: single-tradesperson app, data on the device. The encrypted backup restores documents on a second device with the recovery code. Prices are shown in the currency of the country selected in the app. Subscriptions renew automatically until cancelled. No charge is made until the publisher enables the payment flow (DEMO_MODE).</p>
 
     <h2>4. Payment</h2>
     <p>Online payments are processed by <b>Stripe</b> (card, SEPA, ACH). The publisher stores no card data. Stripe transaction fees are borne by the professional customer on top of the subscription and are paid directly to Stripe. Other displayed methods (bank transfer, cash, TWINT) are manual payments outside Stripe, recorded by the user in the app.</p>
 
     <h2>5. Invoicing and compliance</h2>
-    <p>The software generates documents using the formats and mandatory details required in France, Belgium, Switzerland and the United States. The publisher alone cannot guarantee compliance: users must have their templates validated by their accountant, especially for structured formats (Factur-X, Peppol-BIS, QR-bill) and local tax rates.</p>
+    <p>The software generates <b>PDFs with the country's mandatory details</b> (legal name, address, tax ID, due date). <b>These are not certified e-invoices:</b> France — transmission between VAT-registered parties via a certified platform (PDP) required (receiving mandatory since 1 Sep 2026, SME issuing from 1 Sep 2027); Belgium — Peppol-BIS mandatory in B2B since 1 Jan 2026, a PDF alone is not enough (fines €1,500–€5,000); Switzerland — the displayed QR opens the Stripe link, not a SIX bank QR; United States — sales tax entered by hand. Users must have their templates and rates validated by their accountant.</p>
 
     <h2>6. Liability</h2>
-    <p>The service is provided "as is". The publisher cannot be held liable for loss of business, loss of local data caused by the user's failure to back up, or consequences of non-compliant use of the generated documents.</p>
+    <p>The service is provided "as is". Data stored locally (~5 MB): if the device is lost, stolen or the browser cleared without an encrypted backup or JSON/CSV export, history is lost. Finger signatures are timestamped images archived with the quote, not certified e-signatures. The publisher cannot be held liable for loss of business or consequences of non-compliant use of the generated documents.</p>
 
     <h2>7. Termination</h2>
     <p>You may cancel at any time by e-mail to support ([E-MAIL TO COMPLETE]), effective at the end of the paid period, free of charge. Documents remain exportable as JSON and CSV after cancellation. For French consumer disputes, a prior written complaint is required before any mediation.</p>
@@ -272,6 +274,17 @@
     });
     document.getElementById("printBtn").addEventListener("click", function (e) { e.preventDefault(); window.print(); });
     document.getElementById("yr").textContent = new Date().getFullYear();
+    /* Verrou de mise en production : tant qu'un placeholder subsiste, le
+       bandeau d'avertissement reste et window.ENCAISSE_LEGAL_OK vaut false
+       (l'app Réglages → Légal peut le lire pour bloquer DEMO_MODE:false). */
+    try {
+      var html = document.body.innerHTML || "";
+      var ok = html.indexOf("[À COMPLÉTER]") === -1 && html.indexOf("[TO COMPLETE]") === -1
+        && html.indexOf("[E-MAIL À COMPLÉTER]") === -1 && html.indexOf("[E-MAIL TO COMPLETE]") === -1;
+      window.ENCAISSE_LEGAL_OK = ok;
+      var w = document.getElementById("legalWarn");
+      if (w && ok) w.style.display = "none";
+    } catch (e) { window.ENCAISSE_LEGAL_OK = false; }
     paint();
   })();
 </script>

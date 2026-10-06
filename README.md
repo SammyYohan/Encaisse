@@ -13,7 +13,7 @@
 | **Storage** | `localStorage` on the user's device — no account, no server database |
 | **Deployment** | Cloudflare Pages (free tier) |
 | **i18n** | French source strings are the translation keys (gettext-style) |
-| **Status** | 🟢 Front-end production-ready & automated-tested · 🔴 No backend yet → see [Roadmap](#9-roadmap) |
+| **Status** | 🟢 Front + backend exist & wired (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, `legal.html` placeholders unfilled → see [Go-live checklist](#go-live-checklist) |
 
 ---
 
@@ -37,12 +37,15 @@
 ## 1. What it does
 
 - **Quotes & invoices** for a sole trader, created on a phone, in under a minute.
-- **Country-aware** documents: France (Factur-X / PDP), Belgium (Peppol-BIS),
-  Switzerland (QR-bill), United States (state/local sales tax).
-- **Payment link** (Stripe card, SEPA Direct Debit, ACH, SWISS QR/TWINT) + printable
+- **Country-aware PDF documents** with the country's mandatory details:
+  France (PDF + PDP notice), Belgium (PDF + Peppol-BIS warning),
+  Switzerland (PDF, QR opens the Stripe link — not a SIX QR-bill), United States
+  (hand-entered state/local sales tax).
+- **Payment link** (Stripe card, SEPA Direct Debit, ACH, TWINT/manual transfer/cash noted separately) + printable
   PDF with QR code via the browser's print dialog.
-- **Guided follow-up**: D+3 polite → D+7 firm → D+15 formal notice, with the message
-  pre-filled for WhatsApp or e-mail, 1 click.
+- **Guided follow-up**: D+3 polite → D+7 firm → D+15 formal notice, with **three
+  distinct pre-filled messages** for WhatsApp or e-mail (server-side Brevo
+  reminder uses the same 3 tiers), 1 click.
 - **Single cash screen**: who owes what, how long overdue, 30-day cash forecast.
 - **Offline-first**: works in a basement on a job site; installable as a PWA.
 - **Proof tools**: job-site photo attached to the document, on-device signature
@@ -59,7 +62,7 @@ Any static file server works. The service worker and PWA install require
 ```powershell
 npx serve .            # → http://localhost:3000
 # or
-python -m http.server 8000
+python -m http.server 8080
 ```
 
 Open `http://localhost:3000`. On first load you get the onboarding flow
@@ -188,7 +191,7 @@ Do not translate the key. The dictionary must stay complete — check with a
 
 ### 4.6 Offline & caching
 
-`sw.js` caches the whole app (constant `C`, currently `encaisse-v8`).
+`sw.js` caches the whole app (constant `C`, currently `encaisse-v11`).
 `config.js`, `i18n.js` and `sw.js`
 are **network-first** so a key or a translation ships immediately even with a stale
 cache. **Bump the `C` constant on every release.**
@@ -264,8 +267,11 @@ Endpoints: `POST /api/checkout` (subscription Checkout, server-side prices) ·
 (publishes `/r/:slug`, only on an explicit share) · `GET /api/pay` (invoice
 payment; amount comes from D1, never from the payer) · `POST /api/remind`
 (1-click reminder e-mailed by the server via Brevo, 72 h anti-doublon per
-document) · `/r/:slug` (server-rendered invoice, confirms payment via
-`?session_id=` and e-mails the receipt to the customer — no webhook yet).
+document, 3 distinct D+3/D+7/D+15 tiers) · `POST /api/stripe-webhook`
+(signed Stripe webhook, strict amount + currency check, idempotent `paid_at`) ·
+`/r/:slug` (server-rendered invoice, confirms payment via
+`?session_id=` and e-mails the receipt to the customer — webhook is the
+no-browser-return path).
 
 > **Automated (unattended) reminders are not possible on Pages Functions** —
 > Cloudflare does not expose cron triggers there. They require a small dedicated
@@ -297,7 +303,7 @@ Honest state of the compliance claims (see `VEILLE.md` for the research):
 |---|---|---|
 | 🇫🇷 France | E-invoice **receipt mandatory since 2026-09-01**; SMEs must **issue from 2027-09-01** through a certified platform (**PDP/PA**, 166 approved) | Emits a PDF with correct seller details + a visible warning that transmission needs a certified platform |
 | 🇧🇪 Belgium | **Peppol-BIS mandatory in B2B since 2026-01-01** (fines €1 500–5 000) | Same: PDF + explicit warning, no Peppol access point yet |
-| 🇨🇭 Switzerland | No e-invoice mandate; **QR-bill** required for paper | QR payment code supported |
+| 🇨🇭 Switzerland | No e-invoice mandate; **QR-bill** required for paper | PDF with Swiss details; displayed QR opens the Stripe payment link, **not** a SIX bank QR-bill |
 | 🇺🇸 USA | No federal mandate; state/local **sales tax** with economic nexus; **7-year** IRS record retention | Manual tax rate, country-specific legal mentions |
 
 **Consequence:** the product must **not** be marketed as "EU-compliant e-invoicing"
@@ -403,8 +409,10 @@ legal placeholders, then connect P0 item 6 (certified e-invoicing partner).
 | Icons | Generated in-house for this project (Unicode `U+20A3` glyph) | Original |
 | Everything else | Written for this project | Owner's choice |
 
-> ⚠️ **No `LICENSE` file yet.** Decide on one (proprietary / MIT / AGPL…) **before**
-> distributing the code — it is the single most important file for an acquisition.
+> `LICENSE` is a provisional **all-rights-reserved evaluation licence** (audit +
+> authorised deployment only). Replace it with the final licence (proprietary /
+> MIT / AGPL…) **before** any public distribution — it is the single most
+> important file for an acquisition.
 
 ---
 

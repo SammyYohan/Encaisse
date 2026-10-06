@@ -44,10 +44,11 @@
     <div class="onb-bar"><i id="onbBar"></i></div>
     <div class="onb-slides" id="onbSlides">
       <section class="slide is-active" data-i="0">
-        <div class="art a1" aria-hidden="true"><span class="card-mini m1">DEVIS-2026-014<br><b>12 500 € ✓</b></span><span class="card-mini m2">VAT ✓ Factur-X<br><b>Paid · Stripe</b></span><span class="coin">₣</span></div>
+        <div class="art a1" aria-hidden="true"><span class="card-mini m1">DEVIS-2026-014<br><b>12 500 € ✓</b></span><span class="card-mini m2">TVA ✓ PDF<br><b>Paid · Stripe</b></span><span class="coin">₣</span></div>
         <h1 data-i18n-html="Tu travailles.<br>Tu dois être <mark>payé.</mark>">Tu travailles.<br>Tu dois être <mark>payé.</mark></h1>
-        <p data-i18n="Devis en 60 secondes sur chantier, même sans réseau. Facture aux mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.">Devis en 60 secondes sur chantier, même sans réseau. Facture aux mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.</p>
-        <ul class="chips"><li>FR Factur-X</li><li>BE Peppol</li><li>CH QR-facture</li><li>US Sales tax</li></ul>
+        <p data-i18n="Devis en 60 secondes sur chantier, même sans réseau. Facture PDF avec les mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.">Devis en 60 secondes sur chantier, même sans réseau. Facture PDF avec les mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.</p>
+        <ul class="chips"><li data-i18n="PDF + mentions FR">PDF + mentions FR</li><li data-i18n="PDF + mentions BE">PDF + mentions BE</li><li data-i18n="PDF + mentions CH">PDF + mentions CH</li><li data-i18n="Sales tax US (manuelle)">Sales tax US (manuelle)</li></ul>
+        <p class="fine" data-i18n="E-facture certifiée (PDP France, Peppol Belgique, QR SIX) : via plateforme agréée à brancher. Ce document reste un PDF.">E-facture certifiée (PDP France, Peppol Belgique, QR SIX) : via plateforme agréée à brancher. Ce document reste un PDF.</p>
       </section>
       <section class="slide" data-i="1">
         <div class="art a2" aria-hidden="true"><span class="phone-mini"><i></i><i></i><i class="ok"></i></span><span class="paylist">Stripe ✓ 120,00 €<br>SEPA ✓ 1 250,00 €<br>Stripe ✓ $450.00</span></div>
@@ -75,13 +76,13 @@
           <option value="transport" data-i18n="🛵 Transport / Livraison">🛵 Transport / Livraison</option>
         </select>
         <div class="pays-grid" id="onbPays">
-          <button type="button" data-pays="FR" class="is-sel" data-i18n="🇫🇷 France · Factur-X">🇫🇷 France · Factur-X</button>
-          <button type="button" data-pays="BE" data-i18n="🇧🇪 Belgique · Peppol">🇧🇪 Belgique · Peppol</button>
-          <button type="button" data-pays="CH" data-i18n="🇨🇭 Suisse · QR-facture">🇨🇭 Suisse · QR-facture</button>
-          <button type="button" data-pays="US" data-i18n="🇺🇸 United States · Sales tax">🇺🇸 United States · Sales tax</button>
+          <button type="button" data-pays="FR" class="is-sel" data-i18n="🇫🇷 France · PDF + mentions">🇫🇷 France · PDF + mentions</button>
+          <button type="button" data-pays="BE" data-i18n="🇧🇪 Belgique · PDF + mentions">🇧🇪 Belgique · PDF + mentions</button>
+          <button type="button" data-pays="CH" data-i18n="🇨🇭 Suisse · PDF + mentions">🇨🇭 Suisse · PDF + mentions</button>
+          <button type="button" data-pays="US" data-i18n="🇺🇸 United States · Sales tax (manuelle)">🇺🇸 United States · Sales tax (manuelle)</button>
         </div>
         <p class="onb-price" id="onbPrice">🇫🇷 Solo 19 €/mois · Pro 39 €/mois · -20% en annuel</p>
-        <p class="fine" data-i18n="Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.">Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.</p>
+        <p class="fine" data-i18n="PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.">PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.</p>
       </section>
     </div>
     <div class="onb-nav">
@@ -95,7 +96,7 @@
     <div class="brand small"><span class="logo">₣</span><span>Encaisse</span></div>
     <div class="top-right">
       <span class="plan-badge" id="planBadge">Gratuit</span>
-      <span class="pill-pays" id="pillPays">🇫🇷 Factur-X</span>
+      <span class="pill-pays" id="pillPays">🇫🇷 France</span>
       <span class="dot-net" id="dotNet" title="statut réseau"><i></i><em>Hors-ligne OK</em></span>
     </div>
   </header>
@@ -160,10 +161,10 @@
         </select></label>
         <div class="grid2">
           <label><span data-i18n="Pays fiscal">Pays fiscal</span><select name="pays" id="paysSel">
-            <option value="FR" data-i18n="🇫🇷 France — Factur-X / PDP">🇫🇷 France — Factur-X / PDP</option>
-            <option value="BE" data-i18n="🇧🇪 Belgique — Peppol-BIS">🇧🇪 Belgique — Peppol-BIS</option>
-            <option value="CH" data-i18n="🇨🇭 Suisse — QR-facture">🇨🇭 Suisse — QR-facture</option>
-            <option value="US" data-i18n="🇺🇸 United States — Sales tax">🇺🇸 United States — Sales tax</option>
+            <option value="FR" data-i18n="🇫🇷 France — PDF + mentions (PDP à brancher)">🇫🇷 France — PDF + mentions (PDP à brancher)</option>
+            <option value="BE" data-i18n="🇧🇪 Belgique — PDF + mentions (Peppol à brancher)">🇧🇪 Belgique — PDF + mentions (Peppol à brancher)</option>
+            <option value="CH" data-i18n="🇨🇭 Suisse — PDF + mentions">🇨🇭 Suisse — PDF + mentions</option>
+            <option value="US" data-i18n="🇺🇸 United States — Sales tax (manuelle)">🇺🇸 United States — Sales tax (manuelle)</option>
           </select></label>
           <label><span data-i18n="Devise">Devise</span><select name="devise" id="devSel"><option>€</option><option>CHF</option><option>$</option></select></label>
         </div>
@@ -189,12 +190,13 @@
       </div>
       <div class="card">
         <h3 data-i18n="Sauvegarde en ligne chiffrée">Sauvegarde en ligne chiffrée</h3>
-        <p class="muted" data-i18n="Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire.">Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire.</p>
+        <p class="muted" data-i18n="Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire. Seule protection contre perte ou vol du téléphone.">Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire. Seule protection contre perte ou vol du téléphone.</p>
         <div class="row"><button class="btn small" id="bkNowBtn" type="button" data-i18n="Sauvegarder maintenant">Sauvegarder maintenant</button><button class="btn small ghost" id="bkCodeBtn" type="button" data-i18n="Code de récupération">Code de récupération</button><button class="btn small ghost" id="bkRestoreBtn" type="button" data-i18n="Restaurer">Restaurer</button></div>
         <p class="muted" id="bkState" style="font-size:12px;margin:8px 0 0"></p>
       </div>
       <div class="card">
         <h3 data-i18n="Légal">Légal</h3>
+        <p class="muted" style="font-size:12px" data-i18n="Identité éditeur à compléter dans legal.html avant tout encaissement réel. Interface FR/EN ; régime fiscal FR · BE · CH · US uniquement.">Identité éditeur à compléter dans legal.html avant tout encaissement réel. Interface FR/EN ; régime fiscal FR · BE · CH · US uniquement.</p>
         <div class="row">
           <a class="btn small ghost" href="legal.html#mentions" data-i18n="Mentions légales">Mentions légales</a>
           <a class="btn small ghost" href="legal.html#cgv" data-i18n="CGU / CGV">CGU / CGV</a>

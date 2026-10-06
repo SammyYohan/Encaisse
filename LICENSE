@@ -1,0 +1,18 @@
+Encaisse — Licence d'évaluation (provisoire)
+
+© Encaisse SLC — Tous droits réservés.
+
+Le code source de ce dépôt est mis à disposition uniquement pour :
+- l'audit technique et la due diligence,
+- le déploiement du service par son propriétaire légitime,
+- la correction de bugs et la maintenance autorisée.
+
+Toute redistribution publique, revente, extraction de composants vers un
+produit concurrent, ou utilisation commerciale par un tiers sans accord écrit
+du propriétaire est interdite tant qu'une licence définitive (propriétaire,
+MIT, AGPL…) n'a pas été choisie et inscrite ici.
+
+Fichier à remplacer avant distribution publique — voir README §12.
+English summary: all rights reserved; source shared for audit and authorised
+deployment/maintenance only; no public redistribution or commercial reuse by
+third parties without written agreement until a final licence is chosen.

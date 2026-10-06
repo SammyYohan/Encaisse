@@ -368,14 +368,33 @@ async function postRemind(ctx) {
   const late = Math.max(0, Math.floor((now - new Date(String(d.eche || today()) + "T12:00:00Z").getTime()) / 864e5));
   const url = new URL(request.url).origin + "/r/" + slug;
   const amount = fmtCents(tt.net, biz.devise, lang);
-  const subject = lang === "en" ? "Reminder — invoice " + (d.numero || "") : "Relance — facture " + (d.numero || "");
-  const text = lang === "en"
-    ? "Hello " + (who || "you") + ", a friendly reminder: invoice " + (d.numero || "") + " of " + amount +
-      " (due " + (d.eche || "") + ", " + late + " day(s) overdue).\nPay securely here: " + url +
-      "\n\nThank you very much \ud83d\ude4f — " + String(biz.nom || "")
-    : "Bonjour " + (who || "à vous") + ", petit rappel : facture " + (d.numero || "") + " de " + amount +
-      " (échéance " + (d.eche || "") + ", " + late + "j de retard).\nLien pour régler : " + url +
-      "\n\nMerci beaucoup \ud83d\ude4f — " + String(biz.nom || "");
+  /* 3 tons réellement distincts, alignés sur le front (J+3 poli / J+7 ferme / J+15 mise en demeure). */
+  const tier = late <= 3 ? 0 : late <= 10 ? 1 : 2;
+  const subject = lang === "en"
+    ? (tier === 2 ? "Formal notice — invoice " : tier === 1 ? "Overdue — invoice " : "Reminder — invoice ") + (d.numero || "")
+    : (tier === 2 ? "Mise en demeure — facture " : tier === 1 ? "Facture impayée — " : "Relance — facture ") + (d.numero || "");
+  let text;
+  if (lang === "en") {
+    text = tier === 0
+      ? "Hello " + (who || "you") + ", a friendly reminder: invoice " + (d.numero || "") + " of " + amount +
+        " (due " + (d.eche || "") + ", " + late + " day(s) overdue).\nPay securely here: " + url +
+        "\n\nThank you very much \ud83d\ude4f — " + String(biz.nom || "")
+      : tier === 1
+      ? "Hello " + (who || "you") + ", invoice " + (d.numero || "") + " of " + amount + " is unpaid for " + late + " day(s) (due " + (d.eche || "") + ").\nPlease pay here: " + url +
+        "\nWithout payment within 7 days, statutory late penalties will apply.\nRegards, " + String(biz.nom || "")
+      : "Formal notice — invoice " + (d.numero || "") + " of " + amount + " unpaid for " + late + " day(s) (due " + (d.eche || "") + ").\nFinal reminder before collection: pay here " + url +
+        ".\nStatutory penalties + €40 flat recovery fee apply.\n— " + String(biz.nom || "");
+  } else {
+    text = tier === 0
+      ? "Bonjour " + (who || "à vous") + ", petit rappel : facture " + (d.numero || "") + " de " + amount +
+        " (échéance " + (d.eche || "") + ", " + late + "j de retard).\nLien pour régler : " + url +
+        "\n\nMerci beaucoup \ud83d\ude4f — " + String(biz.nom || "")
+      : tier === 1
+      ? "Bonjour " + (who || "à vous") + ", facture " + (d.numero || "") + " de " + amount + " impayée depuis " + late + "j (échéance " + (d.eche || "") + ").\nMerci de régler ici : " + url +
+        "\nSans règlement sous 7 jours, des pénalités légales s'appliqueront.\nCordialement, " + String(biz.nom || "")
+      : "Mise en demeure — facture " + (d.numero || "") + " de " + amount + " impayée depuis " + late + "j (échéance " + (d.eche || "") + ").\nDernier rappel avant recouvrement : réglez ici " + url +
+        ".\nPénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables.\n— " + String(biz.nom || "");
+  }
 
   const sent = await sendMail(env, to, subject, text, biz.contact || "");
   if (!sent.ok) {

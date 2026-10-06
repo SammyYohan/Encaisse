@@ -13,7 +13,7 @@
 | **Stockage** | `localStorage` sur l'appareil de l'utilisateur — pas de compte, pas de base de données |
 | **Déploiement** | Cloudflare Pages (offre gratuite) |
 | **i18n** | La chaîne française **est** la clé de traduction (style gettext) |
-| **État** | 🟢 Front prêt et testé automatiquement · 🔴 Pas de serveur → voir [Feuille de route](#9-feuille-de-route) |
+| **État** | 🟢 Front + backend existent & câblés (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, placeholders `legal.html` non remplis → voir [Checklist](#checklist-de-mise-en-ligne) |
 
 ---
 
@@ -37,12 +37,14 @@
 ## 1. Ce que fait l'application
 
 - **Devis et factures** pour un indépendant, créés sur téléphone en moins d'une minute.
-- **Documents adaptés au pays** : France (Factur-X / PDP), Belgique (Peppol-BIS),
-  Suisse (QR-facture), États-Unis (sales tax d'État/local).
-- **Lien de paiement** (carte Stripe, prélèvement SEPA, ACH, SWISS QR/TWINT) +
+- **PDF adaptés au pays** avec les mentions obligatoires : France (PDF + avertissement PDP),
+  Belgique (PDF + avertissement Peppol-BIS), Suisse (PDF, le QR ouvre le lien
+  Stripe — pas un QR SIX bancaire), États-Unis (sales tax d'État/local saisie à la main).
+- **Lien de paiement** (carte Stripe, prélèvement SEPA, ACH, TWINT / virement / espèces constatés à part) +
   PDF imprimable avec QR code via le dialogue d'impression du navigateur.
-- **Relances guidées** : J+3 poli → J+7 ferme → J+15 mise en demeure, message
-  pré-rempli pour WhatsApp ou e-mail, en 1 clic.
+- **Relances guidées** : J+3 poli → J+7 ferme → J+15 mise en demeure, avec **3
+  messages vraiment distincts** pré-remplis pour WhatsApp ou e-mail (la relance
+  serveur Brevo utilise les mêmes 3 tons), en 1 clic.
 - **Écran de trésorerie unique** : qui doit quoi, depuis quand, prévision à 30 jours.
 - **Hors-ligne d'abord** : fonctionne sans réseau sur un chantier, installable en PWA.
 - **Preuves** : photo de chantier rattachée au document, signature sur l'écran
@@ -59,7 +61,7 @@ exigent `http://localhost` (inertes en `file://`).
 ```powershell
 npx serve .            # → http://localhost:3000
 # ou
-python -m http.server 8000
+python -m http.server 8080
 ```
 
 Au premier chargement, l'onboarding (pays → métier → nom de l'entreprise) crée
@@ -188,7 +190,7 @@ anglaise dans `i18n.js`. Ne jamais traduire la clé elle-même.
 
 ### 4.6 Hors-ligne & cache
 
-`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v8`).
+`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v11`).
 `config.js`, `i18n.js` et `sw.js`
 sont en **network-first** pour qu'une clé ou une traduction se propage immédiatement.
 **Incrémenter la constante `C` à chaque release.**
@@ -262,9 +264,11 @@ Endpoints : `POST /api/checkout` (Checkout abonnement, prix côté serveur) ·
 (publie `/r/:slug`, uniquement à un partage explicite) · `GET /api/pay`
 (encaissement facture ; le montant vient de D1, jamais du payeur) ·
 `POST /api/remind` (relance e-mail envoyée PAR LE SERVEUR via Brevo,
-anti-doublon 72 h par document) · `/r/:slug` (facture rendue par le serveur,
+anti-doublon 72 h par document, 3 tons J+3/J+7/J+15) · `POST /api/stripe-webhook`
+(webhook Stripe signé, contrôle strict montant + devise, `paid_at` idempotent) ·
+`/r/:slug` (facture rendue par le serveur,
 confirmation de paiement via `?session_id=` et envoi automatique du reçu au
-client — pas encore de webhook).
+client — le webhook couvre le cas sans retour navigateur).
 
 > **Les relances automatiques non supervisées sont impossibles sur les Pages
 > Functions** — Cloudflare n'y expose pas de cron trigger. Elles exigent un
@@ -297,7 +301,7 @@ client — pas encore de webhook).
 |---|---|---|
 | 🇫🇷 France | Réception e-facture **obligatoire depuis le 01/09/2026** ; émission PME **à partir du 01/09/2027** via une plateforme agréée (**PDP/PA**, 166 agréées) | PDF avec les mentions du vendeur + avertissement visible : la transmission exige une plateforme agréée |
 | 🇧🇪 Belgique | **Peppol-BIS obligatoire en B2B depuis le 01/01/2026** (amendes 1 500 – 5 000 €) | Idem : PDF + avertissement explicite, pas encore de point d'accès |
-| 🇨🇭 Suisse | Aucune obligation, **QR-facture** exigée sur support papier | QR de paiement pris en charge |
+| 🇨🇭 Suisse | Aucune obligation, **QR-facture** exigée sur support papier | PDF avec mentions suisses ; le QR affiché ouvre le lien de paiement Stripe, **pas** un QR SIX bancaire |
 | 🇺🇸 États-Unis | Aucune obligation fédérale ; **sales tax** d'État/local, conservation **7 ans** (IRS) | Taux saisi à la main, mentions légales par pays |
 
 **Conséquence :** ne **pas** communiquer sur une « conformité e-facturation Europe »
@@ -405,9 +409,9 @@ les mentions légales, puis brancher le P0 n° 6 (partenaire agréé e-facturati
 | Icônes | Générées pour ce projet (glyphe Unicode `U+20A3`) | Original |
 | Tout le reste | Écrit pour ce projet | Au choix du propriétaire |
 
-> ⚠️ **Pas encore de fichier `LICENSE`.** En choisir un (propriétaire / MIT / AGPL…)
-> **avant** toute distribution du code — c'est le fichier le plus important pour
-> une cession.
+> `LICENSE` est une licence d'évaluation provisoire **tous droits réservés**
+> (audit + déploiement autorisé uniquement). La remplacer par la licence
+> définitive (propriétaire / MIT / AGPL…) **avant** toute distribution publique.
 
 ---
 

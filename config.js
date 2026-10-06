@@ -10,7 +10,9 @@ window.ENCAISSE_CONFIG = {
      1. npx wrangler d1 create encaisse → UUID dans wrangler.toml + binding « DB »
         puis : npx wrangler d1 execute encaisse --remote --file=schema.sql
      2. npx wrangler pages secret put STRIPE_SECRET_KEY   (jamais dans le repo)
-     3. ICI : DEMO_MODE:false et STRIPE_LIVE:true, puis push sur main.
+     3. Remplir legal.html (plus aucun [À COMPLÉTER], window.ENCAISSE_LEGAL_OK=true),
+        choisir la LICENSE définitive, puis ICI : DEMO_MODE:false et STRIPE_LIVE:true, push sur main.
+     Tant que legal.html contient un placeholder, DEMO_MODE doit rester à true.
      Les functions/ (Pages Functions) sont déjà en place : /api/checkout,
      /api/sub, /api/portal, /api/pay et la page client /r/:slug. */
   STRIPE_LIVE: false,
