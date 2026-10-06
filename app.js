@@ -1108,6 +1108,9 @@ function openView(id){
 
   const payUrl=getDocUrl(d.id);
   const qrSVG=makeQR(payUrl);
+  /* Sans SITE_URL le lien est local (même navigateur uniquement) : on le
+     signale dans l'aperçu pour éviter un partage inutilisable. */
+  const siteOff=!String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
   const biz=S.biz, cli=cliOf(d);
 
   const acompteLine=d.acompteDeduction?`
@@ -1209,7 +1212,7 @@ function openView(id){
                ${T("Avoir au titre de la facture {n} — consultez-le et conservez ce document.",{n:d.avoirSourceNum||"—"})}`
             : `<strong>${T("Règlement sécurisé par Stripe")}</strong>
                ${T("Scannez ce QR code pour ouvrir la facture et payer en 1 clic (carte, SEPA, ACH).")}`}
-          <br><small style="color:var(--mut)" id="viewLink" data-u="${esc(payUrl)}">${T("Lien direct")} : ${esc(payUrl)}</small>
+          <br><small style="color:var(--mut)" id="viewLink" data-u="${esc(payUrl)}">${T("Lien direct")} : ${esc(payUrl)}</small>${siteOff?`<br><small style="color:#92400e">⚠️ ${T("Lien local : ne fonctionne que sur cet appareil. Renseigne SITE_URL (config.js) pour un vrai lien client.")}</small>`:""}
         </div>
       </div>
 
@@ -1268,7 +1271,7 @@ function openPay(id){
   <div class="paylink">
     <code id="payCode">${esc(payUrl)}</code>
     <div class="inv-qr-code" id="payQR" style="background:#fff;border-radius:10px;padding:3px">${qrSVG}</div>
-    ${site?`<small class="muted" id="payStat" style="font-size:12px">${T("Génération du lien client…")}</small>`:""}
+    ${site?`<small class="muted" id="payStat" style="font-size:12px">${T("Génération du lien client…")}</small>`:`<small class="muted" style="font-size:12px">⚠️ ${T("Lien local : ne fonctionne que sur cet appareil. Renseigne SITE_URL (config.js) pour un vrai lien client.")}</small>`}
   </div>
   <p class="muted" style="font-size:12px">${d.type==="facture"
     ? `${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :")} ${(allowed.map(mLabel)).join(", ")}.`
@@ -1338,7 +1341,10 @@ async function openRelance(id){
   if(srvBtn)srvBtn.onclick=async()=>{
     srvBtn.disabled=true;const old=srvBtn.textContent;srvBtn.textContent=T("Envoi…");
     try{
-      const r=await fetch("/api/remind",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:d.portal?.slug||"",key:ownerKey()})});
+      /* Même origine que la publication du portail (SITE_URL) : en relatif
+         on raterait le backend quand l'app est ouverte depuis une autre origine. */
+      const remindBase=String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"");
+      const r=await fetch(remindBase+"/api/remind",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:d.portal?.slug||"",key:ownerKey()})});
       const j2=await r.json().catch(()=>({}));
       if(r.ok&&j2.ok){bump();haptic([20,40]);closeSheet();toast(T("Relance e-mail envoyée ✓ ({n})",{n:j2.count}));return}
       toast(

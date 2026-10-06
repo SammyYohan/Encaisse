@@ -191,7 +191,7 @@ Do not translate the key. The dictionary must stay complete — check with a
 
 ### 4.6 Offline & caching
 
-`sw.js` caches the whole app (constant `C`, currently `encaisse-v11`).
+`sw.js` caches the whole app (constant `C`, currently `encaisse-v12`).
 `config.js`, `i18n.js` and `sw.js`
 are **network-first** so a key or a translation ships immediately even with a stale
 cache. **Bump the `C` constant on every release.**

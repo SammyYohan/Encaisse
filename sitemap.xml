@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- ⚠️ Remplace VOTRE-DOMAINE.TLD par ton domaine une fois acheté.
-     Puis régénère les dates si tu republies. -->
+<!-- Nom de domaine par défaut (à adapter si vous utilisez un autre domaine personnalisé). -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://VOTRE-DOMAINE.TLD/</loc>
-    <lastmod>2026-10-04</lastmod>
+    <loc>https://encaisse.app/</loc>
+    <lastmod>2026-10-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://VOTRE-DOMAINE.TLD/legal.html</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>yearly</changefreq>
+    <loc>https://encaisse.app/legal.html</loc>
+    <lastmod>2026-10-06</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 </urlset>

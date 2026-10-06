@@ -1,11 +1,12 @@
 /* Encaisse — Pages Functions (le « Worker » du P0), un seul fichier catch-all :
    aucune importation, zéro build, zéro dépendance (Stripe + Brevo appelés en REST).
 
-   POST /api/checkout  {kind:"sub", plan, cycle, zone, origin} → {url} Stripe Checkout (abonnement)
-   POST /api/portal    {slug?, hash, doc, biz, cli?, lang}     → {slug} page client /r/:slug (D1)
-   POST /api/remind    {slug}
-    POST /api/stripe-webhook (Stripe-Signature)                -> confirme un paiement sans retour navigateur
-    POST /api/backup        {op:"push"|"pull", key, ...}          -> sauvegarde chiffrée zéro-lecture                                  → envoie la relance e-mail (Brevo)
+   POST /api/checkout  {kind:"sub", plan, cycle, zone} → {url} Stripe Checkout (abonnement ;
+     l'origine de retour est celle de la requête, jamais celle du client)
+   POST /api/portal    {slug?, hash, key?, doc, biz, cli?, lang} → {slug} page client /r/:slug (D1)
+   POST /api/remind    {slug, key?} → envoie la relance e-mail (Brevo, anti-doublon 72 h)
+   POST /api/stripe-webhook (Stripe-Signature) → confirme un paiement sans retour navigateur
+   POST /api/backup    {op:"push"|"pull", key, ...} → sauvegarde chiffrée zéro-lecture
    GET  /api/sub       ?session_id=… → vérifie l'achat, émet le jeton d'abonnement
                        X-Sub-Token   → vérifie/rafraîchit le jeton (HMAC-SHA256)
    GET  /api/pay       ?slug=…       → 307 vers Stripe Checkout (encaissement d'une facture)
@@ -39,14 +40,6 @@ function json(body, status) {
     status: status || 200,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...CORS }
   });
-}
-
-function safeOrigin(v, fallback) {
-  try {
-    const u = new URL(String(v));
-    if (u.protocol === "http:" || u.protocol === "https:") return u.origin;
-  } catch (e) {}
-  return fallback;
 }
 
 /* Limitation naïve par IP (mémoire d'isolat, best-effort) : brides les
@@ -244,7 +237,10 @@ async function postCheckout(ctx) {
   if (body.kind !== "sub" || !plan || !cycle || !zone) return json({ error: "requete_invalide" }, 400);
   const P = PLANS[zone];
   const unit = plan === "solo" ? (cycle === "monthly" ? P.soloM : P.soloA) : (cycle === "monthly" ? P.proM : P.proA);
-  const origin = safeOrigin(body.origin, new URL(request.url).origin);
+  /* Origine de retour = origine de la requête (côté serveur, non falsifiable).
+     L'« origin » envoyée par le client est ignorée : sinon n'importe qui
+     ferait rediriger Stripe vers un domaine d'hameçonnage (open-redirect). */
+  const origin = new URL(request.url).origin;
   const r = await stripe(env, "checkout/sessions", "POST", {
     mode: "subscription",
     line_items: [{
@@ -305,6 +301,10 @@ async function postPortal(ctx) {
   const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
   const owner = key ? await sha256hex(key) : "";
   try {
+    /* Migration douce : garantit les colonnes si la base a été créée avec une version antérieure */
+    await env.DB.prepare("ALTER TABLE portal ADD COLUMN owner TEXT").run().catch(function () {});
+    await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_count INTEGER DEFAULT 0").run().catch(function () {});
+    await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_at INTEGER").run().catch(function () {});
     const prev = await env.DB.prepare("SELECT owner FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
     if (prev && prev.owner && prev.owner !== owner) return json({ error: "acces_refuse" }, 403);
     await env.DB.prepare(
@@ -436,7 +436,9 @@ async function getSub(ctx) {
   if (r.status >= 400) return json({ error: "stripe_erreur" }, 502);
   if (["active", "trialing"].indexOf(r.body.status) === -1) return json({ error: "abonnement_inactif" }, 403);
   const exp = subExp(r.body);
-  const newTok = await signToken(env, { v: 1, sid: p.sid, plan: p.plan, cycle: p.cycle, customer: p.customer, exp: exp });
+  /* On conserve la liaison d'appareil (oh) : sinon le jeton rafraîchi
+     deviendrait copiable sur un autre appareil (anti-partage contourné). */
+  const newTok = await signToken(env, { v: 1, sid: p.sid, plan: p.plan, cycle: p.cycle, customer: p.customer, exp: exp, oh: p.oh || "" });
   return json({ ok: true, plan: p.plan, cycle: p.cycle, exp: exp, token: newTok });
 }
 
