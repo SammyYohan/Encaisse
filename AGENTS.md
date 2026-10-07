@@ -39,4 +39,4 @@ python -m http.server 8080
 
 - `README.md` — full architecture, go-live checklist, roadmap (verified against code).
 - `VEILLE.md` — market research + P0/P1/P2 plan. **Read before touching pricing or positioning.**
-- `legal.html` still has `[TO COMPLETE]` placeholders — must be filled before commercial use.
+- `legal.html` has no literal `[TO COMPLETE]` markers left, but the publisher identity inside is still fictional (SIRET fails Luhn) — authenticate with the real SIRET/address before commercial use.

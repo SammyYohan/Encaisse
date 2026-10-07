@@ -13,7 +13,7 @@
 | **Stockage** | `localStorage` sur l'appareil de l'utilisateur — pas de compte, pas de base de données |
 | **Déploiement** | Cloudflare Pages (offre gratuite) |
 | **i18n** | La chaîne française **est** la clé de traduction (style gettext) |
-| **État** | 🟢 Front + backend existent & câblés (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, placeholders `legal.html` non remplis → voir [Checklist](#checklist-de-mise-en-ligne) |
+| **État** | 🟢 Front + backend existent & câblés (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, identité `legal.html` encore fictive → voir [Checklist](#checklist-de-mise-en-ligne) |
 
 ---
 
@@ -392,14 +392,14 @@ Ce qu'un repreneur doit savoir le jour J :
 | Données personnelles détenues par nous | **Uniquement des copies de documents explicitement partagés** dans D1 (e-mail client + payload du document) ; tout le reste reste sur l'appareil de l'utilisateur |
 | Comptes tiers à transférer | Cloudflare, Stripe, Brevo (e-mails), le registrar de domaine, GitHub |
 | Stripe | Clé publishable committée (inoffensive par conception). **Clé secrète absente** |
-| Identité légale | `legal.html` contient encore des `[À COMPLÉTER]` — **à remplir avant tout usage commercial** |
+| Identité légale | `legal.html` ne contient plus de `[À COMPLÉTER]` littéraux, mais l'identité est encore fictive — **à authentifier (vrai SIRET/adresse) avant tout usage commercial** |
 | Conformité fiscale | Plateforme européenne agréée **pas encore branchée** (§7) |
 | Marque & domaine | Le domaine `encaisse.app` apparaît dans d'anciens brouillons — vérifier la propriété |
 | Build / CI | Aucun. Pas de `package.json`, pas de tests en CI |
 | Contrôles automatisés | Scripts exécutés au fil de l'eau pendant le développement (parses, complétude i18n, parcours jsdom) — **non committés** |
 
-Premiers conseils au nouveau mainteneur : reproduire §2, lire `VEILLE.md`, remplir
-les mentions légales, puis brancher le P0 n° 6 (partenaire agréé e-facturation).
+Premiers conseils au nouveau mainteneur : reproduire §2, lire `VEILLE.md`, authentifier
+l'identité légale, puis brancher le P0 n° 6 (partenaire agréé e-facturation).
 
 ## 12. Éléments tiers & licence
 

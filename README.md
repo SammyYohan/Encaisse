@@ -13,7 +13,7 @@
 | **Storage** | `localStorage` on the user's device — no account, no server database |
 | **Deployment** | Cloudflare Pages (free tier) |
 | **i18n** | French source strings are the translation keys (gettext-style) |
-| **Status** | 🟢 Front + backend exist & wired (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, `legal.html` placeholders unfilled → see [Go-live checklist](#go-live-checklist) |
+| **Status** | 🟢 Front + backend exist & wired (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, `legal.html` identity still fictional → see [Go-live checklist](#go-live-checklist) |
 
 ---
 
@@ -96,7 +96,7 @@ document numbers are never reused).
 | `functions/` | **Backend (Pages Functions, no build)**: `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay` + server-rendered customer page `/r/:slug` |
 | `schema.sql`, `wrangler.toml` | D1 schema (table `portal`) + wrangler config (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | PWA manifest + PNG icons (192, 512, maskable, apple-touch) |
-| `legal.html` | Legal notice, terms and privacy policy (bilingual, **placeholders to fill**) |
+| `legal.html` | Legal notice, terms and privacy policy (bilingual, **publisher identity to authenticate**) |
 | `robots.txt`, `sitemap.xml`, `_headers` | SEO + Cloudflare security headers |
 | `README.md` / `README.fr.md` | This file |
 | `VEILLE.md` | Market & competitor research (EU + US) and prioritised plan |
@@ -392,14 +392,14 @@ What an acquirer should know on day one:
 | Users' personal data held by us | **Only copies of explicitly shared documents** in D1 (customer e-mail + document payload); everything else stays on the user's device |
 | Third-party accounts needed to transfer | Cloudflare, Stripe, Brevo (e-mails), the domain registrar, GitHub |
 | Stripe | Publishable key committed (harmless by design). **Secret key not present** |
-| Legal identity | `legal.html` still has `[TO COMPLETE]` placeholders — **must be filled before any commercial use** |
+| Legal identity | `legal.html` has no literal `[TO COMPLETE]` markers left, but the identity inside is still fictional — **authenticate (real SIRET/address) before any commercial use** |
 | Tax / invoicing compliance | Certified EU platform **not yet connected** (see §7) |
 | Trademark & domain | Domain `encaisse.app` referenced in older drafts — verify ownership |
 | Build / CI | None. No `package.json`, no tests in CI |
 | Automated checks | Scripts were run ad hoc during development (parse, i18n completeness, jsdom user flow) — **not committed** |
 
-Suggested first tasks for a new maintainer: reproduce §2, read `VEILLE.md`, fill the
-legal placeholders, then connect P0 item 6 (certified e-invoicing partner).
+Suggested first tasks for a new maintainer: reproduce §2, read `VEILLE.md`, authenticate the
+legal identity, then connect P0 item 6 (certified e-invoicing partner).
 
 ## 12. Third-party assets & licensing
 

@@ -122,7 +122,7 @@ Multi-utilisateurs, rapprochement bancaire, CRM, API, modèles de devis, invento
 ### Ce qu'on AJOUTE (par ordre de valeur)
 1. **Avoirs** — légalement requis, 1 journée de dev.
 2. **Factures récurrentes** (hebdo/mensuel) — standard, forte valeur perçue.
-3. **Relance automatique par e-mail** (Worker cron + Resend/Brevo en free tier).
+3. **Relance automatique par e-mail** (Worker cron + Brevo en free tier).
 4. **Portail client serveur** (`/r/:id` rendu par le Worker) — indispensable avant tout encaissement réel.
 5. **Stripe Checkout** côté Worker (secret uniquement) — puis `STRIPE_LIVE: true`.
 6. **Export FEC / CSV** pour le comptable.
