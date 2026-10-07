@@ -143,14 +143,13 @@ Autres clés : `encaisse.onboarded`, `encaisse.lang`, `encaisse.owner` (clé d'a
 
 ### 4.4 Offre gratuite & paliers
 
-| | Gratuit | Pro (plan unique) |
+| | Gratuit | Pro (plan unique, facturé en €) |
 |---|---|---|
 | Devis | **illimités** | illimités |
 | Avoirs | **illimités** | illimités |
 | Factures / mois | **3** (`FREE_MONTHLY`) | illimitées |
-| Mensuel — EUR 🇪🇺 / USD 🇺🇸 | 0 | 9 |
-| Mensuel — CHF 🇨🇭 | 0 | 12 |
-| Annuel (2 mois offerts) | 0 | 90 / 120 |
+| Mensuel | 0 | 9,99 € |
+| Annuel (2 mois offerts) | 0 | 99 € |
 
 - Les devis sont le canal d'acquisition : **jamais plafonnés**.
 - Les avoirs sont la *correction légale* d'une facture déjà émise
@@ -205,7 +204,7 @@ Pas de bibliothèque PDF : la facture est mise en forme pour l'écran et
 |---|---|---|
 | `DEMO_MODE` | `false` | En ligne : débits réels via Checkout Lemon Squeezy ; bandeau démo masqué, les plans exigent un jeton signé serveur (API Lemon Squeezy = source de vérité) |
 | `STRIPE_LIVE` | supprimée | Lemon Squeezy n'a pas de clé publishable — le checkout est une redirection fabriquée par le serveur |
-| `LEMON_CFG` | variable JSON | Un store PAR DEVISE avec 3 IDs de variants chacun (`proM/proA/once`) — dashboard → Variables |
+| `LEMON_CFG` | variable JSON | Produit Premium (store EUR, variants `monthly/yearly`) + 1 variant « facture » par devise — dashboard → Variables |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Partenaire agréé e-facturation (Europe) — optionnel |
 | `SITE_URL` | `""` | Origine publique, ex. `https://app.exemple.fr` — active la vraie page client `/r/:slug` (publiée au partage) |
 
@@ -248,14 +247,15 @@ npx wrangler pages secret put LEMON_API_KEY --project-name=<projet>
 npx wrangler pages secret put LEMON_SIGNING_SECRET --project-name=<projet>
 #    Secret de signature du webhook (dashboard → Settings → Webhooks → Reveal).
 
-# 3. Stores & variants (dashboard) : UN store PAR DEVISE (EUR/CHF/USD — la
-#    devise facturée suit le store). Par store, 5 variants :
-#    proM, proA (abonnement Pro) + once (factures clients à montant libre).
-#    Les prix affichés vivent dans PLANS (app.js + functions) ; custom_price
-#    écrase le prix du variant, donc garde les prix dashboard synchronisés.
+# 3. Stores & variants (dashboard) : UN produit Premium (store EUR, 2 variants
+#    monthly/yearly) + 1 variant « facture » PAR DEVISE (EUR/CHF/USD, montant libre,
+#    la devise facturée suit le store). Total : 5 variants.
+#    Les prix affichés vivent dans SUB (app.js + functions : 9,99 € / 99 €) ;
+#    custom_price écrase le prix du variant, donc garde les prix dashboard synchronisés.
 
-# 4. Variable LEMON_CFG (dashboard → Variables, PAS Secrets) — IDs stores/variants :
-#    {"EUR":{"store":"1","variants":{"proM":"12","proA":"13","once":"14"}},"CHF":{...},"USD":{...}}
+# 4. Variable LEMON_CFG (dashboard → Variables, PAS Secrets) — IDs :
+#    {"sub":{"store":"1","variants":{"monthly":"12","yearly":"13"}},
+#     "once":{"EUR":{"store":"1","variant":"14"},"CHF":{"store":"2","variant":"20"},"USD":{"store":"3","variant":"30"}}}
 
 # 5. Webhook par store → https://<domaine>/api/lemon-webhook
 #    Events : order_created, subscription_created, subscription_updated,

@@ -18,10 +18,9 @@
    Mise en place (une fois) — voir README §6 :
      1. D1 : npx wrangler d1 create encaisse → UUID dans wrangler.toml + binding « DB »
         puis : npx wrangler d1 execute encaisse --remote --file=schema.sql
-     2. Lemon Squeezy : 1 store PAR DEVISE (EUR/CHF/USD, la devise de facturation
-        suit le store) avec 3 variants chacun : proM, proA (abonnement Pro)
-        + once (montant libre pour les factures clients) ; prix affichés = table PLANS
-        ci-dessous (custom_price écrase le prix du variant, source unique = ce fichier).
+     2. Lemon Squeezy : UN produit Premium (store EUR : variants monthly/yearly)
+        + 1 variant « facture » PAR DEVISE (EUR/CHF/USD, montant libre) ;
+        prix = SUB ci-dessous (9,99 € / 99 €, custom_price écrase le prix du variant).
      3. Secrets + config (jamais dans le repo) :
         npx wrangler pages secret put LEMON_API_KEY        (clé API LS ; clé TEST pour essayer sans risque)
         npx wrangler pages secret put LEMON_SIGNING_SECRET (secret du webhook LS, dashboard → Settings → Webhooks)
@@ -31,16 +30,10 @@
            subscription_cancelled, subscription_expired)
    Le secret ne quitte jamais le serveur : le front ne reçoit qu'une URL et un jeton signé. */
 
-/* ---------- UN SEUL plan Pro par zone (9 € / 9 $ / 12 CHF, annuel = 10×) ----------
-   Table des prix (centimes) — custom_price LS, source de vérité serveur.
-   LEMON_CFG (variable d'environnement, JSON) :
-   {"EUR":{"store":"1","variants":{"proM":"12","proA":"13","once":"14"}},"CHF":{...},"USD":{...}}
-   Un store PAR DEVISE : la devise facturée suit le store (custom_price = montant, devise = store). */
-const PLANS = {
-  EUR: { cur: "eur", m: 900, a: 9000 },
-  CHF: { cur: "chf", m: 1200, a: 12000 },
-  USD: { cur: "usd", m: 900, a: 9000 }
-};
+/* ---------- UN SEUL produit : Premium, 9,99 € / 99 € pour TOUS (un seul store EUR).
+   Les factures clients, elles, se paient dans LEUR devise (stores de zone). */
+const SUB = { m: 999, a: 9900 }; // centimes : 9,99 €/mois, 99 €/an (2 mois offerts)
+const ZONES = ["EUR", "CHF", "USD"];
 const CUR = { "€": "EUR", CHF: "CHF", $: "USD" };
 
 const CORS = {
@@ -73,29 +66,32 @@ function ipOf(request) {
 }
 
 /* ---------- Lemon Squeezy en REST (JSON:API, clé Bearer) ---------- */
-/* LEMON_CFG (variable d'environnement, JSON) :
-   {"EUR":{"store":"1","variants":{"proM":"12","proA":"13","once":"14"}},"CHF":{...},"USD":{...}}
-   Un store PAR DEVISE : la devise facturée suit le store (custom_price = montant, devise = store). */
+/* LEMON_CFG (variable d'environnement, JSON) — UN SEUL produit Premium (EUR)
+   + 1 variant "facture" par devise (montant libre, devise = store) :
+   {"sub":{"store":"1","variants":{"monthly":"12","yearly":"13"}},
+    "once":{"EUR":{"store":"1","variant":"14"},"CHF":{"store":"2","variant":"20"},"USD":{"store":"3","variant":"30"}}} */
 function lemonCfg(env) {
   try {
     const c = JSON.parse(env.LEMON_CFG || "{}");
     return (c && typeof c === "object") ? c : {};
   } catch (e) { return {}; }
 }
-function lsZone(env, zone) {
-  const z = lemonCfg(env)[zone];
-  if (!z || typeof z !== "object" || !z.store || !z.variants || typeof z.variants !== "object") return null;
-  return z;
+function lsSub(env) {
+  const cfg = lemonCfg(env);
+  const s = cfg && cfg.sub;
+  if (!s || typeof s !== "object" || !s.store || !s.variants || typeof s.variants !== "object") return null;
+  return s;
 }
-function lsVariant(z, plan, cycle) {
-  const p = plan === "solo" ? "solo" : "pro"; // solo historique : toléré si le variant existe
-  const k = p + (cycle === "monthly" ? "M" : "A");
-  const v = z.variants[k];
+function lsSubVariant(s, cycle) {
+  const v = s.variants[cycle === "monthly" ? "monthly" : "yearly"];
   return (typeof v === "string" && v) ? v : ((typeof v === "number") ? String(v) : null);
 }
-function lsOnce(z) {
-  const v = z.variants.once;
-  return (typeof v === "string" && v) ? v : ((typeof v === "number") ? String(v) : null);
+function lsOnce(env, zone) {
+  const cfg = lemonCfg(env);
+  const z = cfg && cfg.once && cfg.once[zone];
+  if (!z || typeof z !== "object" || !z.store || z.variant === undefined || z.variant === null || z.variant === "") return null;
+  const v = z.variant;
+  return { store: z.store, variant: (typeof v === "string" && v) ? v : String(v) };
 }
 
 async function lemon(env, path, method, body) {
@@ -244,17 +240,16 @@ async function postCheckout(ctx) {
   try { body = await request.json(); } catch (e) { return json({ error: "json_invalide" }, 400); }
   const plan = body.plan === "pro" ? "pro" : null; // UN SEUL plan en vente (solo historique toléré en lecture)
   const cycle = body.cycle === "yearly" ? "yearly" : body.cycle === "monthly" ? "monthly" : null;
-  const zone = PLANS[body.zone] ? body.zone : null;
+  const zone = ZONES.indexOf(body.zone) !== -1 ? body.zone : null; // zone d'origine (le prix, lui, est toujours en EUR)
   if (body.kind !== "sub" || !plan || !cycle || !zone) return json({ error: "requete_invalide" }, 400);
   const oh = typeof body.oh === "string" && /^[0-9a-f]{64}$/i.test(body.oh) ? body.oh.toLowerCase() : "";
   if (!oh) return json({ error: "appareil_requis" }, 400);
-  const Z = lsZone(env, zone);
-  const variant = Z ? lsVariant(Z, plan, cycle) : null;
-  if (!Z || !variant) return json({ error: "offre_non_configuree" }, 500);
-  const P = PLANS[zone];
-  const unit = cycle === "monthly" ? P.m : P.a;
+  const S = lsSub(env);
+  const variant = S ? lsSubVariant(S, cycle) : null;
+  if (!S || !variant) return json({ error: "offre_non_configuree" }, 500);
+  const unit = cycle === "monthly" ? SUB.m : SUB.a;
   const origin = new URL(request.url).origin;
-  const r = await lemon(env, "checkouts", "POST", lsCheckout(Z.store, variant, {
+  const r = await lemon(env, "checkouts", "POST", lsCheckout(S.store, variant, {
     custom_price: unit,
     expires_at: new Date(Date.now() + 3600e3).toISOString(),
     product_options: {
@@ -417,17 +412,16 @@ async function getPay(ctx) {
   const amount = totals(d).net;
   if (!(amount >= 50)) return json({ error: "montant_trop_faible" }, 400);
   const zone = { "€": "EUR", CHF: "CHF", $: "USD" }[(p.biz || {}).devise] || null;
-  const Z = zone ? lsZone(env, zone) : null;
-  const once = Z ? lsOnce(Z) : null;
-  if (!Z || !once) return json({ error: "offre_non_configuree" }, 500);
+  const O = zone ? lsOnce(env, zone) : null;
+  if (!O) return json({ error: "offre_non_configuree" }, 500);
   const origin = url.origin;
   const bizName = ((p.biz || {}).nom ? " · " + String(p.biz.nom).slice(0, 60) : "");
-  const r = await lemon(env, "checkouts", "POST", lsCheckout(Z.store, once, {
+  const r = await lemon(env, "checkouts", "POST", lsCheckout(O.store, O.variant, {
     custom_price: amount,
     expires_at: new Date(Date.now() + 3600e3).toISOString(),
     product_options: {
       name: String(d.numero || "Facture").slice(0, 120) + bizName,
-      enabled_variants: [String(once)],
+      enabled_variants: [String(O.variant)],
       redirect_url: origin + "/r/" + slug + "?paid=1"
     },
     checkout_data: { custom: { slug: slug } }
@@ -510,7 +504,7 @@ async function postLemonWebhook(ctx) {
       name === "subscription_cancelled" || name === "subscription_expired") {
     const plan = custom.plan === "pro" ? "pro" : custom.plan === "solo" ? "solo" : null;
     const cycle = custom.cycle === "yearly" ? "yearly" : custom.cycle === "monthly" ? "monthly" : null;
-    const zone = PLANS[custom.zone] ? custom.zone : null;
+    const zone = ZONES.indexOf(custom.zone) !== -1 ? custom.zone : null;
     const oh = typeof custom.oh === "string" && /^[0-9a-f]{64}$/i.test(custom.oh) ? custom.oh.toLowerCase() : "";
     if (!plan || !cycle || !zone || !oh || !data.id) return json({ received: true });
     const s = await lemon(env, "subscriptions/" + encodeURIComponent(data.id), "GET");

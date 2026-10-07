@@ -214,11 +214,14 @@ function openBackupRestore(){
   };
 }
 
-/* ---------- monétisation : UN SEUL plan Pro par zone (9 € / 9 $ / 12 CHF, annuel = 10×) ---------- */
+/* ---------- monétisation : UN SEUL produit Premium, 9,99 € / 99 € pour TOUS ----------
+   L'abonnement se paie en euros quel que soit le pays (cartes gèrent le change) ;
+   les factures clients, elles, se paient dans LEUR devise (stores de zone). */
+const SUB={m:9.99,a:99}; // euros : 9,99 €/mois, 99 €/an (2 mois offerts)
 const PLANS={
-  EUR:{zone:{fr:"Europe · €",en:"Europe · €"},dev:"€",m:9,a:90,fee:.05,feeFixe:.30,infra:.6},
-  CHF:{zone:{fr:"Suisse · CHF",en:"Switzerland · CHF"},dev:"CHF",m:12,a:120,fee:.05,feeFixe:.30,infra:.6},
-  USD:{zone:{fr:"États-Unis · $",en:"United States · $"},dev:"$",m:9,a:90,fee:.05,feeFixe:.30,infra:.8}
+  EUR:{zone:{fr:"Europe · €",en:"Europe · €"},dev:"€",fee:.05,feeFixe:.30,infra:.6},
+  CHF:{zone:{fr:"Suisse · CHF",en:"Switzerland · CHF"},dev:"CHF",fee:.05,feeFixe:.30,infra:.6},
+  USD:{zone:{fr:"États-Unis · $",en:"United States · $"},dev:"$",fee:.05,feeFixe:.30,infra:.8}
 };
 
 /* ---------- secteurs : vocabulaires + suggestions 1-clic ---------- */
@@ -360,10 +363,10 @@ const normLib=v=>{if(typeof v==="string")return v;if(v&&typeof v==="object"){con
 const cliOf=d=>S.clients.find(c=>c.id===d.clientId)||{};
 const cliName=c=>loc(c&&c.nom)||T("Client");
 
+const fmtSub=v=>(lang()==="en"?String(v):String(v).replace(".",","))+" €"; // prix Premium, virgule FR
 function priceLine(pays){
-  const k=ZONE_FOR[pays]||"EUR", p=PLANS[k];
   const flag=(PAYS[pays]?.label||"").split(" ")[0]||"";
-  return `${flag} Pro ${fmtP(p.m)}/${T("mois")} · ${fmtP(p.a)}/${T("an")} · ${T("2 mois offerts")}`;
+  return `${flag} Pro ${fmtSub(SUB.m)}/${T("mois")} · ${fmtSub(SUB.a)}/${T("an")} · ${T("2 mois offerts")}`;
 }
 
 /* ---------- onboarding ---------- */
@@ -618,18 +621,18 @@ function marginPct(priceMonthly){
 }
 
 function openPaywall(reason){
-  const P=planOf(), cyc=(S.sub&&S.sub.cycle)||"monthly";
-  const prix=cyc==="monthly"?P.m:P.a;
+  const cyc=(S.sub&&S.sub.cycle)||"monthly";
+  const prix=cyc==="monthly"?SUB.m:SUB.a;
   const per=cyc==="monthly"?`/${T("mois")}`:`/${T("an")}`;
   const paysNom=loc(PAYS[S.biz.pays]?.nom)||"";
   const onM=cyc==="monthly"?"is-on":"", onY=cyc==="yearly"?"is-on":"";
-  const marge=marginPct(cyc==="monthly"?P.m:P.a/12);
+  const marge=marginPct(cyc==="monthly"?SUB.m:SUB.a/12);
   const safeReason=esc(reason||T("Tes {n} factures gratuites par mois sont utilisées — les devis restent gratuits.",{n:FREE_MONTHLY}));
   const html=''
-    +`<h2>${T("Passer au payant")}</h2><p class="sub">${safeReason} ${T("Ton prix")} ${esc(paysNom)} ${T("s'applique automatiquement.")}</p>`
+    +`<h2>${T("Passer au payant")}</h2><p class="sub">${safeReason}</p>`
     +`<div class="cycle" id="cyc"><button class="${onM}" data-c="monthly" type="button">${T("Mensuel")}</button><button class="${onY}" data-c="yearly" type="button">${T("Annuel")}</button></div>`
     +`<div class="plans">`
-    +`<div class="plan is-pro"><b>${T("Pro — tout illimité")}</b><span class="p">${fmtP(prix)}${per}</span><small>${T("Marge nette ~{m}% après frais + infra",{m:marge})}${cyc==="yearly"?` · ${T("2 mois offerts")}`:""}</small><ul><li>${T("Devis + factures")} <b>${T("illimités")}</b></li><li>${T("Lien de paiement en ligne + relances")}</li><li>${T("Sauvegarde chiffrée multi-appareils")}</li><li>${T("Support prioritaire")}</li><li>${T("Facture")} ${esc(paysNom)} + ${T("archivage")} ${PAYS[S.biz.pays]?.archive}</li></ul><button class="btn primary" data-sub="pro" type="button">${T("Choisir Pro")}</button></div>`
+    +`<div class="plan is-pro"><b>${T("Pro — tout illimité")}</b><span class="p">${fmtSub(prix)}${per}</span><small>${T("Marge nette ~{m}% après frais + infra",{m:marge})}${cyc==="yearly"?` · ${T("2 mois offerts")}`:""}</small><ul><li>${T("Devis + factures")} <b>${T("illimités")}</b></li><li>${T("Lien de paiement en ligne + relances")}</li><li>${T("Support prioritaire")}</li><li>${T("Facture")} ${esc(paysNom)} + ${T("archivage")} ${PAYS[S.biz.pays]?.archive}</li></ul><button class="btn primary" data-sub="pro" type="button">${T("Choisir Pro")}</button></div>`
     +`</div>`
     +`<p class="muted" style="font-size:12px">${T("Sans engagement. 0% commission sur tes encaissements : Lemon Squeezy prélève 5 % + 0,30 $ par transaction, TVA gérée pour toi.")}</p>`
     +`<button class="btn ghost" id="cancelS" type="button">${T("Plus tard")}</button>`;
@@ -667,13 +670,13 @@ async function activatePlan(plan){
 
 function renderPlanCard(){
   const el=$("#planCard");if(!el)return;
-  const p=planOf(), cyc=S.sub?.cycle||"monthly";
+  const cyc=S.sub?.cycle||"monthly";
   const nMonth=docsCeMois().length;
-  const prix=cyc==="monthly"?`${fmtP(p.m)}/${T("mois")}`:`${fmtP(p.a)}/${T("an")}`;
+  const prix=cyc==="monthly"?`${fmtSub(SUB.m)}/${T("mois")}`:`${fmtSub(SUB.a)}/${T("an")}`;
   const badge=S.sub?.plan==="free"
     ? `${T("Gratuit")} · ${Math.min(nMonth,FREE_MONTHLY)}/${FREE_MONTHLY} ${T("factures/mois")}`
     : "Pro ✓";
-  el.innerHTML=`<h3>💳 ${T("Offre")} — ${esc(loc(PAYS[S.biz.pays]?.nom))} <small class="muted">· ${T("prix auto selon ton pays")}</small></h3>
+  el.innerHTML=`<h3>💳 Pro · ${fmtSub(SUB.m)}/${T("mois")} · ${fmtSub(SUB.a)}/${T("an")}</h3>
   <div class="doc-meta"><span>${T("Plan actuel")}</span><b>${badge}</b></div>
   ${S.sub?.plan==="free"
     ? `<div class="free-progress" aria-label="${T("Progression")}"><i style="width:${Math.min(100,nMonth/FREE_MONTHLY*100)}%"></i></div><small class="muted">${Math.max(0,FREE_MONTHLY-nMonth)} ${T("facture(s) gratuite(s) restante(s) ce mois-ci · devis illimités · ensuite Pro")} ${prix}. <em>${T("Exemples non comptés.")}</em></small>`
@@ -681,7 +684,7 @@ function renderPlanCard(){
   <div class="row" style="margin-top:10px">${S.sub?.plan==="free"
     ? `<button class="btn primary small" id="goPlans" type="button">${T("Voir les offres →")}</button>`
     : `<button class="btn primary small" id="manageSub" type="button">${T("Gérer mon abonnement")}</button>`}<button class="btn small ghost" id="cycBtn" type="button">${T("Cycle")} : ${cyc==="monthly"?T("Mensuel"):T("Annuel")}</button></div>`;
-  const gp=$("#goPlans");if(gp)gp.onclick=()=>openPaywall(T("Ton tarif")+" "+loc(PAYS[S.biz.pays]?.nom)+" :");
+  const gp=$("#goPlans");if(gp)gp.onclick=()=>openPaywall(T("Un seul plan pour tous : 9,99 €/mois ou 99 €/an."));
   const ms=$("#manageSub");if(ms)ms.onclick=openManage;
   $("#cycBtn").onclick=()=>{S.sub.cycle=cyc==="monthly"?"yearly":"monthly";save();render();toast(T("Cycle")+" : "+(S.sub.cycle==="monthly"?T("mensuel"):T("annuel")))};
   const b=$("#planBadge");

@@ -6,8 +6,8 @@ window.ENCAISSE_CONFIG = {
      false = le paiement est considéré comme branché (leasing côté serveur). */
   DEMO_MODE: false,
 
-  // Lemon Squeezy (voir README §6) : 1 store PAR DEVISE (EUR/CHF/USD) avec
-  // 3 variants chacun (proM, proA, once). Les IDs vivent dans
+  // Lemon Squeezy (voir README §6) : UN produit Premium (store EUR : monthly/yearly)
+  // + 1 variant « facture » PAR DEVISE (EUR/CHF/USD). Les IDs vivent dans
   // la variable LEMON_CFG côté serveur — rien de secret ici, rien à remplir.
 
   // Facturation conforme (optionnel V2 — l'app reste utilisable sans)

@@ -3,7 +3,7 @@
 # Sur GitHub → Pages, configure aussi dans le dashboard :
 #   • Settings → Functions → D1 binding nommé « DB »
 #   • Settings → Secrets  → LEMON_API_KEY + LEMON_SIGNING_SECRET (`npx wrangler pages secret put ...`)
-#   • Settings → Variables → LEMON_CFG (JSON stores/variants, un store par devise)
+#   • Settings → Variables → LEMON_CFG (JSON : produit Premium + variants facture/devise)
 name = "encaisse"
 compatibility_date = "2026-10-01"
 pages_build_output_dir = "."
