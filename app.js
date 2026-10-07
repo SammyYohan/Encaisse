@@ -1316,7 +1316,7 @@ function syncSettings(){
   set("adresse",S.biz.adresse);set("contact",S.biz.contact);set("tvaId",S.biz.tvaId);set("iban",S.biz.iban);
   $("#ruleLine").textContent="📌 "+loc(PAYS[S.biz.pays]?.rule||"");
   const al=$("#archiveLine");
-  if(al)al.textContent=T("Numérotation inviolable, jamais remise à zéro, montants en centimes, journal horodaté. Conservation {a} à ta charge : exporte en JSON/CSV et active la sauvegarde chiffrée — téléphone perdu = historique perdu sans sauvegarde. CSV = liste simple, pas un FEC.",{a:loc(PAYS[S.biz.pays]?.archive||"10 ans")});
+  if(al)al.textContent=T("Numérotation inviolable, jamais remise à zéro, montants en centimes, journal horodaté. Conservation {a} à ta charge : exporte en JSON/CSV/FEC et active la sauvegarde chiffrée — téléphone perdu = historique perdu sans sauvegarde.",{a:loc(PAYS[S.biz.pays]?.archive||"10 ans")});
   const allowed=PAYS[S.biz.pays]?.moyens||[];
   S.biz.moyens=(S.biz.moyens||[]).filter(k=>allowed.includes(k));
   if(!S.biz.moyens.length)S.biz.moyens=[...allowed];
@@ -1509,6 +1509,40 @@ function bind(){
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`encaisse-compta-${todayISO().slice(0,7)}.csv`;document.body.appendChild(a);a.click();
     setTimeout(()=>{try{URL.revokeObjectURL(a.href)}catch{}a.remove()},4000);
     toast(T("Export CSV téléchargé ✓"));
+  };
+  /* Export FEC simplifié (format BOI, 18 colonnes pipe, sans ligne d'en-tête) :
+     factures + avoirs non-démo UNIQUEMENT (les devis ne sont pas des écritures).
+     3 lignes par pièce : client 411 (TTC), ventes 707 (HT), TVA 44571.
+     Version simplifiée pour transmettre au comptable — à faire valider par lui. */
+  const fecBtn=$("#fecBtn");
+  if(fecBtn)fecBtn.onclick=()=>{
+    const clean=v=>String(v??"").replace(/[|\r\n]+/g," ").trim().slice(0,120);
+    const ymd=iso=>String(iso||"").replace(/-/g,"").slice(0,8)||todayISO().replace(/-/g,"");
+    const eur=c=>((Number(c)||0)/100).toFixed(2).replace(".",",");
+    const isoDev={ "€":"EUR",CHF:"CHF",$:"USD" }[S.biz.devise]||"EUR";
+    const rows=[];
+    S.docs.filter(d=>!d.demo&&(d.type==="facture"||d.type==="avoir")).forEach(d=>{
+      const t=totals(d), dt=ymd(d.emis), au=isNaN(Date.parse(d.emis))?"":dt;
+      const cli=clean(cliName(S.clients.find(c=>c.id===d.clientId)||{nom:d.client}));
+      const jc="VE", jl="Ventes", piece=clean(d.numero), aux=clean(d.clientId||"");
+      const lib=clean((d.type==="avoir"?"Avoir ":"Facture ")+d.numero+" "+cli);
+      const tvaTx=`TVA ${num(d.tva)}%`;
+      const L=(cp,cl,auxn,auxl,db,cr)=>[jc,jl,piece,dt,cp,cl,auxn,auxl,piece,dt,lib,db,cr,"","",au,eur(db||cr),isoDev].join("|");
+      if(d.type==="avoir"){
+        rows.push(L("411000","Clients",aux,cli,"",eur(t.ttc)));
+        rows.push(L("707000","Ventes de prestations","","",eur(t.ht),""));
+        if(t.tva>0)rows.push(L("445710",tvaTx,"","",eur(t.tva),""));
+      }else{
+        rows.push(L("411000","Clients",aux,cli,eur(t.ttc),""));
+        rows.push(L("707000","Ventes de prestations","","","",eur(t.ht)));
+        if(t.tva>0)rows.push(L("445710",tvaTx,"","","",eur(t.tva)));
+      }
+    });
+    if(!rows.length){toast(T("Aucune facture à exporter."));return}
+    const blob=new Blob(["\ufeff"+rows.join("\n")],{type:"text/plain;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`ENCAISSE-FEC-${todayISO().slice(0,4)}.txt`;document.body.appendChild(a);a.click();
+    setTimeout(()=>{try{URL.revokeObjectURL(a.href)}catch{}a.remove()},4000);
+    toast(T("Export FEC téléchargé ✓"));
   };
   const bkNow=$("#bkNowBtn");if(bkNow)bkNow.onclick=()=>{bkDirty=true;flushBackup(false)};
   const bkCode=$("#bkCodeBtn");if(bkCode)bkCode.onclick=openBackupCode;
