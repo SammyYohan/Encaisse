@@ -385,7 +385,7 @@ Ce qu'un repreneur doit savoir le jour J :
 | Données personnelles détenues par nous | **Uniquement des copies de documents explicitement partagés** dans D1 (e-mail client + payload du document) ; tout le reste reste sur l'appareil de l'utilisateur |
 | Comptes tiers à transférer | Cloudflare, Stripe, le registrar de domaine, GitHub |
 | Stripe | Clé publishable committée (inoffensive par conception). **Clés secrètes absentes du dépôt** |
-| Identité légale | `legal.html` contient encore des `[À COMPLÉTER]` — **à remplir avant tout usage commercial** |
+| Identité légale | `legal.html` complété (développeur indépendant, Libreville, Gabon — e-mail de contact actif) |
 | Conformité fiscale | Plateforme européenne agréée **pas encore branchée** (§7) |
 | Marque & domaine | En ligne sur `https://encaisse.pages.dev` ; propriété d'`encaisse.app` toujours non vérifiée (mettre à jour SITE_URL/robots/sitemap si revendiqué) |
 | Build / CI | Aucun. Pas de `package.json`, pas de tests en CI |

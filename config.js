@@ -1,19 +1,12 @@
-/* Encaisse — Clés API à remplir EN DERNIER par le propriétaire.
-   L'app marche en MODE DÉMO sans clés (liens simulés, stockage local).
-   Quand tu es prêt à encaisser pour de vrai, remplis juste ici. */
+/* Encaisse — paiement réel branché (Stripe live via Pages Functions).
+   Les liens de paiement sont réels ; les prix viennent du serveur.
+   Secrets : uniquement via `wrangler pages secret put` (jamais dans le repo). */
 window.ENCAISSE_CONFIG = {
   /* true  = aucun débit réel, bandeau "démo" affiché, aucun plan marqué payé.
      false = le paiement est considéré comme branché (nécessite STRIPE_LIVE + une clé). */
   DEMO_MODE: false,
 
-  /* ✅ MISE EN PRODUCTION DU PAIEMENT — 3 étapes, une seule fois (voir README §6) :
-     1. npx wrangler d1 create encaisse → UUID dans wrangler.toml + binding « DB »
-        puis : npx wrangler d1 execute encaisse --remote --file=schema.sql
-     2. npx wrangler pages secret put STRIPE_SECRET_KEY   (jamais dans le repo)
-     3. Remplir legal.html (plus aucun [À COMPLÉTER], window.ENCAISSE_LEGAL_OK=true),
-        choisir la LICENSE définitive, puis ICI :
-        DEMO_MODE:false et STRIPE_LIVE:true, push sur main.
-     Tant que legal.html contient un placeholder, DEMO_MODE doit rester à true.
+  /* ✅ Paiement en ligne : D1 + secrets Stripe configurés, legal.html complété.
      Les functions/ (Pages Functions) sont déjà en place : /api/checkout,
      /api/sub, /api/portal, /api/pay et la page client /r/:slug. */
   STRIPE_LIVE: true,

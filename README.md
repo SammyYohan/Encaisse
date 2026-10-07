@@ -374,7 +374,7 @@ What an acquirer should know on day one:
 | Users' personal data held by us | **Only copies of explicitly shared documents** in D1 (customer e-mail + document payload); everything else stays on the user's device |
 | Third-party accounts needed to transfer | Cloudflare, Stripe, the domain registrar, GitHub |
 | Stripe | Publishable key committed (harmless by design). **Secret key not present** |
-| Legal identity | `legal.html` still has `[TO COMPLETE]` placeholders — **must be filled before any commercial use** |
+| Legal identity | `legal.html` completed (independent developer, Libreville, Gabon — contact e-mail live) |
 | Tax / invoicing compliance | Certified EU platform **not yet connected** (see §7) |
 | Trademark & domain | Live at `https://encaisse.pages.dev`; `encaisse.app` ownership still unverified (update SITE_URL/robots/sitemap if claimed) |
 | Build / CI | None. No `package.json`, no tests in CI |

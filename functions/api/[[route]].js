@@ -235,8 +235,8 @@ async function postPortal(ctx) {
     return json({ error: "document_invalide" }, 400);
   }
   if (!b.biz || typeof b.biz !== "object") return json({ error: "entreprise_invalide" }, 400);
-  /* cli : contact client (e-mail) — indispensable pour la confirmation de
-     paiement et les relances envoyées PAR LE SERVEUR. */
+  /* cli : contact client (e-mail) — affiché au client sur sa page /r/:slug
+     (aucun e-mail envoyé par le serveur). */
   const cli = (b.cli && typeof b.cli === "object")
     ? { e: String(b.cli.e || "").slice(0, 120), n: String(b.cli.n || "").slice(0, 80) }
     : { e: "", n: "" };

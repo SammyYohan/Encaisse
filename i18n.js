@@ -422,7 +422,7 @@
     "🇺🇸 United States — Sales tax (manuelle)": "🇺🇸 United States — Sales tax (manual)",
     "Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire. Seule protection contre perte ou vol du téléphone.": "Encrypted copy of the whole device. Even we cannot read it. Your only protection against loss or theft of the phone.",
     "Fait foi de bon pour accord": "Timestamped approval image (not a certified signature)",
-    "Identité éditeur à compléter dans legal.html avant tout encaissement réel. Interface FR/EN ; régime fiscal FR · BE · CH · US uniquement.": "Publisher identity must be completed in legal.html before any real collection. FR/EN interface; FR · BE · CH · US tax rules only."
+    "Éditeur : Sammy Yohan OSSORIAH, Libreville (Gabon). Interface FR/EN ; régime fiscal FR · BE · CH · US uniquement.": "Publisher: Sammy Yohan OSSORIAH, Libreville (Gabon). FR/EN interface; FR · BE · CH · US tax rules only.",
   };
 
   /* 24 langues officielles de l'UE (nom natif = libellé affiché, norme Switch) :
