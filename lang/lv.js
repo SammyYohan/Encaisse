@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Maksājums pašlaik neiespējams — mēģini drīz.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Maksājums neapstiprināts — mēģini vai raksti atbalstam.",
   "Paiements": "Maksājumi",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Maksājumi ar Stripe. Demo skats, līdz API atslēgas pieslēgtas.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Aizsargāta koplietošana — atver ierakstu šajā ierīcē.",
   "Partager": "Koplietot",
   "Partager l'avoir": "Koplietot kredītrēķinu",

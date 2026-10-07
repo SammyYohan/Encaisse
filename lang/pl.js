@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Płatność chwilowo niedostępna — spróbuj za moment.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Płatność niepotwierdzona — spróbuj lub skontaktuj się ze wsparciem.",
   "Paiements": "Płatności",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Płatności przez Stripe. Widok demo, aż klucze API będą podłączone.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Chronione udostępnienie — otwórz wpis na tym urządzeniu.",
   "Partager": "Udostępnij",
   "Partager l'avoir": "Udostępnij notę korygującą",

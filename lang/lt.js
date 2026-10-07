@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Mokėjimas šiuo metu negalimas — bandyk tuoj.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Mokėjimas nepatvirtintas — bandyk ar kreipkis pagalbos.",
   "Paiements": "Mokėjimai",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Mokėjimai per Stripe. Demonstracinis vaizdas, kol neprijungti API raktai.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Apsaugotas dalijimasis — atidaryk įrašą šiame įrenginyje.",
   "Partager": "Dalintis",
   "Partager l'avoir": "Dalintis kreditine sąskaita",

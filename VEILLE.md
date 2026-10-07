@@ -79,15 +79,15 @@ Ce sont des différenciateurs réels, vérifiés chez les acteurs ci-dessus :
 
 ## 5. Ce que la concurrence a et **que nous n'avons pas**
 
-### 🔴 P0 — bloque la vente
-| Manque | Pourquoi c'est bloquant | Concurrence qui a |
-|---|---|---|
-| **Page client serveur `/r/:id`** | Aujourd'hui le lien client n'ouvre le document **que dans ton propre navigateur**. | Tous (portail client / lien signé serveur) |
-| **Stripe Checkout réel** | `DEMO_MODE` est à `true` : **aucun débit**, l'abonnement se « marque payé » côté client. | Tous |
-| **Envoi d'e-mail serveur** | On ouvre un `mailto:` ; pas d'envoi en arrière-plan ni de relance automatique. | Zoho, FreshBooks, Wave, Invoice Ninja (Pro), Indy |
-| **Avoirs (credit notes)** | **Obligatoires en FR/BE** pour annuler une facture. | Tous |
-| **Plateforme agréée (PDP / Peppol)** | Sans elle on ne peut **pas** annoncer la conformité Europe. | Indy, Tiime, Shine, Qonto, Pennylane, Sellsy, Henrri… |
-| **Factures récurrentes** | Standard attendu, 0 effort chez eux. | Zoho, Invoice Ninja, FreshBooks, Wave… |
+### 🟠 P0 — bloquait la vente (levés sauf conformité certifiée)
+| ✅ Faits | État |
+|---|---|
+| **Page client serveur `/r/:slug`** | En ligne (D1, publiée au partage explicite) |
+| **Stripe Checkout réel** | En ligne (`DEMO_MODE:false`, prix côté serveur) |
+| **Avoirs (credit notes)** | Série `AVT`, jamais plafonnés |
+| **Envoi d'e-mail serveur** | Retiré pour le moment (`mailto:`/WhatsApp) |
+| **Plateforme agréée (PDP / Peppol)** | 🔴 Toujours manquante — interdit toute annonce « conforme » Europe (Indy, Tiime, Shine, Qonto, Pennylane, Sellsy, Henrri… sont agréés) |
+| **Factures récurrentes** | Manquant (Zoho, Invoice Ninja, FreshBooks, Wave… l'ont) |
 
 ### 🟠 P1 — différentiation tarifaire
 - **Suivi du temps** et **notes de frais** (FreshBooks, Zoho, Invoice Ninja, HoneyBook).
@@ -120,11 +120,11 @@ Multi-utilisateurs, rapprochement bancaire, CRM, API, modèles de devis, invento
 | Moyens de paiement | Wave, Orange, MTN, Free, Moov, Interac… | **Stripe** (carte, SEPA, ACH, TWINT) + virement + espèces | Demandé ; tout le reste était de la dette. |
 
 ### Ce qu'on AJOUTE (par ordre de valeur)
-1. **Avoirs** — légalement requis, 1 journée de dev.
+1. ✅ **Avoirs** — fait (série `AVT`, jamais plafonnés).
 2. **Factures récurrentes** (hebdo/mensuel) — standard, forte valeur perçue.
 3. **Relance automatique par e-mail** (Worker cron + fournisseur à choisir).
-4. **Portail client serveur** (`/r/:id` rendu par le Worker) — indispensable avant tout encaissement réel.
-5. **Stripe Checkout** côté Worker (secret uniquement) — puis `STRIPE_LIVE: true`.
+4. ✅ **Portail client serveur** — fait (`/r/:slug` D1, partage explicite).
+5. ✅ **Stripe Checkout** — fait (secret serveur, `STRIPE_LIVE: true`).
 6. **Export FEC / CSV** pour le comptable.
 7. **Partenaire PDP/Peppol** (ou renvoi vers une PA agréée gratuite : Indy/Tiime/Shine) — c'est le seul chemin crédible vers « conforme » en Europe.
 8. **Sales tax rate lookup** aux US (API gratuite ou table par État).

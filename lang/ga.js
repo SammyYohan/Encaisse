@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Íocaíocht dodhéanta faoi láthair — bain triail eile as go luath.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Íocaíocht nár deimhníodh — bain triail eile as nó déan teagmháil leis an tacaíocht.",
   "Paiements": "Íocaíochtaí",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Íocaíochtaí le Stripe. Taispeántas go dtí go nascfar eochracha API.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Roinnt cosanta — athoscail an taifead ón ngléas seo.",
   "Partager": "Roinn",
   "Partager l'avoir": "Roinn an nóta creidmheasa",

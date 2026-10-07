@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Platba teď nemožná — zkus za chvíli.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Platba nepotvrzena — zkus znovu či kontaktuj podporu.",
   "Paiements": "Platby",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Platby přes Stripe. Demo zobrazení, dokud nejsou připojeny API klíče.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Chráněné sdílení — otevři záznam na tomto zařízení.",
   "Partager": "Sdílet",
   "Partager l'avoir": "Sdílet dobropis",

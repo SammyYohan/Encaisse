@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Makse pole praegu võimalik — proovi varsti.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Makset ei kinnitatud — proovi või võta tugi.",
   "Paiements": "Maksed",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Maksed Stripega. Demovaade, kuni API-võtmed on ühendatud.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Kaitstud jagamine — ava kirje selles seadmes.",
   "Partager": "Jaga",
   "Partager l'avoir": "Jaga kreeditarvet",

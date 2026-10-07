@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Η πληρωμή δεν είναι διαθέσιμη τώρα — δοκίμασε σε λίγο.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Η πληρωμή δεν επιβεβαιώθηκε — δοκίμασε ή επικοινώνησε με την υποστήριξη.",
   "Paiements": "Πληρωμές",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Πληρωμές με Stripe. Προβολή επίδειξης μέχρι να συνδεθούν τα κλειδιά API.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Προστατευμένη κοινοποίηση — άνοιξε την εγγραφή από αυτή τη συσκευή.",
   "Partager": "Κοινοποίηση",
   "Partager l'avoir": "Κοινοποίηση πιστωτικού",

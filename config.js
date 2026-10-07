@@ -1,6 +1,6 @@
-/* Encaisse — Clés API à remplir EN DERNIER par le propriétaire.
-   L'app marche en MODE DÉMO sans clés (liens simulés, stockage local).
-   Quand tu es prêt à encaisser pour de vrai, remplis juste ici. */
+/* Encaisse — paiement réel branché (Stripe live via Pages Functions).
+   Les liens de paiement sont réels ; les prix viennent du serveur.
+   Secrets : uniquement via `wrangler pages secret put` (jamais dans le repo). */
 window.ENCAISSE_CONFIG = {
   /* true  = aucun débit réel, bandeau "démo" affiché, aucun plan marqué payé.
      false = le paiement est considéré comme branché (nécessite STRIPE_LIVE + une clé). */

@@ -1,8 +1,8 @@
-# Nom de domaine par défaut (à adapter si vous utilisez un autre domaine personnalisé).
+# Domaine servi : https://encaisse.pages.dev (mettre à jour vers le domaine custom si ajouté).
 User-agent: *
 Allow: /
 
 # Espace client privé : ne jamais l'indexer
 Disallow: /r/
 
-Sitemap: https://encaisse.app/sitemap.xml
+Sitemap: https://encaisse.pages.dev/sitemap.xml

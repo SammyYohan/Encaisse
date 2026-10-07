@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Betalning inte möjlig just nu — försök strax.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Betalning ej bekräftad — försök igen eller kontakta supporten.",
   "Paiements": "Betalningar",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Betalningar via Stripe. Demovy tills API-nycklarna är anslutna.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Skyddad delning — öppna posten på den här enheten.",
   "Partager": "Dela",
   "Partager l'avoir": "Dela kreditnotan",

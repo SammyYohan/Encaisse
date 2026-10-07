@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Fizetés most nem megy — próbáld hamarosan.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Fizetés nincs megerősítve — próbáld vagy írj a supportnak.",
   "Paiements": "Fizetések",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Fizetés Stripe-pal. Demó nézet, amíg az API-kulcsok nincsenek csatlakoztatva.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Védett megosztás — nyisd meg az adatlapot erről a készülékről.",
   "Partager": "Megosztás",
   "Partager l'avoir": "Jóváírás megosztása",

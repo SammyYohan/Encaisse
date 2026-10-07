@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Pago no disponible ahora — inténtalo en un momento.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Pago no confirmado — inténtalo o contacta soporte.",
   "Paiements": "Pagos",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Pagos con Stripe. Vista demo hasta conectar las claves API.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Recurso protegido — abre la ficha desde este dispositivo.",
   "Partager": "Compartir",
   "Partager l'avoir": "Compartir la nota de crédito",

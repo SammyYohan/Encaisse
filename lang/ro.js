@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Plată indisponibilă acum — reîncearcă imediat.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Plată neconfirmată — reîncearcă sau contactează suportul.",
   "Paiements": "Plăți",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Plăți prin Stripe. Afișare demo până se conectează cheile API.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Partajare protejată — redeschide fișa de pe acest aparat.",
   "Partager": "Distribuie",
   "Partager l'avoir": "Distribuie nota de credit",

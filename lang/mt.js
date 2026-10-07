@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Ħlas mhux disponibbli bħalissa — erġa' pprova dalwaqt.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Ħlas mhux ikkonfermat — erġa' pprova jew ikkuntattja l-appoġġ.",
   "Paiements": "Ħlasijiet",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Ħlas bi Stripe. Dehra dimostrattiva sakemm iċ-ċwievet API ma jitqabbdux.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Qsim protett — erġa' iftaħ il-karta minn dan l-apparat.",
   "Partager": "Aqsam",
   "Partager l'avoir": "Aqsam in-nota ta' kreditu",

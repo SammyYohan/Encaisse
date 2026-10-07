@@ -13,7 +13,7 @@
 | **Storage** | `localStorage` on the user's device — no account, no server database |
 | **Deployment** | Cloudflare Pages (free tier) |
 | **i18n** | French source strings are the translation keys (gettext-style) |
-| **Status** | 🟢 Front + backend exist & wired (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, `legal.html` placeholders unfilled → see [Go-live checklist](#go-live-checklist) |
+| **Status** | 🟢 Live — front + backend wired, real Stripe Checkout (`DEMO_MODE:false`, `STRIPE_LIVE:true`) · 🟡 `legal.html` placeholders unfilled → see [Go-live checklist](#go-live-checklist) |
 
 ---
 
@@ -93,7 +93,7 @@ npx wrangler pages dev . --port 8788   # → http://localhost:8788
 | `config.js` | **The only file to edit before going live** — API keys & flags |
 | `styles.css` | All styles, including `@media print` (PDF output) |
 | `sw.js` | Service worker: cache-first, with network-first on `config.js` / `i18n.js` / `sw.js` |
-| `functions/` | **Backend (Pages Functions, no build)**: `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay` + server-rendered customer page `/r/:slug` |
+| `functions/` | **Backend (Pages Functions, no build)**: `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay`, `/api/stripe-webhook`, `/api/backup` + server-rendered customer page `/r/:slug` (+ `encaisse-export.json.js` 404 guard) |
 | `schema.sql`, `wrangler.toml` | D1 schema (table `portal`) + wrangler config (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | PWA manifest + PNG icons (192, 512, maskable, apple-touch) |
 | `legal.html` | Legal notice, terms and privacy policy (bilingual, **placeholders to fill**) |
@@ -131,7 +131,7 @@ Everything lives in one JSON object `S`, persisted to `localStorage` under
 | `S.docs` | Quotes, invoices & credit notes: `type` (`devis` \| `facture` \| `avoir`), `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `avoirSourceId`/`avoirSourceNum`/`avoirNums` (credit-note links), `portal` (`{slug, hash}` — server publication ref), `demo` |
 | `S.seq` | Numbering counters, `{DEV:{YYYY:n}, FAC:{YYYY:n}, AVT:{YYYY:n}}` |
 
-Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`.
+Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`, `encaisse.owner` (device key — never exported), `encaisse.backup` (last backup state), `encaisse.install.hidden`.
 
 **Money is stored in integer cents** (`toCents()`); never use floats for amounts.
 
@@ -206,15 +206,16 @@ the action bar are hidden when printing.
 
 | Key | Current | Meaning |
 |---|---|---|
-| `DEMO_MODE` | `true` | `true` ⇒ **no charge**, demo banner shown, plans can't really be bought. The Worker (`functions/`) exists now — flip to `false` **after** D1 + `STRIPE_SECRET_KEY` are set up |
-| `STRIPE_LIVE` | `false` | Set `true` **at the same time** as `DEMO_MODE:false` — enables the real Checkout redirect |
+| `DEMO_MODE` | `false` | Live: real charges via Stripe Checkout; demo banner hidden, plans require a server-signed token (Stripe = source of truth) |
+| `STRIPE_LIVE` | `true` | Live together with `DEMO_MODE:false` — real Checkout redirect (flip both at once) |
 | `STRIPE_PUBLIC_KEY` | set | *Publishable* key — safe in the browser by design |
 | `STRIPE_PAYMENT_LINK` | `""` | Optional static Payment Link instead of a Checkout Session |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Certified e-invoicing partner (EU) — optional |
 | `SITE_URL` | `""` | Public origin, e.g. `https://app.example.com`. Enables the real customer page `/r/:slug` (uploaded on explicit share) |
 
-> ⚠️ `DEMO_MODE: true` is a deliberate safety lock, **not a bug**. While it is on,
-> the "Upgrade" button marks the plan locally without any payment.
+> ✅ Live mode: "Upgrade" redirects to real Stripe Checkout (server-side prices).
+> Demo-granting only happens when payments aren't configured (`paymentsReady()`
+> false) — never flip back while secrets are live.
 
 ## 6. Deployment
 
@@ -269,11 +270,17 @@ no-browser-return path). Reminders go out via WhatsApp / app e-mail (1 click,
 ### Go-live checklist
 
 ```
-□ Replace VOTRE-DOMAINE.TLD in robots.txt and sitemap.xml
-□ Set SITE_URL in config.js
-□ Create D1 database + binding "DB" + run schema.sql (see above)
-□ Put STRIPE_SECRET_KEY (wrangler pages secret put) and test a real checkout
-□ Flip DEMO_MODE:false + STRIPE_LIVE:true in config.js
+✅ Set SITE_URL in config.js (https://encaisse.pages.dev)
+✅ Create D1 database + binding "DB" + run schema.sql (see above)
+✅ Put STRIPE_SECRET_KEY (wrangler pages secret put)
+□ Test a real checkout (small amount, then refund) + verify webhook delivery
+□ Fill in legal.html (legal name, registration number, VAT, e-mail, ombudsman)
+□ Fill Réglages → My business (address, VAT number, IBAN) — printed on invoices
+□ Add the custom domain in Cloudflare (Workers & Pages → Custom domains) + update SITE_URL/robots/sitemap
+□ Verify headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options
+□ Verify https://<domain>/encaisse-export.json returns 404
+□ Test PWA install on Android & iOS
+```
 □ Fill in legal.html (legal name, registration number, VAT, e-mail, ombudsman)
 □ Fill Réglages → My business (address, VAT number, IBAN) — printed on invoices
 □ Add the custom domain in Cloudflare (Workers & Pages → Custom domains)
@@ -309,7 +316,7 @@ unlimited invoicing. The only defensible wedge is
 
 ## 9. Roadmap
 
-### 🔴 P0 — blocks charging real money
+### 🔴 P0 — remaining: certified e-invoicing before any "compliant" claim
 
 1. ✅ **Server-rendered customer page `/r/:slug`** — `functions/r/[doc].js`,
    D1-backed, published on an explicit share only (the local `?r=` link still
@@ -370,14 +377,14 @@ What an acquirer should know on day one:
 
 | Item | Status |
 |---|---|
-| Revenue / paying customers | None — payments are simulated (`DEMO_MODE`) |
+| Revenue / paying customers | Live (`DEMO_MODE:false`) — no paying customers yet; test with a small checkout + refund |
 | Backend / database | **Exists**: Pages Functions (`functions/`) + D1 table `portal` — Stripe secrets live in Cloudflare, never in the repo |
 | Users' personal data held by us | **Only copies of explicitly shared documents** in D1 (customer e-mail + document payload); everything else stays on the user's device |
 | Third-party accounts needed to transfer | Cloudflare, Stripe, the domain registrar, GitHub |
 | Stripe | Publishable key committed (harmless by design). **Secret key not present** |
 | Legal identity | `legal.html` still has `[TO COMPLETE]` placeholders — **must be filled before any commercial use** |
 | Tax / invoicing compliance | Certified EU platform **not yet connected** (see §7) |
-| Trademark & domain | Domain `encaisse.app` referenced in older drafts — verify ownership |
+| Trademark & domain | Live at `https://encaisse.pages.dev`; `encaisse.app` ownership still unverified (update SITE_URL/robots/sitemap if claimed) |
 | Build / CI | None. No `package.json`, no tests in CI |
 | Automated checks | Scripts were run ad hoc during development (parse, i18n completeness, jsdom user flow) — **not committed** |
 

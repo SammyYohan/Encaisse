@@ -13,7 +13,7 @@
 | **Stockage** | `localStorage` sur l'appareil de l'utilisateur — pas de compte, pas de base de données |
 | **Déploiement** | Cloudflare Pages (offre gratuite) |
 | **i18n** | La chaîne française **est** la clé de traduction (style gettext) |
-| **État** | 🟢 Front + backend existent & câblés (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, placeholders `legal.html` non remplis → voir [Checklist](#checklist-de-mise-en-ligne) |
+| **État** | 🟢 En ligne — front + backend câblés, vrai Checkout Stripe (`DEMO_MODE:false`, `STRIPE_LIVE:true`) · 🟡 placeholders `legal.html` non remplis → voir [Checklist](#checklist-de-mise-en-ligne) |
 
 ---
 
@@ -92,7 +92,7 @@ npx wrangler pages dev . --port 8788   # → http://localhost:8788
 | `config.js` | **Le seul fichier à modifier** avant la mise en production |
 | `styles.css` | Styles, y compris `@media print` (sortie PDF) |
 | `sw.js` | Service worker : cache-first, network-first sur `config.js` / `i18n.js` / `sw.js` |
-| `functions/` | **Backend (Pages Functions, sans build)** : `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay` + page client serveur `/r/:slug` |
+| `functions/` | **Backend (Pages Functions, sans build)** : `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay`, `/api/stripe-webhook`, `/api/backup` + page client serveur `/r/:slug` (+ garde 404 `encaisse-export.json.js`) |
 | `schema.sql`, `wrangler.toml` | Schéma D1 (table `portal`) + config wrangler (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | Manifest PWA + icônes PNG (192, 512, maskable, apple-touch) |
 | `legal.html` | Mentions légales, CGU/CGV, confidentialité (bilingue, **cases à remplir**) |
@@ -130,7 +130,7 @@ Tout vit dans un objet `S`, persisté dans `localStorage` sous **`encaisse.v1`**
 | `S.docs` | Devis, factures & avoirs : `type` (`devis` \| `facture` \| `avoir`), `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `avoirSourceId`/`avoirSourceNum`/`avoirNums` (liens d'avoir), `portal` (`{slug, hash}` — référence de publication serveur), `demo` |
 | `S.seq` | Compteurs de numérotation `{DEV:{AAAA:n}, FAC:{AAAA:n}, AVT:{AAAA:n}}` |
 
-Autres clés : `encaisse.onboarded`, `encaisse.lang`.
+Autres clés : `encaisse.onboarded`, `encaisse.lang`, `encaisse.owner` (clé d'appareil — jamais exportée), `encaisse.backup`, `encaisse.install.hidden`.
 
 **Les montants sont stockés en centimes** (`toCents()`) — jamais en flottants.
 
@@ -204,14 +204,16 @@ Pas de bibliothèque PDF : la facture est mise en forme pour l'écran et
 
 | Clé | Actuel | Sens |
 |---|---|---|
-| `DEMO_MODE` | `true` | `true` ⇒ **aucun débit**, bandeau démo, aucun plan réellement achetable. Les functions/ existent maintenant → passe à `false` **après** la mise en place D1 + `STRIPE_SECRET_KEY` |
-| `STRIPE_LIVE` | `false` | Passe à `true` **en même temps** que `DEMO_MODE:false` — active la redirection Checkout réelle |
+| `DEMO_MODE` | `false` | En ligne : débits réels via Checkout Stripe ; bandeau démo masqué, les plans exigent un jeton signé serveur (Stripe = source de vérité) |
+| `STRIPE_LIVE` | `true` | En ligne avec `DEMO_MODE:false` — vraie redirection Checkout (basculer les deux ensemble) |
 | `STRIPE_PUBLIC_KEY` | renseignée | Clé *publishable* — conçue pour être visible par le navigateur |
 | `STRIPE_PAYMENT_LINK` | `""` | Payment Link statique, alternative à la session Checkout |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Partenaire agréé e-facturation (Europe) — optionnel |
 | `SITE_URL` | `""` | Origine publique, ex. `https://app.exemple.fr` — active la vraie page client `/r/:slug` (publiée au partage) |
 
-> ⚠️ `DEMO_MODE: true` est un verrou **volontaire**, pas un bug.
+> ✅ Mode en ligne : « Choisir Solo/Pro » redirige vers le vrai Checkout Stripe (prix côté serveur).
+> L'attribution locale d'un plan n'arrive que si les paiements ne sont pas configurés
+> (`paymentsReady()` faux) — ne jamais rebasculer tant que les secrets sont en ligne.
 
 ## 6. Déploiement
 
@@ -266,11 +268,17 @@ applicatif (1 clic, 3 tons J+3/J+7/J+15) ; aucun e-mail serveur pour le moment.
 ### Checklist de mise en ligne
 
 ```
-□ Remplacer VOTRE-DOMAINE.TLD dans robots.txt et sitemap.xml
-□ Renseigner SITE_URL dans config.js
-□ Créer la base D1 + binding « DB » + exécuter schema.sql (voir ci-dessus)
-□ Mettre STRIPE_SECRET_KEY (wrangler pages secret put) et tester un vrai checkout
-□ Basculer DEMO_MODE:false + STRIPE_LIVE:true dans config.js
+✅ Renseigner SITE_URL dans config.js (https://encaisse.pages.dev)
+✅ Créer la base D1 + binding « DB » + exécuter schema.sql (voir ci-dessus)
+✅ Mettre STRIPE_SECRET_KEY (wrangler pages secret put)
+□ Tester un vrai checkout (petit montant, puis remboursement) + vérifier le webhook
+□ Remplir legal.html (raison sociale, SIRET/RCS/EIN, TVA, e-mail, médiateur)
+□ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
+□ Ajouter le domaine dans Cloudflare (Custom domains) + mettre à jour SITE_URL/robots/sitemap
+□ Vérifier les en-têtes : CSP, HSTS, X-Content-Type-Options, X-Frame-Options
+□ Vérifier que /encaisse-export.json renvoie 404
+□ Tester l'installation PWA sur Android et iOS
+```
 □ Remplir legal.html (raison sociale, SIRET/RCS/EIN, TVA, e-mail, médiateur)
 □ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
 □ Ajouter le domaine dans Cloudflare (Custom domains)
@@ -307,7 +315,7 @@ est **hors-ligne + preuve de chantier + relances guidées** — ce positionnemen
 
 ## 9. Feuille de route
 
-### 🔴 P0 — bloque la vente
+### 🔴 P0 — reste : la e-facturation certifiée avant toute annonce « conforme »
 
 1. ✅ **Page client serveur `/r/:slug`** — `functions/r/[doc].js`, adossée à D1,
    publiée seulement lors d'un partage explicite (le lien local `?r=` reste le
@@ -371,14 +379,14 @@ Ce qu'un repreneur doit savoir le jour J :
 
 | Point | État |
 |---|---|
-| Revenus / clients payants | Aucun — les paiements sont simulés (`DEMO_MODE`) |
+| Revenus / clients payants | En ligne (`DEMO_MODE:false`) — aucun client payant pour l'instant ; tester avec un petit checkout + remboursement |
 | Backend / base de données | **Existe** : Pages Functions (`functions/`) + table D1 `portal` — les secrets Stripe vivent dans Cloudflare, jamais dans le dépôt |
 | Données personnelles détenues par nous | **Uniquement des copies de documents explicitement partagés** dans D1 (e-mail client + payload du document) ; tout le reste reste sur l'appareil de l'utilisateur |
 | Comptes tiers à transférer | Cloudflare, Stripe, le registrar de domaine, GitHub |
 | Stripe | Clé publishable committée (inoffensive par conception). **Clé secrète absente** |
 | Identité légale | `legal.html` contient encore des `[À COMPLÉTER]` — **à remplir avant tout usage commercial** |
 | Conformité fiscale | Plateforme européenne agréée **pas encore branchée** (§7) |
-| Marque & domaine | Le domaine `encaisse.app` apparaît dans d'anciens brouillons — vérifier la propriété |
+| Marque & domaine | En ligne sur `https://encaisse.pages.dev` ; propriété d'`encaisse.app` toujours non vérifiée (mettre à jour SITE_URL/robots/sitemap si revendiqué) |
 | Build / CI | Aucun. Pas de `package.json`, pas de tests en CI |
 | Contrôles automatisés | Scripts exécutés au fil de l'eau pendant le développement (parses, complétude i18n, parcours jsdom) — **non committés** |
 

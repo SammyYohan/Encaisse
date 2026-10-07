@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Plačilo trenutno nemogoče — poskusi čez čas.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Plačilo nepotrjeno — poskusi ali pokliči podporo.",
   "Paiements": "Plačila",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Plačila prek Stripe. Demo prikaz, dokler ključi API niso povezani.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Zaščiteno deljenje — odpri zapis v tej napravi.",
   "Partager": "Deli",
   "Partager l'avoir": "Deli dobropis",

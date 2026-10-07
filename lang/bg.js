@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Плащането е невъзможно сега — опитай след малко.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Плащането не е потвърдено — опитай или пиши на поддръжката.",
   "Paiements": "Плащания",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Плащания през Stripe. Демо изглед, докато API ключовете не са свързани.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Защитено споделяне — отвори записа от това устройство.",
   "Partager": "Сподели",
   "Partager l'avoir": "Сподели кредитното известие",

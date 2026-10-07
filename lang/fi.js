@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Maksu ei juuri nyt mahdollinen — yritä hetken kuluttua.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Maksua ei vahvistettu — yritä tai ota tukeen.",
   "Paiements": "Maksut",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Maksut Stripellä. Demonäkymä, kunnes API-avaimet on yhdistetty.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Suojattu jako — avaa tietue tällä laitteella.",
   "Partager": "Jaa",
   "Partager l'avoir": "Jaa hyvityslasku",

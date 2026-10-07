@@ -30,7 +30,7 @@ python -m http.server 8080
 ## Constraints (do not relax)
 
 - Scope is **FR · BE · CH · US, Stripe only**, currencies EUR/CHF/USD. No other payment providers, countries, or FCFA/CAD.
-- `DEMO_MODE: true` in `config.js` is a deliberate safety lock, **not a bug** — leave it until a Cloudflare Worker creates real Stripe Checkout Sessions. Stripe **secret** key never belongs in this repo (`wrangler secret put`).
+- `DEMO_MODE: false` in prod — real Stripe Checkout via Pages Functions. Never flip back to demo-granting (`activatePlan` marks plans locally only when payments aren't ready). Stripe **secret** key never belongs in this repo (`wrangler pages secret put`).
 - `encaisse-export.json` (real user data) and `.dev.vars` are git-ignored and must never be committed or uploaded (wrangler deploys *everything* in the folder).
 - Quotes are the acquisition channel → never gate them, and credit notes (avoirs) are the legal correction of an invoice → never gate them either. `canCreate()` gates only `type === "facture"` (3/month on Free).
 - French is the source language for code comments, i18n keys, and docs (`README.fr.md` mirrors `README.md`).

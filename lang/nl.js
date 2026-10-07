@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Betaling nu niet mogelijk — probeer zo.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Betaling niet bevestigd — probeer opnieuw of contacteer support.",
   "Paiements": "Betalingen",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Betalingen via Stripe. Demoweergave tot de API-sleutels zijn gekoppeld.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Beveiligde deling — open het dossier op dit apparaat.",
   "Partager": "Delen",
   "Partager l'avoir": "Creditnota delen",

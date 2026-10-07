@@ -282,7 +282,6 @@
   "Paiement indisponible pour l'instant — réessaie dans un instant.": "Betaling ikke mulig lige nu — prøv om lidt.",
   "Paiement non confirmé — réessaie ou contacte le support.": "Betaling ikke bekræftet — prøv igen eller kontakt support.",
   "Paiements": "Betalinger",
-  "Paiements par Stripe. Rendus de démonstration tant que les clés API ne sont pas branchées.": "Betalinger via Stripe. Demovisning til API-nøglerne er forbundet.",
   "Partage protégé — rouvre la fiche depuis cet appareil.": "Beskyttet deling — åbn posten på denne enhed.",
   "Partager": "Del",
   "Partager l'avoir": "Del kreditnotaen",
