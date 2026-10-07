@@ -287,9 +287,9 @@ let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb",
 /* Langue = source unique i18n (24 langues UE, voir i18n.js) ; repli français. */
 function detectLang(){try{if(window.getLang)return window.getLang()}catch(e){}return "fr"}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S));scheduleBackup();return true}catch(err){toast(T("Stockage plein : supprime une photo ou un vieux document"));return false}}
-/* Pas encore de données : la démo est créée à la fin de l'onboarding
-   (voir finishOnb), UNE SEULE FOIS, avec le bon pays et le bon secteur. */
-let needSeed=false;
+/* Comptes vierges : aucun seeding — l'onboarding crée un profil vide.
+   Migration unique : purge les traces de l'ancienne démo (docs flaggés demo
+   + clients seed C1-C3 aux ids déterministes), compteurs préservés. */
 function load(){
   try{
     const r=localStorage.getItem(LS);
@@ -297,12 +297,18 @@ function load(){
       const p=JSON.parse(r);
       S={...S,...p,biz:{...S.biz,...(p.biz||{})},sub:{...S.sub,...(p.sub||{})}};
       if(!S.sub)S.sub={plan:"free",cycle:"monthly",since:null};
-      migrateSeq();migrateMoyens();
+      migrateSeq();migrateMoyens();purgeDemo();
       return;
     }
   }catch{}
-  needSeed=true;
   S.lang=detectLang();
+}
+function purgeDemo(){
+  const hadDemo=(S.docs||[]).some(d=>d&&d.demo)||(S.clients||[]).some(c=>c&&(c.id==="C1"||c.id==="C2"||c.id==="C3"));
+  if(!hadDemo)return;
+  S.docs=(S.docs||[]).filter(d=>!(d&&d.demo));
+  S.clients=(S.clients||[]).filter(c=>!(c&&(c.id==="C1"||c.id==="C2"||c.id==="C3")));
+  try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}
 }
 function migrateSeq(){
   const y=String(new Date().getFullYear());
@@ -318,48 +324,6 @@ function migrateMoyens(){
   S.biz.moyens=list.length?[...new Set(list)]:[...PAYS[S.biz.pays].moyens];
   (S.clients||[]).forEach(c=>{if(c&&typeof c==="object"){c.tel=c.tel||"";c.email=c.email||"";c.adresse=c.adresse||"";c.tvaId=c.tvaId||""}});
   S.lang=(window.ENCAISSE_LANG_LIST&&window.ENCAISSE_LANG_LIST[S.lang])?S.lang:detectLang();
-}
-
-function seed(targetPays="FR", targetSecteur="artisan", targetBiz=""){
-  const P=PAYS[targetPays]||PAYS.FR;
-  const cur=P.devise, tva=P.tva;
-  const mult=cur==="CHF"?1.12:(cur==="$"?1.08:1);
-  const rP=v=>cur==="€"?v:Math.round(v*mult/5)*5;
-  const keepSeq=(S&&S.seq)?S.seq:{DEV:{},FAC:{},AVT:{}};
-  const dom={FR:["Awa Diallo — Paris 11e","Marc Dupont — Lyon 6e","Boulangerie Saint-Germain"],
-             BE:["Awa Diallo — Bruxelles","Marc Dupont — Liège","Boulangerie Saint-Gilles"],
-             CH:["Awa Diallo — Genève","Marc Dupont — Lausanne","Boulangerie de Nyon"],
-             US:["Awa Diallo — Brooklyn NY","Marc Dupont — Austin TX","Bluebird Coffee Co."]}[targetPays]||[];
-  const tel={FR:"+33600000001",BE:"+32470000001",CH:"+41790000001",US:"+12125550101"}[targetPays]||"+33600000001";
-
-  S={
-    lang:S.lang||detectLang(),
-    biz:{nom:targetBiz||{FR:"Atelier Koné — Rénovation",BE:"Atelier Koné — Rénovation",CH:"Atelier Koné — Rénovation",US:"Koné Renovation LLC"}[targetPays]||"Koné Renovation",
-      pays:targetPays,secteur:targetSecteur,devise:cur,moyens:[...P.moyens],
-      adresse:"",contact:"",tvaId:"",iban:""},
-    sub:{plan:"free",cycle:"monthly",since:null},
-    clients:[
-      {id:"C1",nom:dom[0],tel:targetPays==="US"?"":tel,email:"",adresse:"",tvaId:""},
-      {id:"C2",nom:dom[1],tel:targetPays==="US"?"":tel,email:"",adresse:"",tvaId:""},
-      {id:"C3",nom:dom[2],tel:"",email:"",adresse:"",tvaId:""}
-    ],
-    docs:[],
-    seq:keepSeq
-  };
-
-  const mk=(type,cli,items,statut,emis,eche)=>{
-    const id=uid();
-    const tot=items.reduce((a,l)=>a+l.q*l.p,0);
-    const num=nextNum(type);
-    S.docs.push({id,type,numero:num,clientId:cli,client:nomCli(cli),
-      items,total:tot,tva,statut,emis,eche,payeLe:statut==="paye"?emis:null,relances:statut==="paye"?1:0,demo:true});
-  };
-
-  mk("devis","C1",[{lib:{fr:"Peinture salon 45m²",en:"Paint living room 45m²"},q:1,p:rP(65000)},{lib:{fr:"Main d'œuvre préparation",en:"Labour — prep"},q:2,p:rP(10000)}],"envoye",todayISO(),addDays(todayISO(),15));
-  mk("facture","C1",[{lib:{fr:"Rénovation salle de bain",en:"Bathroom renovation"},q:1,p:rP(85000)}],"envoye",addDays(todayISO(),-12),addDays(todayISO(),-5));
-  mk("facture","C3",[{lib:{fr:"Fourniture + pose équipement",en:"Equipment supply & install"},q:1,p:rP(120000)}],"envoye",addDays(todayISO(),-3),addDays(todayISO(),11));
-  mk("facture","C2",[{lib:{fr:"Dépannage plomberie urgente",en:"Emergency plumbing call-out"},q:1,p:rP(9500)}],"paye",addDays(todayISO(),-20),addDays(todayISO(),-6));
-  save();
 }
 
 function nomCli(id){return (S.clients.find(c=>c.id===id)||{}).nom||T("Client")}
@@ -444,12 +408,10 @@ function finishOnb(){
   const sel=$("#onbPays .is-sel")?.dataset?.pays||"FR";
   const biz=($("#onbBiz")?.value||"").trim().slice(0,60);
   const sx=$("#onbSecteur")?.value||"artisan";
-  if(needSeed){ needSeed=false; seed(sel,sx,biz); }
-  else{
-    S.biz.pays=sel;S.biz.devise=PAYS[sel].devise;S.biz.moyens=[...PAYS[sel].moyens];
-    S.biz.secteur=SECTEURS[sx]?sx:"artisan";
-    if(biz)S.biz.nom=biz;save();
-  }
+  /* Compte vierge : aucun seeding — profil configuré, documents à créer. */
+  S.biz.pays=sel;S.biz.devise=PAYS[sel].devise;S.biz.moyens=[...PAYS[sel].moyens];
+  S.biz.secteur=SECTEURS[sx]?sx:"artisan";
+  if(biz)S.biz.nom=biz;save();
   localStorage.setItem(LS_ON,"1");
   $("#onb").hidden=true;
   document.querySelector("#app")?.classList.remove("onb-on");
@@ -1571,10 +1533,6 @@ function bind(){
       impFile.value="";
     };
   }
-
-  $("#resetBtn").onclick=()=>{
-    if(confirm(T("Réinitialiser la démo ?"))){localStorage.removeItem(LS);seed(S.biz.pays,S.biz.secteur,S.biz.nom);syncSettings();render();toast(T("Démo réinitialisée"))}
-  };
 
   const up=()=>{const off=!navigator.onLine;const em=$("#dotNet").querySelector("em");if(em)em.textContent=off?T("Hors-ligne · tout marche"):T("En ligne")};
   window.addEventListener("online",up);window.addEventListener("offline",up);up();

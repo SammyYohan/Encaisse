@@ -79,8 +79,8 @@ Open `http://localhost:3000`. On first load you get the onboarding flow
 npx wrangler pages dev . --port 8788   # → http://localhost:8788
 ```
 
-**Reset the demo:** *Settings → Reset demo* (keeps the numbering counters intact —
-document numbers are never reused).
+**Fresh account:** onboarding creates a pristine profile — no sample data.
+(Numbering counters are never reset — document numbers are never reused).
 
 ## 3. Repository layout
 
@@ -137,12 +137,10 @@ Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`.
 
 ### 4.3 Document numbering
 
-- Counters are chronological and **never reset to zero**, including after
-  *Reset demo* — invoices must not repeat numbers.
+- Counters are chronological and **never reset to zero** — invoices must not repeat numbers.
 - Numbers are produced by `nextNum(type)` → `FAC-2026-0001`, `DEV-2026-0001`,
   `AVT-2026-0001` (credit notes get their own dedicated **AVT** series).
-- Seeding demo data runs **once**, at the end of onboarding (`needSeed` flag), so the
-  counters are not advanced twice.
+- No demo seeding: onboarding starts empty; `purgeDemo()` clears legacy `demo` traces once.
 
 ### 4.4 Free tier & plans
 

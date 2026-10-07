@@ -78,8 +78,8 @@ des données de démonstration.
 npx wrangler pages dev . --port 8788   # → http://localhost:8788
 ```
 
-**Réinitialiser la démo :** *Réglages → Réinitialiser démo* (les compteurs de
-numérotation sont conservés — un numéro de facture n'est jamais réutilisé).
+**Compte vierge :** l'onboarding crée un profil vide — aucune donnée d'exemple.
+(Les compteurs de numérotation ne sont jamais remis à zéro.)
 
 ## 3. Structure du dépôt
 
@@ -136,12 +136,10 @@ Autres clés : `encaisse.onboarded`, `encaisse.lang`.
 
 ### 4.3 Numérotation
 
-- Compteurs chronologiques, **jamais remis à zéro**, y compris après
-  *Réinitialiser démo*.
+- Compteurs chronologiques, **jamais remis à zéro**.
 - Production par `nextNum(type)` → `FAC-2026-0001`, `DEV-2026-0001`,
   `AVT-2026-0001` (les avoirs ont leur propre série **AVT**).
-- La démo est créée **une seule fois**, à la fin de l'onboarding (drapeau `needSeed`),
-  pour ne pas avancer les compteurs deux fois.
+- Aucun seeding : l'onboarding part de zéro ; `purgeDemo()` nettoie les traces `demo` existantes, une fois.
 
 ### 4.4 Offre gratuite & paliers
 
