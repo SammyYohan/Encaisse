@@ -2,7 +2,7 @@
 
 > **Un devis en 60 secondes → une facture conforme → encaissé.**
 > PWA de facturation **hors-ligne d'abord** pour la **France · la Belgique · la Suisse · les États-Unis**.
-> Bilingue **FR / EN**, paiement **Stripe uniquement**, hébergé sur **Cloudflare**.
+> Bilingue **FR / EN**, paiements **en ligne via Lemon Squeezy** (Merchant of Record), hébergé sur **Cloudflare**.
 
 > 📖 **English?** See [`README.md`](./README.md) — same content.
 
@@ -13,7 +13,7 @@
 | **Stockage** | `localStorage` sur l'appareil de l'utilisateur — pas de compte, pas de base de données |
 | **Déploiement** | Cloudflare Pages (offre gratuite) |
 | **i18n** | La chaîne française **est** la clé de traduction (style gettext) |
-| **État** | 🟢 En ligne — front + backend câblés, vrai Checkout Stripe (`DEMO_MODE:false`, `STRIPE_LIVE:true`) · 🟡 placeholders `legal.html` non remplis → voir [Checklist](#checklist-de-mise-en-ligne) |
+| **État** | 🟢 En ligne — front + backend câblés, vrai Checkout Lemon Squeezy (`DEMO_MODE:false`) · 🟡 placeholders `legal.html` non remplis → voir [Checklist](#checklist-de-mise-en-ligne) |
 
 ---
 
@@ -39,8 +39,8 @@
 - **Devis et factures** pour un indépendant, créés sur téléphone en moins d'une minute.
 - **PDF adaptés au pays** avec les mentions obligatoires : France (PDF + avertissement PDP),
   Belgique (PDF + avertissement Peppol-BIS), Suisse (PDF, le QR ouvre le lien
-  Stripe — pas un QR SIX bancaire), États-Unis (sales tax d'État/local saisie à la main).
-- **Lien de paiement** (carte Stripe, prélèvement SEPA, ACH, TWINT / virement / espèces constatés à part) +
+  en ligne — pas un QR SIX bancaire), États-Unis (sales tax d'État/local saisie à la main).
+- **Lien de paiement** (carte, prélèvement SEPA, ACH, TWINT / virement / espèces constatés à part) +
   PDF imprimable avec QR code via le dialogue d'impression du navigateur.
 - **Relances guidées** : J+3 poli → J+7 ferme → J+15 mise en demeure, avec **3
   messages vraiment distincts** pré-remplis pour WhatsApp ou e-mail en 1 clic
@@ -92,7 +92,7 @@ npx wrangler pages dev . --port 8788   # → http://localhost:8788
 | `config.js` | **Le seul fichier à modifier** avant la mise en production |
 | `styles.css` | Styles, y compris `@media print` (sortie PDF) |
 | `sw.js` | Service worker : cache-first, network-first sur `config.js` / `i18n.js` / `sw.js` |
-| `functions/` | **Backend (Pages Functions, sans build)** : `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay`, `/api/stripe-webhook`, `/api/backup` + page client serveur `/r/:slug` (+ garde 404 `encaisse-export.json.js`) |
+| `functions/` | **Backend (Pages Functions, sans build)** : `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay`, `/api/lemon-webhook`, `/api/backup` + page client serveur `/r/:slug` (+ garde 404 `encaisse-export.json.js`) |
 | `schema.sql`, `wrangler.toml` | Schéma D1 (table `portal`) + config wrangler (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | Manifest PWA + icônes PNG (192, 512, maskable, apple-touch) |
 | `legal.html` | Mentions légales, CGU/CGV, confidentialité (bilingue, **cases à remplir**) |
@@ -108,7 +108,7 @@ npx wrangler pages dev . --port 8788   # → http://localhost:8788
 ### 4.1 Ordre de chargement
 
 ```html
-<script src="config.js"></script>      <!-- drapeaux + clé publishable Stripe -->
+<script src="config.js"></script>      <!-- drapeaux (ni secrets ni clés) -->
 <script src="i18n.js"></script>        <!-- définit t/setLang/getLang/applyI18n -->
 <script src="qr.js"></script>          <!-- définit window.qrcode -->
 <script src="app.js" defer></script>   <!-- tout le reste -->
@@ -125,7 +125,7 @@ Tout vit dans un objet `S`, persisté dans `localStorage` sous **`encaisse.v1`**
 |---|---|
 | `S.lang` | `"fr"` \| `"en"` (miroir sous `encaisse.lang`) |
 | `S.biz` | Identité de l'entreprise : `nom`, `pays`, `secteur`, `devise`, `moyens`, `adresse`, `contact`, `tvaId`, `iban` — **imprimé sur chaque facture** |
-| `S.sub` | Abonnement `{plan, cycle, since, exp, token, customer, checkedAt}` — `token` = **jeton signé HMAC** émis par `/api/sub` après un vrai Checkout Stripe ; rafraîchi en ligne (Stripe = source de vérité), tolérance hors-ligne 14 j |
+| `S.sub` | Abonnement `{plan, cycle, since, exp, token, customer, checkedAt}` — `token` = **jeton signé HMAC** émis par `/api/sub` après un vrai achat Lemon Squeezy ; rafraîchi en ligne (API Lemon Squeezy = source de vérité), tolérance hors-ligne 14 j |
 | `S.clients` | `{id, nom, tel, email, adresse, tvaId}` |
 | `S.docs` | Devis, factures & avoirs : `type` (`devis` \| `facture` \| `avoir`), `numero`, `clientId`, `items[]`, `total`, `tva`, `statut`, `emis`, `eche`, `relances`, `signature`, `photo`, `acompte`, `avoirSourceId`/`avoirSourceNum`/`avoirNums` (liens d'avoir), `portal` (`{slug, hash}` — référence de publication serveur), `demo` |
 | `S.seq` | Compteurs de numérotation `{DEV:{AAAA:n}, FAC:{AAAA:n}, AVT:{AAAA:n}}` |
@@ -143,14 +143,14 @@ Autres clés : `encaisse.onboarded`, `encaisse.lang`, `encaisse.owner` (clé d'a
 
 ### 4.4 Offre gratuite & paliers
 
-| | Gratuit | Solo | Pro |
-|---|---|---|---|
-| Devis | **illimités** | illimités | illimités |
-| Avoirs | **illimités** | illimités | illimités |
-| Factures / mois | **3** (`FREE_MONTHLY`) | illimitées | illimitées |
-| Mensuel — EUR 🇪🇺 / USD 🇺🇸 | 0 | 19 | 39 |
-| Mensuel — CHF 🇨🇭 | 0 | 29 | 59 |
-| Annuel (−20 %) | 0 | 182 / 278 | 374 / 566 |
+| | Gratuit | Pro (plan unique) |
+|---|---|---|
+| Devis | **illimités** | illimités |
+| Avoirs | **illimités** | illimités |
+| Factures / mois | **3** (`FREE_MONTHLY`) | illimitées |
+| Mensuel — EUR 🇪🇺 / USD 🇺🇸 | 0 | 9 |
+| Mensuel — CHF 🇨🇭 | 0 | 12 |
+| Annuel (2 mois offerts) | 0 | 90 / 120 |
 
 - Les devis sont le canal d'acquisition : **jamais plafonnés**.
 - Les avoirs sont la *correction légale* d'une facture déjà émise
@@ -158,8 +158,7 @@ Autres clés : `encaisse.onboarded`, `encaisse.lang`, `encaisse.owner` (clé d'a
   créables qu'à partir d'une facture existante.
 - `canCreate(type)` ne bloque que `type === "facture"`, et uniquement à la
   sauvegarde, à la conversion et au dupliquer.
-- Hypothèses de frais Stripe utilisées par l'affichage de marge : 1,5 % + 0,25 € (EUR),
-  1,7 % + 0,30 CHF (CHF), 2,9 % + 0,30 $ (USD).
+- Frais Lemon Squeezy utilisés par l'affichage de marge : 5 % + 0,30 $ par transaction (MoR, TVA gérée).
 
 ### 4.5 Contrat i18n
 
@@ -204,14 +203,13 @@ Pas de bibliothèque PDF : la facture est mise en forme pour l'écran et
 
 | Clé | Actuel | Sens |
 |---|---|---|
-| `DEMO_MODE` | `false` | En ligne : débits réels via Checkout Stripe ; bandeau démo masqué, les plans exigent un jeton signé serveur (Stripe = source de vérité) |
-| `STRIPE_LIVE` | `true` | En ligne avec `DEMO_MODE:false` — vraie redirection Checkout (basculer les deux ensemble) |
-| `STRIPE_PUBLIC_KEY` | renseignée | Clé *publishable* — conçue pour être visible par le navigateur |
-| `STRIPE_PAYMENT_LINK` | `""` | Payment Link statique, alternative à la session Checkout |
+| `DEMO_MODE` | `false` | En ligne : débits réels via Checkout Lemon Squeezy ; bandeau démo masqué, les plans exigent un jeton signé serveur (API Lemon Squeezy = source de vérité) |
+| `STRIPE_LIVE` | supprimée | Lemon Squeezy n'a pas de clé publishable — le checkout est une redirection fabriquée par le serveur |
+| `LEMON_CFG` | variable JSON | Un store PAR DEVISE avec 3 IDs de variants chacun (`proM/proA/once`) — dashboard → Variables |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Partenaire agréé e-facturation (Europe) — optionnel |
 | `SITE_URL` | `""` | Origine publique, ex. `https://app.exemple.fr` — active la vraie page client `/r/:slug` (publiée au partage) |
 
-> ✅ Mode en ligne : « Choisir Solo/Pro » redirige vers le vrai Checkout Stripe (prix côté serveur).
+> ✅ Mode en ligne : « Choisir Pro » redirige vers le vrai Checkout Lemon Squeezy (prix côté serveur).
 > L'attribution locale d'un plan n'arrive que si les paiements ne sont pas configurés
 > (`paymentsReady()` faux) — ne jamais rebasculer tant que les secrets sont en ligne.
 
@@ -233,32 +231,46 @@ npx wrangler pages deploy . --project-name=encaisse
 
 Wrangler envoie **tout** le dossier : retirez `encaisse-export.json` au préalable.
 
-### Stripe, e-mails & portail client (mise en place unique)
+### Lemon Squeezy, stores & portail client (mise en place unique)
 
 Le backend sont les **Pages Functions** (`functions/`, JS pur — ça se déploie avec
 le site, aucun build). Activation en une fois :
 
 ```powershell
-# 1. D1 (stockage du portail client)
+# 1. D1 (portail + abonnements)
 npx wrangler d1 create encaisse                # copier l'UUID dans wrangler.toml
 npx wrangler d1 execute encaisse --remote --file=schema.sql
 #    + dashboard : projet Pages → Settings → Functions → binding D1 nommé « DB »
 
-# 2. Clé secrète Stripe — jamais dans ce dépôt
-npx wrangler pages secret put STRIPE_SECRET_KEY --project-name=<projet>
+# 2. Secrets Lemon Squeezy — jamais dans ce dépôt
+npx wrangler pages secret put LEMON_API_KEY --project-name=<projet>
+#    Commence par une clé TEST (tests gratuits), passe en LIVE pour l'argent réel.
+npx wrangler pages secret put LEMON_SIGNING_SECRET --project-name=<projet>
+#    Secret de signature du webhook (dashboard → Settings → Webhooks → Reveal).
 
-# 3. Basculer les deux drapeaux de config.js : DEMO_MODE:false, STRIPE_LIVE:true → push
+# 3. Stores & variants (dashboard) : UN store PAR DEVISE (EUR/CHF/USD — la
+#    devise facturée suit le store). Par store, 5 variants :
+#    proM, proA (abonnement Pro) + once (factures clients à montant libre).
+#    Les prix affichés vivent dans PLANS (app.js + functions) ; custom_price
+#    écrase le prix du variant, donc garde les prix dashboard synchronisés.
+
+# 4. Variable LEMON_CFG (dashboard → Variables, PAS Secrets) — IDs stores/variants :
+#    {"EUR":{"store":"1","variants":{"proM":"12","proA":"13","once":"14"}},"CHF":{...},"USD":{...}}
+
+# 5. Webhook par store → https://<domaine>/api/lemon-webhook
+#    Events : order_created, subscription_created, subscription_updated,
+#    subscription_cancelled, subscription_expired.
 ```
 
-Endpoints : `POST /api/checkout` (Checkout abonnement, prix côté serveur) ·
-`GET /api/sub` (vérification d'achat + jeton HMAC) · `POST /api/portal`
+Endpoints : `POST /api/checkout` (Checkout abonnement, `custom_price` côté serveur) ·
+`GET /api/sub` (recherche par clé d'appareil + jeton HMAC) · `POST /api/portal`
 (publie `/r/:slug`, uniquement à un partage explicite) · `GET /api/pay`
-(encaissement facture ; le montant vient de D1, jamais du payeur) ·
-`POST /api/stripe-webhook` (webhook Stripe signé, contrôle strict montant +
-devise, `paid_at` idempotent) · `/r/:slug` (facture rendue par le serveur,
-confirmation de paiement via `?session_id=` avec reçu affiché — le webhook
-couvre le cas sans retour navigateur). Relances via WhatsApp / e-mail
-applicatif (1 clic, 3 tons J+3/J+7/J+15) ; aucun e-mail serveur pour le moment.
+(encaissement facture ; le montant vient de D1 en `custom_price` LS, jamais du payeur) ·
+`POST /api/lemon-webhook` (signature X-Signature vérifiée, contrôle strict montant +
+devise, `paid_at` idempotent, table `subs`) · `/r/:slug` (facture rendue par le serveur,
+reçu affiché après confirmation webhook — `?paid=1` n'est qu'un badge).
+Relances via WhatsApp / e-mail applicatif (1 clic, 3 tons J+3/J+7/J+15) ;
+aucun e-mail serveur pour le moment.
 
 > **Les relances automatiques non supervisées sont impossibles sur les Pages
 > Functions** — Cloudflare n'y expose pas de cron trigger. Elles exigent un
@@ -270,7 +282,7 @@ applicatif (1 clic, 3 tons J+3/J+7/J+15) ; aucun e-mail serveur pour le moment.
 ```
 ✅ Renseigner SITE_URL dans config.js (https://encaisse.pages.dev)
 ✅ Créer la base D1 + binding « DB » + exécuter schema.sql (voir ci-dessus)
-✅ Mettre STRIPE_SECRET_KEY (wrangler pages secret put)
+✅ Mettre LEMON_API_KEY + LEMON_SIGNING_SECRET (wrangler pages secret put) + variable LEMON_CFG
 □ Tester un vrai checkout (petit montant, puis remboursement) + vérifier le webhook
 □ Remplir legal.html (raison sociale, SIRET/RCS/EIN, TVA, e-mail, médiateur)
 □ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
@@ -295,7 +307,7 @@ applicatif (1 clic, 3 tons J+3/J+7/J+15) ; aucun e-mail serveur pour le moment.
 |---|---|---|
 | 🇫🇷 France | Réception e-facture **obligatoire depuis le 01/09/2026** ; émission PME **à partir du 01/09/2027** via une plateforme agréée (**PDP/PA**, 166 agréées) | PDF avec les mentions du vendeur + avertissement visible : la transmission exige une plateforme agréée |
 | 🇧🇪 Belgique | **Peppol-BIS obligatoire en B2B depuis le 01/01/2026** (amendes 1 500 – 5 000 €) | Idem : PDF + avertissement explicite, pas encore de point d'accès |
-| 🇨🇭 Suisse | Aucune obligation, **QR-facture** exigée sur support papier | PDF avec mentions suisses ; le QR affiché ouvre le lien de paiement Stripe, **pas** un QR SIX bancaire |
+| 🇨🇭 Suisse | Aucune obligation, **QR-facture** exigée sur support papier | PDF avec mentions suisses ; le QR affiché ouvre le lien de paiement en ligne, **pas** un QR SIX bancaire |
 | 🇺🇸 États-Unis | Aucune obligation fédérale ; **sales tax** d'État/local, conservation **7 ans** (IRS) | Taux saisi à la main, mentions légales par pays |
 
 **Conséquence :** ne **pas** communiquer sur une « conformité e-facturation Europe »
@@ -320,12 +332,12 @@ est **hors-ligne + preuve de chantier + relances guidées** — ce positionnemen
 1. ✅ **Page client serveur `/r/:slug`** — `functions/r/[doc].js`, adossée à D1,
    publiée seulement lors d'un partage explicite (le lien local `?r=` reste le
    repli hors-ligne).
-2. ✅ **Stripe Checkout** créé par les Pages Functions (`/api/checkout`) — le
-   secret reste dans `wrangler pages secret put`, le navigateur ne reçoit qu'une
+2. ✅ **Checkout Lemon Squeezy** créé par les Pages Functions (`/api/checkout`) — la
+   clé API reste dans `wrangler pages secret put`, le navigateur ne reçoit qu'une
    URL de redirection.
 3. ✅ **Vérification serveur de l'abonnement** — `/api/sub` émet un jeton signé
-   HMAC (`exp`), rafraîchi en ligne, tolérance hors-ligne 14 j ; Stripe reste la
-   source de vérité.
+   HMAC (`exp`), rafraîchi en ligne, tolérance hors-ligne 14 j ; l'API Lemon Squeezy
+   reste la source de vérité.
 4. ⏸️ **Envoi d'e-mail** (retiré pour le moment — relances via WhatsApp / e-mail
    applicatif, reçus affichés sur `/r/:slug`). Les relances *totalement
    automatiques* nécessitent un cron trigger, absent des Pages
@@ -357,16 +369,16 @@ d'utilisateurs.
 - Toute saisie utilisateur passe par `esc()` avant insertion HTML, les montants par
   `num()` ; aucun `innerHTML` ne reçoit de donnée brute — la règle vaut aussi
   côté serveur dans `functions/` (le rendu du portail ré-échappe les données D1).
-- `_headers` livre une **CSP** (liste d' Stripe), HSTS, `X-Frame-Options: DENY`,
+- `_headers` livre une **CSP** (aucun script tiers — le checkout est une redirection), HSTS, `X-Frame-Options: DENY`,
   `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` ;
   les réponses `/r/:slug` ajoutent leur propre CSP stricte, `no-store` et `noindex`.
 - **Pas de mot de passe, pas de compte.** Les données ne vivent toujours que
   dans le navigateur du client (l'export JSON est l'histoire de sauvegarde). D1
   ne garde qu'une *copie* des documents explicitement partagés, clé = slug
-  aléatoire de 96 bits (possession = autorisation, comme un lien Stripe) ;
+  aléatoire de 96 bits (possession = autorisation, comme un lien de checkout) ;
   `/api/portal` ne publie rien sans partage.
-- Ne jamais committer la **clé secrète** Stripe : `wrangler pages secret put STRIPE_SECRET_KEY`.
-  Les droits d'abonnement sont signés côté serveur (clé dérivée du secret Stripe) —
+- Ne jamais committer la **clé API** Lemon Squeezy : `wrangler pages secret put LEMON_API_KEY`.
+  Les droits d'abonnement sont signés côté serveur (clé dérivée de la clé API) —
   le navigateur ne détient qu'un jeton signé avec une expiration.
 - Aucun e-mail serveur : les relances partent via WhatsApp / `mailto:` depuis
   l'appareil (1 clic). Les copies D1 restent limitées aux documents
@@ -380,10 +392,10 @@ Ce qu'un repreneur doit savoir le jour J :
 | Point | État |
 |---|---|
 | Revenus / clients payants | En ligne (`DEMO_MODE:false`) — aucun client payant pour l'instant ; tester avec un petit checkout + remboursement |
-| Backend / base de données | **Existe** : Pages Functions (`functions/`) + table D1 `portal` — les secrets Stripe vivent dans Cloudflare, jamais dans le dépôt |
+| Backend / base de données | **Existe** : Pages Functions (`functions/`) + tables D1 `portal`/`subs` — les clés Lemon Squeezy vivent dans Cloudflare, jamais dans le dépôt |
 | Données personnelles détenues par nous | **Uniquement des copies de documents explicitement partagés** dans D1 (e-mail client + payload du document) ; tout le reste reste sur l'appareil de l'utilisateur |
-| Comptes tiers à transférer | Cloudflare, Stripe, le registrar de domaine, GitHub |
-| Stripe | Clé publishable committée (inoffensive par conception). **Clé secrète absente** |
+| Comptes tiers à transférer | Cloudflare, Lemon Squeezy, le registrar de domaine, GitHub |
+| Lemon Squeezy | Clé API + secret webhook dans Cloudflare (jamais dans le dépôt). Clé TEST pour essais gratuits. |
 | Identité légale | `legal.html` contient encore des `[À COMPLÉTER]` — **à remplir avant tout usage commercial** |
 | Conformité fiscale | Plateforme européenne agréée **pas encore branchée** (§7) |
 | Marque & domaine | En ligne sur `https://encaisse.pages.dev` ; propriété d'`encaisse.app` toujours non vérifiée (mettre à jour SITE_URL/robots/sitemap si revendiqué) |
@@ -412,5 +424,5 @@ les mentions légales, puis brancher le P0 n° 6 (partenaire agréé e-facturati
 - Le français est la langue source partout (commentaires, clés, documentations).
 - Garder la constante `C` de `sw.js` en cohérence avec chaque release.
 - `node --check app.js && node --check i18n.js` avant de pousser.
-- Ne pas réintroduire de moyens de paiement hors Stripe, de pays hors cible, ni de
-  monnaies FCFA/CAD : le périmètre est **FR · BE · CH · US, Stripe uniquement**.
+- Ne pas réintroduire de moyens de paiement hors Lemon Squeezy, de pays hors cible, ni de
+  monnaies FCFA/CAD : le périmètre est **FR · BE · CH · US, Lemon Squeezy uniquement**.

@@ -1,10 +1,11 @@
-/* Encaisse — page client serveur /r/:slug (P0 n°1 : le CLIENT l'ouvre sur SON
+/* Encaisse — page client serveur /r/:slug (le CLIENT l'ouvre sur SON
    appareil, depuis n'importe quel navigateur).
    HTML autonome — ni app.js ni styles.css : le rendu du client ne dépend pas de
    l'application, il ne peut donc pas casser avec une mise à jour de l'app.
    Données : D1 table « portal », écrites par POST /api/portal depuis l'app du pro.
-   Paiement : le bouton appelle GET /api/pay (session Stripe), et le retour de
-   Stripe confirme le règlement ICI via ?session_id=… (pas encore de webhook). */
+   Paiement : le bouton appelle GET /api/pay (checkout Lemon Squeezy à prix libre),
+   et le webhook Lemon Squeezy confirme le règlement (paid_at) — le retour
+   navigateur affiche le reçu, jamais une preuve. */
 
 const L = {
   fr: {
@@ -18,7 +19,7 @@ const L = {
     avTxt: "Avoir au titre de la facture {n} — annule ou diminue son montant.",
     signed: "Bon pour accord signé ✓", signedOn: "Signé par le client le {d}",
     waitDevis: "Devis — en attente de votre accord",
-    pay: "Payer {a} ✓", stripe: "Règlement sécurisé par Stripe — {m}",
+    pay: "Payer {a} ✓", stripe: "Règlement sécurisé en ligne — {m}",
     ok: "Paiement reçu ✓ Merci !", canceled: "Paiement annulé — réessaie quand tu veux.",
     proof: "📷 Constat & preuve de réalisation",
     missing: "Ce document n'est plus disponible.",
@@ -38,7 +39,7 @@ const L = {
     avTxt: "Credit note for invoice {n} — cancels or reduces its amount.",
     signed: "Approved & signed ✓", signedOn: "Signed by the customer on {d}",
     waitDevis: "Quote — awaiting your approval",
-    pay: "Pay {a} ✓", stripe: "Secure payment by Stripe — {m}",
+    pay: "Pay {a} ✓", stripe: "Secure online payment — {m}",
     ok: "Payment received ✓ Thank you!", canceled: "Payment canceled — try again whenever you want.",
     proof: "📷 Job-site proof",
     missing: "This document is no longer available.",
@@ -163,16 +164,16 @@ function render(slug, row, p, opts) {
   else if (isAvoir) banner = `<div class="banner b-wait">${Lx.waitAvoir}</div>`;
   else banner = `<div class="banner b-wait">${Lx.pending}</div>`;
 
-  /* Seuls ces moyens passent vraiment par Stripe ; le reste (TWINT, virement,
-     espèces) est manuel et s'affiche à part — jamais sous le label Stripe. */
+  /* Seuls ces moyens passent par le paiement en ligne ; le reste (TWINT, virement,
+     espèces) est manuel et s'affiche à part — jamais sous le label en ligne. */
   const mList = Array.isArray(biz.moyens) ? biz.moyens : [];
-  const isStripeM = k => k === "stripe_cb" || k === "sepa" || k === "ach";
-  const mStripe = mList.filter(isStripeM).map(k => Lx.m[k] || k).join(", ");
-  const mManual = mList.filter(k => !isStripeM(k)).map(k => Lx.m[k] || k).join(", ");
+  const isOnlineM = k => k === "stripe_cb" || k === "sepa" || k === "ach";
+  const mOnline = mList.filter(isOnlineM).map(k => Lx.m[k] || k).join(", ");
+  const mManual = mList.filter(k => !isOnlineM(k)).map(k => Lx.m[k] || k).join(", ");
 
   const payBtn = (!paid && d.type === "facture" && tt.net >= 50)
     ? `<a class="pay" href="/api/pay?slug=${esc(slug)}">${tpl(Lx.pay, { a: money(tt.net, biz.devise, lang) })}</a>
-       <p class="note">${tpl(Lx.stripe, { m: mStripe || "Stripe" })}</p>`
+       <p class="note">${tpl(Lx.stripe, { m: mOnline || "Online" })}</p>`
       + (mManual ? `<p class="note">${tpl(Lx.manual, { m: mManual })}</p>` : "")
     : "";
 
@@ -252,33 +253,10 @@ export async function onRequest(ctx) {
   let pp0;
   try { pp0 = JSON.parse(row.payload); } catch (e) { return errorPage(L[lang].err, lang, 500); }
 
-  /* Confirmation de paiement SANS webhook : Stripe revient avec ?session_id=…,
-     on vérifie la session côté serveur et on horodate paid_at dans D1. */
+  /* Retour de checkout (redirect_url = ...?paid=1) : badge d'accueil uniquement.
+     L'état payé ne vient QUE de D1 (webhook Lemon Squeezy) — jamais de l'URL. */
   const url = new URL(request.url);
-  const sid = url.searchParams.get("session_id");
-  let justPaid = false;
-  if (sid && !row.paid_at && env.STRIPE_SECRET_KEY && /^cs_[A-Za-z0-9_]{4,80}$/.test(sid)) {
-    try {
-      const res = await fetch("https://api.stripe.com/v1/checkout/sessions/" + encodeURIComponent(sid), {
-        headers: { Authorization: "Bearer " + env.STRIPE_SECRET_KEY }
-      });
-      const s = await res.json();
-      /* Strict sur le montant ET la devise : une session valide mais d'un autre
-         montant (facture modifiee apres envoi du lien) ne doit pas marquer paye.
-         L'artisan regularise alors via "Marquer payee". */
-      const dd0 = (pp0.doc) || {};
-      const exp0 = totals(dd0);
-      const expCur0 = { "€": "eur", CHF: "chf", $: "usd" }[((pp0.biz) || {}).devise] || "eur";
-      if (res.ok && s.payment_status === "paid" && s.metadata && s.metadata.slug === slug
-        && Number(s.amount_total) === exp0.net
-        && String(s.currency || "").toLowerCase() === expCur0) {
-        const now = Date.now();
-        await env.DB.prepare("UPDATE portal SET paid_at = ? WHERE slug = ? AND paid_at IS NULL").bind(now, slug).run();
-        row.paid_at = now;
-        justPaid = true;
-      }
-    } catch (e) { /* Stripe injoignable : la page reste affichée, sans badge */ }
-  }
+  const justPaid = url.searchParams.get("paid") === "1" && !!row.paid_at;
 
   /* Pas de reçu e-mail (envoi serveur retiré) : le reçu reste affiché sur cette page. */
 

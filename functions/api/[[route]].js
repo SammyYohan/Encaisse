@@ -1,28 +1,45 @@
-/* Encaisse — Pages Functions (le « Worker » du P0), un seul fichier catch-all :
-   aucune importation, zéro build, zéro dépendance (Stripe appelé en REST ; aucun e-mail serveur).
+/* Encaisse — Pages Functions (le « Worker »), un seul fichier catch-all :
+   aucune importation, zéro build, zéro dépendance (Lemon Squeezy appelé en REST).
 
-   POST /api/checkout  {kind:"sub", plan, cycle, zone} → {url} Stripe Checkout (abonnement ;
-     l'origine de retour est celle de la requête, jamais celle du client)
+   Lemon Squeezy est Merchant of Record : TVA/sales tax gérées par LS, reçus
+   émis par LS, aucun e-mail serveur. L'app ne voit que des URLs et un jeton.
+
+   POST /api/checkout  {kind:"sub", plan, cycle, zone, oh} → {url} checkout LS (abonnement ;
+     prix = custom_price issu de la table serveur, jamais du client)
    POST /api/portal    {slug?, hash, key?, doc, biz, cli?, lang} → {slug} page client /r/:slug (D1)
-   POST /api/stripe-webhook (Stripe-Signature) → confirme un paiement sans retour navigateur
+   POST /api/lemon-webhook (X-Signature) → abonnements (table subs) + paiements factures (paid_at)
    POST /api/backup    {op:"push"|"pull", key, ...} → sauvegarde chiffrée zéro-lecture
-   GET  /api/sub       ?session_id=… → vérifie l'achat, émet le jeton d'abonnement
-                       X-Sub-Token   → vérifie/rafraîchit le jeton (HMAC-SHA256)
-   GET  /api/pay       ?slug=…       → 307 vers Stripe Checkout (encaissement d'une facture)
+   GET  /api/sub       X-Sub-Oh → vérifie/émet le jeton depuis la table subs + API LS
+                       X-Sub-Token → vérifie/rafraîchit le jeton (HMAC-SHA256)
+   GET  /api/pay       ?slug=… → 303 vers checkout LS (encaissement d'une facture,
+     montant = custom_price issu de D1, jamais du payeur)
+   GET  /api/manage    → portail client LS (moyen de paiement, résiliation autonome)
 
    Mise en place (une fois) — voir README §6 :
-     npx wrangler d1 create encaisse                    → UUID dans wrangler.toml + binding « DB »
-     npx wrangler pages secret put STRIPE_SECRET_KEY
-      npx wrangler pages secret put STRIPE_WEBHOOK_SECRET -> "Signing secret" whsec_... du endpoint webhook Stripe    → secret, jamais dans le repo
-     (aucun e-mail serveur : relances via WhatsApp / e-mail applicatif depuis l'appareil)
-   Le secret ne quitte jamais le serveur : le front ne reçoit qu'une URL de
-   redirection et un jeton signé. */
+     1. D1 : npx wrangler d1 create encaisse → UUID dans wrangler.toml + binding « DB »
+        puis : npx wrangler d1 execute encaisse --remote --file=schema.sql
+     2. Lemon Squeezy : 1 store PAR DEVISE (EUR/CHF/USD, la devise de facturation
+        suit le store) avec 3 variants chacun : proM, proA (abonnement Pro)
+        + once (montant libre pour les factures clients) ; prix affichés = table PLANS
+        ci-dessous (custom_price écrase le prix du variant, source unique = ce fichier).
+     3. Secrets + config (jamais dans le repo) :
+        npx wrangler pages secret put LEMON_API_KEY        (clé API LS ; clé TEST pour essayer sans risque)
+        npx wrangler pages secret put LEMON_SIGNING_SECRET (secret du webhook LS, dashboard → Settings → Webhooks)
+        npx wrangler pages variable put LEMON_CFG --project-name=<projet>   (JSON stores+variants, voir lsZone)
+        + webhook LS par store vers https://TON-DOMAINE/api/lemon-webhook
+          (events : order_created, subscription_created, subscription_updated,
+           subscription_cancelled, subscription_expired)
+   Le secret ne quitte jamais le serveur : le front ne reçoit qu'une URL et un jeton signé. */
 
-/* ---------- table des prix (centimes) — miroir de app.js, source de vérité serveur ---------- */
+/* ---------- UN SEUL plan Pro par zone (9 € / 9 $ / 12 CHF, annuel = 10×) ----------
+   Table des prix (centimes) — custom_price LS, source de vérité serveur.
+   LEMON_CFG (variable d'environnement, JSON) :
+   {"EUR":{"store":"1","variants":{"proM":"12","proA":"13","once":"14"}},"CHF":{...},"USD":{...}}
+   Un store PAR DEVISE : la devise facturée suit le store (custom_price = montant, devise = store). */
 const PLANS = {
-  EUR: { cur: "eur", soloM: 1900, proM: 3900, soloA: 18200, proA: 37400 },
-  CHF: { cur: "chf", soloM: 2900, proM: 5900, soloA: 27800, proA: 56600 },
-  USD: { cur: "usd", soloM: 1900, proM: 3900, soloA: 18200, proA: 37400 }
+  EUR: { cur: "eur", m: 900, a: 9000 },
+  CHF: { cur: "chf", m: 1200, a: 12000 },
+  USD: { cur: "usd", m: 900, a: 9000 }
 };
 const CUR = { "€": "EUR", CHF: "CHF", $: "USD" };
 
@@ -41,7 +58,7 @@ function json(body, status) {
 }
 
 /* Limitation naïve par IP (mémoire d'isolat, best-effort) : brides les
-   endpoints publics contre le spam de sessions Stripe / l'abuse de stockage. */
+   endpoints publics contre le spam de checkouts / l'abuse de stockage. */
 const hits = new Map();
 function rateLimited(key, max) {
   const now = Date.now(), win = 3600e3;
@@ -55,45 +72,62 @@ function ipOf(request) {
   return request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "?";
 }
 
-/* (E-mails serveur retirés pour le moment : relances via WhatsApp / mailto depuis l'appareil.) */
-
-/* ---------- Stripe en REST (pas de SDK : le dépôt n'a pas de package.json) ---------- */
-function flatten(params, obj, prefix) {
-  Object.keys(obj).forEach(function (k) {
-    const v = obj[k];
-    if (v === undefined || v === null) return;
-    const key = prefix ? prefix + "[" + k + "]" : k;
-    if (Array.isArray(v)) {
-      v.forEach(function (item, i) {
-        if (item && typeof item === "object") flatten(params, item, key + "[" + i + "]");
-        else params.append(key + "[]", String(item));
-      });
-    } else if (typeof v === "object") flatten(params, v, key);
-    else params.append(key, String(v));
-  });
+/* ---------- Lemon Squeezy en REST (JSON:API, clé Bearer) ---------- */
+/* LEMON_CFG (variable d'environnement, JSON) :
+   {"EUR":{"store":"1","variants":{"proM":"12","proA":"13","once":"14"}},"CHF":{...},"USD":{...}}
+   Un store PAR DEVISE : la devise facturée suit le store (custom_price = montant, devise = store). */
+function lemonCfg(env) {
+  try {
+    const c = JSON.parse(env.LEMON_CFG || "{}");
+    return (c && typeof c === "object") ? c : {};
+  } catch (e) { return {}; }
+}
+function lsZone(env, zone) {
+  const z = lemonCfg(env)[zone];
+  if (!z || typeof z !== "object" || !z.store || !z.variants || typeof z.variants !== "object") return null;
+  return z;
+}
+function lsVariant(z, plan, cycle) {
+  const p = plan === "solo" ? "solo" : "pro"; // solo historique : toléré si le variant existe
+  const k = p + (cycle === "monthly" ? "M" : "A");
+  const v = z.variants[k];
+  return (typeof v === "string" && v) ? v : ((typeof v === "number") ? String(v) : null);
+}
+function lsOnce(z) {
+  const v = z.variants.once;
+  return (typeof v === "string" && v) ? v : ((typeof v === "number") ? String(v) : null);
 }
 
-async function stripe(env, path, method, params) {
-  if (!env.STRIPE_SECRET_KEY) return { status: 503, body: { error: "stripe_non_configure" } };
-  const qs = new URLSearchParams();
-  flatten(qs, params || {}, "");
-  const isGet = method === "GET";
-  const target = "https://api.stripe.com/v1/" + path + (isGet && qs.toString() ? "?" + qs.toString() : "");
+async function lemon(env, path, method, body) {
+  if (!env.LEMON_API_KEY) return { status: 503, body: { error: "lemon_non_configure" } };
   let res;
   try {
-    res = await fetch(target, {
+    res = await fetch("https://api.lemonsqueezy.com/v1/" + path, {
       method: method,
-      headers: { Authorization: "Bearer " + env.STRIPE_SECRET_KEY, "Content-Type": "application/x-www-form-urlencoded" },
-      body: isGet ? undefined : qs
+      headers: { Authorization: "Bearer " + env.LEMON_API_KEY, Accept: "application/vnd.api+json", "Content-Type": "application/vnd.api+json" },
+      body: body === undefined ? undefined : JSON.stringify(body)
     });
   } catch (e) {
-    return { status: 502, body: { error: "stripe_injoignable" } };
+    return { status: 502, body: { error: "lemon_injoignable" } };
   }
-  const body = await res.json().catch(function () { return {}; });
-  return { status: res.status, body: body };
+  const data = await res.json().catch(function () { return {}; });
+  return { status: res.status, body: data };
 }
 
-/* ---------- jeton d'abonnement signé (HMAC-SHA256 dérivé de la clé Stripe) ---------- */
+function lsCheckout(store, variant, attrs) {
+  return {
+    data: {
+      type: "checkouts",
+      attributes: attrs,
+      relationships: {
+        store: { data: { type: "stores", id: String(store) } },
+        variant: { data: { type: "variants", id: String(variant) } }
+      }
+    }
+  };
+}
+
+/* ---------- jeton d'abonnement signé (HMAC-SHA256 dérivé de la clé LS) ---------- */
 const b64u = function (bytes) {
   let s = "";
   bytes.forEach(function (b) { s += String.fromCharCode(b); });
@@ -110,7 +144,7 @@ async function sha256hex(s) {
   return Array.from(new Uint8Array(d), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
 }
 async function hmacKey(env) {
-  const raw = new TextEncoder().encode("encaisse-sub-v1:" + (env.STRIPE_SECRET_KEY || ""));
+  const raw = new TextEncoder().encode("encaisse-sub-v1:" + (env.LEMON_API_KEY || ""));
   return crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 }
 async function signToken(env, payload) {
@@ -142,15 +176,33 @@ function totals(d) {
   return { ht: ht, tva: tva, ttc: ttc, acompte: acompte, net: Math.max(0, ttc - acompte) };
 }
 
-function subExp(sub) {
-  const item = sub && sub.items && sub.items.data && sub.items.data[0];
-  const end = (item && item.current_period_end) || sub.current_period_end || Math.floor(Date.now() / 1000) + 30 * 86400;
-  return end * 1000; // ms, pour le front
+/* Droit issu d'un abonnement LS : statuts on_trial/active (+ cancelled encore
+   dans sa période de grâce via ends_at). Renvoie {ok, exp} (exp en ms). */
+function lsEntitlement(attrs) {
+  const a = (attrs && typeof attrs === "object") ? attrs : {};
+  const ms = function (v) { const t = Date.parse(String(v || "")); return Number.isFinite(t) ? t : 0; };
+  if (a.status === "on_trial") {
+    const exp = ms(a.trial_ends_at);
+    return exp > 0 ? { ok: true, exp: exp } : { ok: false };
+  }
+  if (a.status === "active") {
+    const exp = ms(a.renews_at);
+    return exp > 0 ? { ok: true, exp: exp } : { ok: false };
+  }
+  if (a.status === "cancelled") {
+    const exp = ms(a.ends_at);
+    return exp > Date.now() ? { ok: true, exp: exp } : { ok: false };
+  }
+  return { ok: false };
 }
 
 function newSlug() {
   const b = crypto.getRandomValues(new Uint8Array(12)); // 96 bits d'entropie : possession = autorisation
   return Array.from(b, function (x) { return x.toString(16).padStart(2, "0"); }).join("");
+}
+
+async function ensureSubs(env) {
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS subs (sub_id TEXT PRIMARY KEY, plan TEXT NOT NULL, cycle TEXT NOT NULL, zone TEXT NOT NULL, oh TEXT, customer TEXT, status TEXT, renews_at INTEGER, updated_at INTEGER NOT NULL)").run().catch(function () {});
 }
 
 /* ---------- routes ---------- */
@@ -162,7 +214,7 @@ export async function onRequestPost(ctx) {
   const seg = routeOf(ctx.request);
   if (seg === "checkout") return postCheckout(ctx);
   if (seg === "portal") return postPortal(ctx);
-  if (seg === "stripe-webhook") return postStripeWebhook(ctx);
+  if (seg === "lemon-webhook") return postLemonWebhook(ctx);
   if (seg === "backup") return postBackup(ctx);
   if (seg === "sub" || seg === "pay") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
@@ -172,7 +224,8 @@ export async function onRequestGet(ctx) {
   const seg = routeOf(ctx.request);
   if (seg === "sub") return getSub(ctx);
   if (seg === "pay") return getPay(ctx);
-  if (seg === "checkout" || seg === "portal" || seg === "stripe-webhook" || seg === "backup") return json({ error: "methode_invalide" }, 405);
+  if (seg === "manage") return getManage(ctx);
+  if (seg === "checkout" || seg === "portal" || seg === "lemon-webhook" || seg === "backup") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
 }
 
@@ -180,48 +233,39 @@ function routeOf(request) {
   return new URL(request.url).pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");
 }
 
-/* POST /api/checkout — crée la session Stripe Checkout d'ABONNEMENT.
-   Le prix vient TOUJOURS de la table serveur : le client n'envoie qu'un intention
-   (plan, cycle, zone), jamais un montant. */
+/* POST /api/checkout — crée le checkout LS d'ABONNEMENT.
+   Le prix vient TOUJOURS de la table serveur (custom_price) : le client n'envoie
+   qu'une intention (plan, cycle, zone) + sa preuve d'appareil (oh), jamais un montant. */
 async function postCheckout(ctx) {
   const { request, env } = ctx;
-  if (!env.STRIPE_SECRET_KEY) return json({ error: "stripe_non_configure" }, 503);
+  if (!env.LEMON_API_KEY) return json({ error: "lemon_non_configure" }, 503);
   if (rateLimited("ck:" + ipOf(request), 30)) return json({ error: "trop_de_requetes" }, 429);
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: "json_invalide" }, 400); }
-  const plan = body.plan === "pro" ? "pro" : body.plan === "solo" ? "solo" : null;
+  const plan = body.plan === "pro" ? "pro" : null; // UN SEUL plan en vente (solo historique toléré en lecture)
   const cycle = body.cycle === "yearly" ? "yearly" : body.cycle === "monthly" ? "monthly" : null;
   const zone = PLANS[body.zone] ? body.zone : null;
   if (body.kind !== "sub" || !plan || !cycle || !zone) return json({ error: "requete_invalide" }, 400);
+  const oh = typeof body.oh === "string" && /^[0-9a-f]{64}$/i.test(body.oh) ? body.oh.toLowerCase() : "";
+  if (!oh) return json({ error: "appareil_requis" }, 400);
+  const Z = lsZone(env, zone);
+  const variant = Z ? lsVariant(Z, plan, cycle) : null;
+  if (!Z || !variant) return json({ error: "offre_non_configuree" }, 500);
   const P = PLANS[zone];
-  const unit = plan === "solo" ? (cycle === "monthly" ? P.soloM : P.soloA) : (cycle === "monthly" ? P.proM : P.proA);
-  /* Origine de retour = origine de la requête (côté serveur, non falsifiable).
-     L'« origin » envoyée par le client est ignorée : sinon n'importe qui
-     ferait rediriger Stripe vers un domaine d'hameçonnage (open-redirect). */
+  const unit = cycle === "monthly" ? P.m : P.a;
   const origin = new URL(request.url).origin;
-  const r = await stripe(env, "checkout/sessions", "POST", {
-    mode: "subscription",
-    line_items: [{
-      quantity: 1,
-      price_data: {
-        currency: P.cur,
-        unit_amount: unit,
-        recurring: { interval: cycle === "monthly" ? "month" : "year" },
-        product_data: {
-          name: "Encaisse " + (plan === "solo" ? "Solo" : "Pro"),
-          description: cycle === "monthly" ? "Abonnement mensuel — sans engagement" : "Abonnement annuel (-20 %)"
-        }
-      }
-    }],
-    success_url: origin + "/?session_id={CHECKOUT_SESSION_ID}",
-    cancel_url: origin + "/?billing=cancel",
-    allow_promotion_codes: true,
-    locale: "auto",
-    metadata: { plan: plan, cycle: cycle, zone: zone },
-    subscription_data: { metadata: { plan: plan, cycle: cycle, zone: zone } }
-  });
-  if (r.status >= 400 || !r.body.url) return json({ error: (r.body && r.body.error && r.body.error.message) || "stripe_erreur" }, 502);
-  return json({ url: r.body.url });
+  const r = await lemon(env, "checkouts", "POST", lsCheckout(Z.store, variant, {
+    custom_price: unit,
+    expires_at: new Date(Date.now() + 3600e3).toISOString(),
+    product_options: {
+      enabled_variants: [String(variant)],
+      redirect_url: origin + "/?billing=success"
+    },
+    checkout_data: { custom: { plan: plan, cycle: cycle, zone: zone, oh: oh } }
+  }));
+  const url = r.body && r.body.data && r.body.data.attributes && r.body.data.attributes.url;
+  if (r.status >= 400 || !url) return json({ error: "paiement_indisponible" }, 502);
+  return json({ url: url });
 }
 
 /* POST /api/portal — publie (ou met à jour) la page client /r/:slug dans D1.
@@ -238,8 +282,7 @@ async function postPortal(ctx) {
     return json({ error: "document_invalide" }, 400);
   }
   if (!b.biz || typeof b.biz !== "object") return json({ error: "entreprise_invalide" }, 400);
-  /* cli : contact client (e-mail) — indispensable pour la confirmation de
-     paiement et les relances envoyées PAR LE SERVEUR. */
+  /* cli : contact client (e-mail) — affiché au client sur sa page /r/:slug. */
   const cli = (b.cli && typeof b.cli === "object")
     ? { e: String(b.cli.e || "").slice(0, 120), n: String(b.cli.n || "").slice(0, 80) }
     : { e: "", n: "" };
@@ -255,13 +298,14 @@ async function postPortal(ctx) {
   const now = Date.now();
   /* Preuve de possession (vague 2) : clé aléatoire générée par l'appareil
      (jamais versionnée, jamais exportée). Adoption au premier partage avec
-     clé ; ensuite, sans la clé, ni écrasement ni relance — même avec le slug. */
+     clé ; ensuite, sans la clé, ni écrasement — même avec le slug. */
   const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
   const owner = key ? await sha256hex(key) : "";
   try {
     /* Base neuve sans schema.sql : crée la table (schéma identique à schema.sql),
        puis migration douce des colonnes pour les bases antérieures. */
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS portal (slug TEXT PRIMARY KEY, payload TEXT NOT NULL, hash TEXT NOT NULL, owner TEXT, paid_at INTEGER, remind_count INTEGER DEFAULT 0, remind_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)").run().catch(function () {});
+    /* Migration douce : garantit les colonnes si la base a été créée avec une version antérieure */
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN owner TEXT").run().catch(function () {});
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_count INTEGER DEFAULT 0").run().catch(function () {});
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_at INTEGER").run().catch(function () {});
@@ -287,73 +331,79 @@ async function postPortal(ctx) {
   return json({ slug: slug });
 }
 
-/* GET /api/sub — vérification serveur de l'abonnement (P0 n°3).
-   ?session_id= : après paiement Stripe → vérifie la session, émet le jeton.
-   X-Sub-Token  : le front rafraîchit son jeton ; la source de vérité est Stripe
-                  (abonnement résilié → 403 → le front déclasse le plan). */
+function today() { return new Date().toISOString().slice(0, 10); }
+
+/* GET /api/manage — portail client Lemon Squeezy (moyen de paiement, résiliation
+   en autonomie). Auth = jeton + preuve d'appareil, comme /api/sub. */
+async function getManage(ctx) {
+  const { request, env } = ctx;
+  if (rateLimited("mg:" + ipOf(request), 30)) return json({ error: "trop_de_requetes" }, 429);
+  if (!env.LEMON_API_KEY) return json({ error: "lemon_non_configure" }, 503);
+  const oh = String(request.headers.get("X-Sub-Oh") || "").toLowerCase();
+  const token = request.headers.get("X-Sub-Token") || "";
+  const p = await verifyToken(env, token);
+  if (!p || !p.sid) return json({ error: "jeton_invalide" }, 401);
+  if (p.oh && p.oh !== oh) return json({ error: "appareil_inconnu" }, 403);
+  const r = await lemon(env, "subscriptions/" + encodeURIComponent(p.sid), "GET");
+  if (r.status >= 400) return json({ error: "gestion_indisponible" }, 502);
+  const portal = r.body && r.body.data && r.body.data.attributes && r.body.data.attributes.urls &&
+    r.body.data.attributes.urls.customer_portal;
+  if (!portal) return json({ error: "gestion_indisponible" }, 502);
+  return json({ url: portal });
+}
+
+/* GET /api/sub — vérification serveur de l'abonnement.
+   Sans jeton (retour d'achat ?billing=success) : cherche l'abonnement rattaché
+   à la preuve d'appareil (oh, posée en custom au checkout), le vérifie via
+   l'API LS (LS = source de vérité) puis émet le jeton.
+   X-Sub-Token : rafraîchit le jeton ; abonnement résilié → 403 (déclassement). */
 async function getSub(ctx) {
   const { request, env } = ctx;
   if (rateLimited("sb:" + ipOf(request), 60)) return json({ error: "trop_de_requetes" }, 429);
-  if (!env.STRIPE_SECRET_KEY) return json({ error: "stripe_non_configure" }, 503);
+  if (!env.LEMON_API_KEY) return json({ error: "lemon_non_configure" }, 503);
   const url = new URL(request.url);
   const oh = url.searchParams.get("oh") || request.headers.get("X-Sub-Oh") || "";
-  const sid = url.searchParams.get("session_id");
-  if (sid) return subFromSession(env, sid, oh);
-  const token = request.headers.get("X-Sub-Token") || url.searchParams.get("token");
-  if (!token) return json({ error: "jeton_requis" }, 400);
-  const p = await verifyToken(env, token);
-  if (!p || !p.sid) return json({ error: "jeton_invalide" }, 401);
-  /* Liaison a l'appareil (vague 3, anti-partage) : un jeton emis avec une preuve
-     ne fonctionne qu'avec elle. Jetons historiques (sans oh) : acceptes comme avant. */
-  /* Comparaison insensible à la casse (stockage lowercassé à l'émission). */
   const ohNorm = String(oh || "").toLowerCase();
-  if (p.oh && p.oh !== ohNorm) return json({ error: "appareil_inconnu" }, 403);
-  const r = await stripe(env, "subscriptions/" + encodeURIComponent(p.sid), "GET");
-  /* 404/400 = abonnement réellement introuvable → 403 (le front déclasse).
-     5xx/429 = transitoire → 502, le front GARDE le plan courant. */
-  if (r.status === 404 || r.status === 400) return json({ error: "abonnement_introuvable" }, 403);
-  if (r.status >= 400) return json({ error: "stripe_erreur" }, 502);
-  if (["active", "trialing"].indexOf(r.body.status) === -1) return json({ error: "abonnement_inactif" }, 403);
-  const exp = subExp(r.body);
-  /* On conserve la liaison d'appareil (oh) : sinon le jeton rafraîchi
-     deviendrait copiable sur un autre appareil (anti-partage contourné). */
-  const newTok = await signToken(env, { v: 1, sid: p.sid, plan: p.plan, cycle: p.cycle, customer: p.customer, exp: exp, oh: p.oh || "" });
-  return json({ ok: true, plan: p.plan, cycle: p.cycle, exp: exp, token: newTok });
-}
-
-async function subFromSession(env, sessionId, oh) {
-  if (!/^cs_[A-Za-z0-9_]{4,80}$/.test(String(sessionId || ""))) return json({ ok: false, error: "session_invalide" }, 400);
-  const r = await stripe(env, "checkout/sessions/" + encodeURIComponent(sessionId) + "?expand[]=subscription", "GET");
-  const s = r.body || {};
-  const paid = s.payment_status === "paid" || s.payment_status === "no_payment_required";
-  const sub = s.subscription;
-  if (r.status === 404 || r.status === 400) return json({ ok: false, error: "session_introuvable" }, 409);
-  if (r.status >= 400) return json({ ok: false, error: "stripe_erreur" }, 502); // transitoire : le front réessaie
-  if (!paid || !sub || ["active", "trialing"].indexOf(sub.status) === -1) {
-    return json({ ok: false, error: "paiement_non_confirme" }, 409);
+  const token = request.headers.get("X-Sub-Token") || url.searchParams.get("token");
+  if (token) {
+    const p = await verifyToken(env, token);
+    if (!p || !p.sid) return json({ error: "jeton_invalide" }, 401);
+    /* Liaison à l'appareil : un jeton émis avec une preuve ne fonctionne qu'avec elle. */
+    if (p.oh && p.oh !== ohNorm) return json({ error: "appareil_inconnu" }, 403);
+    const r = await lemon(env, "subscriptions/" + encodeURIComponent(p.sid), "GET");
+    if (r.status === 404 || r.status === 400) return json({ error: "abonnement_introuvable" }, 403);
+    if (r.status >= 400) return json({ error: "lemon_erreur" }, 502);
+    const ent = lsEntitlement(r.body && r.body.data && r.body.data.attributes);
+    if (!ent.ok) return json({ error: "abonnement_inactif" }, 403);
+    /* On conserve la liaison d'appareil (oh) : sinon le jeton rafraîchi
+       deviendrait copiable sur un autre appareil (anti-partage contourné). */
+    const newTok = await signToken(env, { v: 1, sid: p.sid, plan: p.plan, cycle: p.cycle, customer: p.customer, exp: ent.exp, oh: p.oh || "" });
+    return json({ ok: true, plan: p.plan, cycle: p.cycle, exp: ent.exp, token: newTok });
   }
-  const md = s.metadata || {};
-  const plan = md.plan === "pro" ? "pro" : "solo";
-  const cycle = md.cycle === "yearly" ? "yearly" : "monthly";
-  const customer = typeof sub.customer === "string" ? sub.customer : (sub.customer && sub.customer.id) || "";
-  const exp = subExp(sub);
-  const oh64 = /^[0-9a-f]{64}$/i.test(oh || "") ? String(oh).toLowerCase() : "";
-  /* Liaison d'appareil obligatoire pour tout NOUVEAU jeton : un jeton né sans
-     oh resterait copiable à vie (le contrôle ne porte que sur p.oh présent).
-     Les jetons historiques sans oh restent acceptés en lecture (grand-père). */
-  if (!oh64) return json({ ok: false, error: "appareil_requis" }, 400);
-  const token = await signToken(env, { v: 1, sid: sub.id, plan: plan, cycle: cycle, customer: customer, exp: exp, oh: oh64 });
-  return json({ ok: true, plan: plan, cycle: cycle, since: new Date().toISOString().slice(0, 10), exp: exp, customer: customer, token: token });
+  if (!/^[0-9a-f]{64}$/.test(ohNorm)) return json({ error: "appareil_requis" }, 400);
+  if (!env.DB) return json({ error: "portail_non_configure" }, 503);
+  await ensureSubs(env);
+  const row = await env.DB.prepare(
+    "SELECT sub_id, plan, cycle, customer FROM subs WHERE oh = ? ORDER BY updated_at DESC LIMIT 1"
+  ).bind(ohNorm).first().catch(function () { return null; });
+  if (!row || !row.sub_id) return json({ error: "abonnement_introuvable" }, 404);
+  const r = await lemon(env, "subscriptions/" + encodeURIComponent(row.sub_id), "GET");
+  if (r.status === 404 || r.status === 400) return json({ error: "abonnement_introuvable" }, 403);
+  if (r.status >= 400) return json({ error: "lemon_erreur" }, 502); // transitoire : le front réessaie
+  const ent = lsEntitlement(r.body && r.body.data && r.body.data.attributes);
+  if (!ent.ok) return json({ error: "abonnement_inactif" }, 403);
+  const newTok = await signToken(env, { v: 1, sid: row.sub_id, plan: row.plan, cycle: row.cycle, customer: row.customer || "", exp: ent.exp, oh: ohNorm });
+  return json({ ok: true, plan: row.plan, cycle: row.cycle, since: today(), exp: ent.exp, customer: row.customer || "", token: newTok });
 }
 
 /* GET /api/pay — encaissement d'une facture : le montant vient de D1 (jamais du
-   client payeur), la session est en mode « payment » et le retour Stripe
-   confirme le règlement sur /r/:slug?session_id=… */
+   client payeur), via un checkout LS à prix libre (custom_price) dans la devise
+   du store de la zone. Le webhook confirme le règlement (paid_at). */
 async function getPay(ctx) {
   const { request, env } = ctx;
   if (rateLimited("py:" + ipOf(request), 40)) return json({ error: "trop_de_requetes" }, 429);
   if (!env.DB) return json({ error: "portail_non_configure" }, 503);
-  if (!env.STRIPE_SECRET_KEY) return json({ error: "stripe_non_configure" }, 503);
+  if (!env.LEMON_API_KEY) return json({ error: "lemon_non_configure" }, 503);
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug") || "";
   if (!/^[0-9a-f]{24}$/.test(slug)) return json({ error: "slug_invalide" }, 400);
@@ -365,44 +415,39 @@ async function getPay(ctx) {
   const d = p.doc || {};
   if (d.type !== "facture") return json({ error: "pas_une_facture" }, 400);
   const amount = totals(d).net;
-  if (!(amount >= 50)) return json({ error: "montant_trop_faible" }, 400); // minimum Stripe ≈ 0,50
+  if (!(amount >= 50)) return json({ error: "montant_trop_faible" }, 400);
+  const zone = { "€": "EUR", CHF: "CHF", $: "USD" }[(p.biz || {}).devise] || null;
+  const Z = zone ? lsZone(env, zone) : null;
+  const once = Z ? lsOnce(Z) : null;
+  if (!Z || !once) return json({ error: "offre_non_configuree" }, 500);
   const origin = url.origin;
-  const r = await stripe(env, "checkout/sessions", "POST", {
-    mode: "payment",
-    line_items: [{
-      quantity: 1,
-      price_data: {
-        currency: CUR[(p.biz || {}).devise] || "EUR",
-        unit_amount: amount,
-        product_data: {
-          name: (d.numero || "Facture") + ((p.biz || {}).nom ? " · " + p.biz.nom : ""),
-          description: d.client ? String(d.client).slice(0, 120) : undefined
-        }
-      }
-    }],
-    success_url: origin + "/r/" + slug + "?session_id={CHECKOUT_SESSION_ID}",
-    cancel_url: origin + "/r/" + slug + "?canceled=1",
-    locale: "auto",
-    metadata: { slug: slug }
-  });
-  if (r.status >= 400 || !r.body.url) return json({ error: (r.body && r.body.error && r.body.error.message) || "stripe_erreur" }, 502);
-  return Response.redirect(r.body.url, 303);
+  const bizName = ((p.biz || {}).nom ? " · " + String(p.biz.nom).slice(0, 60) : "");
+  const r = await lemon(env, "checkouts", "POST", lsCheckout(Z.store, once, {
+    custom_price: amount,
+    expires_at: new Date(Date.now() + 3600e3).toISOString(),
+    product_options: {
+      name: String(d.numero || "Facture").slice(0, 120) + bizName,
+      enabled_variants: [String(once)],
+      redirect_url: origin + "/r/" + slug + "?paid=1"
+    },
+    checkout_data: { custom: { slug: slug } }
+  }));
+  const payUrl = r.body && r.body.data && r.body.data.attributes && r.body.data.attributes.url;
+  if (r.status >= 400 || !payUrl) return json({ error: "paiement_indisponible" }, 502);
+  return Response.redirect(payUrl, 303);
 }
 
-/* Devises ISO (minuscules) pour comparer avec Stripe : CUR[] du fichier est en majuscules. */
-const STRIPE_CUR = { "€": "eur", CHF: "chf", $: "usd" };
+/* Devises ISO pour comparer avec LS : CUR[] est en symboles, PLANS en minuscules. */
+const LS_CUR = { "€": "eur", CHF: "chf", $: "usd" };
 
-/* Vérifie l'en-tête Stripe-Signature ("t=...,v1=...") : HMAC-SHA256 du secret
-   webhook sur "timestamp.corps_brut", fraîcheur ±300 s, comparaison constante. */
-async function verifyStripeSig(raw, header, secret) {
-  const h = String(header || "");
-  const mt = /t=(\d+)/.exec(h), mv = /v1=([0-9a-f]+)/.exec(h);
-  if (!mt || !mv || !raw) return false;
-  const t = Number(mt[1]), v1 = mv[1];
-  if (!t || Math.abs(Date.now() / 1000 - t) > 300) return false;
+/* Vérifie l'en-tête X-Signature de LS : HMAC-SHA256 hex du corps brut,
+   comparaison constante. */
+async function verifyLemonSig(raw, header, secret) {
+  const v1 = String(header || "").trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(v1) || !raw || !secret) return false;
   try {
     const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(t + "." + raw));
+    const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw));
     const hex = Array.from(new Uint8Array(mac), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
     if (hex.length !== v1.length) return false;
     let diff = 0;
@@ -411,44 +456,77 @@ async function verifyStripeSig(raw, header, secret) {
   } catch (e) { return false; }
 }
 
-/* POST /api/stripe-webhook — confirmation de paiement SANS retour navigateur.
-   Stripe signe chaque appel : aucune confiance sans signature valide.
-   Idempotent (paid_at posé une seule fois) et STRICT sur le montant ET la
-   devise avant de marquer payé : un montant inattendu est ignoré (200, sans
-   retry) plutôt que validé. Les sessions d'abonnement (sans slug) sont
-   ignorées : l'abonnement reste constaté par retour navigateur (/api/sub). */
-async function postStripeWebhook(ctx) {
+/* POST /api/lemon-webhook — source de vérité différée (le front ne fait que lire).
+   Signature exigée, jamais de confiance sans elle. Événements gérés :
+   - order_created (+ custom.slug) → facture payée (montant ET devise STRICTS, idempotent)
+   - subscription_created/updated/cancelled/expired (+ custom plan/cycle/zone/oh) → table subs
+   Tout le reste (ou tout montant inattendu) : 200 reçu, sans effet. */
+async function postLemonWebhook(ctx) {
   const { request, env } = ctx;
   if (!env.DB) return json({ error: "portail_non_configure" }, 503);
-  if (!env.STRIPE_WEBHOOK_SECRET) return json({ error: "webhook_non_configure" }, 503);
+  if (!env.LEMON_SIGNING_SECRET) return json({ error: "webhook_non_configure" }, 503);
   const raw = await request.text().catch(function () { return ""; });
-  if (!await verifyStripeSig(raw, request.headers.get("stripe-signature") || "", env.STRIPE_WEBHOOK_SECRET)) {
+  if (!await verifyLemonSig(raw, request.headers.get("x-signature") || "", env.LEMON_SIGNING_SECRET)) {
     return json({ error: "signature_invalide" }, 400);
   }
   let ev;
   try { ev = JSON.parse(raw); } catch (e) { return json({ error: "json_invalide" }, 400); }
-  if (!ev || ev.type !== "checkout.session.completed") return json({ received: true });
-  const s = (ev.data && ev.data.object) || {};
-  const slug = (s.metadata && s.metadata.slug) || "";
-  if (!/^[0-9a-f]{24}$/.test(slug || "") || s.payment_status !== "paid") return json({ received: true });
-  const row = await env.DB.prepare("SELECT payload, paid_at FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
-  if (!row) return json({ received: true });
-  if (row.paid_at) return json({ received: true, already: true });
-  let pp;
-  try { pp = JSON.parse(row.payload); } catch (e) { return json({ received: true }); }
-  const dd = (pp && pp.doc) || {};
-  if (dd.type !== "facture") return json({ received: true });
-  const exp = totals(dd);
-  const expCur = STRIPE_CUR[((pp && pp.biz) || {}).devise] || "eur";
-  if (Number(s.amount_total) !== exp.net || String(s.currency || "").toLowerCase() !== expCur) {
-    console.warn("Webhook : montant/devise inattendus pour " + slug);
-    return json({ received: true, ignored: "montant_inattendu" });
+  const meta = (ev && ev.meta) || {};
+  const name = meta.event_name || "";
+  const data = (ev && ev.data) || {};
+  const attrs = data.attributes || {};
+  const custom = (meta.custom_data && typeof meta.custom_data === "object") ? meta.custom_data : {};
+
+  if (name === "order_created") {
+    const slug = typeof custom.slug === "string" && /^[0-9a-f]{24}$/.test(custom.slug) ? custom.slug : "";
+    if (!slug || attrs.refunded) return json({ received: true });
+    /* Vérification via l'API (cohérence test/live + données fraîches). */
+    const o = await lemon(env, "orders/" + encodeURIComponent(data.id || ""), "GET");
+    if (o.status !== 200) return json({ received: true });
+    const oa = (o.body && o.body.data && o.body.data.attributes) || {};
+    if (oa.status !== "paid" || oa.refunded) return json({ received: true });
+    const row = await env.DB.prepare("SELECT payload, paid_at FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
+    if (!row) return json({ received: true });
+    if (row.paid_at) return json({ received: true, already: true });
+    let pp;
+    try { pp = JSON.parse(row.payload); } catch (e) { return json({ received: true }); }
+    const dd = (pp && pp.doc) || {};
+    if (dd.type !== "facture") return json({ received: true });
+    const exp = totals(dd);
+    const expCur = LS_CUR[((pp && pp.biz) || {}).devise] || "eur";
+    if (Number(oa.total) !== exp.net || String(oa.currency || "").toLowerCase() !== expCur) {
+      console.warn("Webhook : montant/devise inattendus pour " + slug);
+      return json({ received: true, ignored: "montant_inattendu" });
+    }
+    const now = Date.now();
+    const up = await env.DB.prepare("UPDATE portal SET paid_at = ? WHERE slug = ? AND paid_at IS NULL").bind(now, slug).run().catch(function () { return null; });
+    if (!up || !up.meta || up.meta.changes !== 1) return json({ received: true });
+    /* Pas de reçu e-mail (envoi serveur retiré) : le reçu reste affiché sur /r/:slug
+       (LS facture le client de son côté en tant que Merchant of Record). */
+    return json({ received: true, paid: true });
   }
-  const now = Date.now();
-  const up = await env.DB.prepare("UPDATE portal SET paid_at = ? WHERE slug = ? AND paid_at IS NULL").bind(now, slug).run().catch(function () { return null; });
-  if (!up || !up.meta || up.meta.changes !== 1) return json({ received: true });
-  /* Pas de reçu e-mail (envoi serveur retiré) : le reçu reste affiché sur la page /r/:slug. */
-  return json({ received: true, paid: true });
+
+  if (name === "subscription_created" || name === "subscription_updated" ||
+      name === "subscription_cancelled" || name === "subscription_expired") {
+    const plan = custom.plan === "pro" ? "pro" : custom.plan === "solo" ? "solo" : null;
+    const cycle = custom.cycle === "yearly" ? "yearly" : custom.cycle === "monthly" ? "monthly" : null;
+    const zone = PLANS[custom.zone] ? custom.zone : null;
+    const oh = typeof custom.oh === "string" && /^[0-9a-f]{64}$/i.test(custom.oh) ? custom.oh.toLowerCase() : "";
+    if (!plan || !cycle || !zone || !oh || !data.id) return json({ received: true });
+    const s = await lemon(env, "subscriptions/" + encodeURIComponent(data.id), "GET");
+    if (s.status !== 200) return json({ received: true });
+    const sa = (s.body && s.body.data && s.body.data.attributes) || {};
+    const renews = Date.parse(String(sa.renews_at || sa.trial_ends_at || sa.ends_at || ""));
+    await ensureSubs(env);
+    const now = Date.now();
+    await env.DB.prepare(
+      "INSERT INTO subs (sub_id, plan, cycle, zone, oh, customer, status, renews_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+      "ON CONFLICT(sub_id) DO UPDATE SET plan = excluded.plan, cycle = excluded.cycle, zone = excluded.zone, oh = excluded.oh, customer = excluded.customer, status = excluded.status, renews_at = excluded.renews_at, updated_at = excluded.updated_at"
+    ).bind(String(data.id), plan, cycle, zone, oh, String(sa.user_email || ""), String(sa.status || ""), Number.isFinite(renews) ? renews : 0, now).run().catch(function () {});
+    return json({ received: true });
+  }
+
+  return json({ received: true });
 }
 
 /* POST /api/backup — sauvegarde chiffrée zéro-lecture (vague 3 : synchro sans compte).

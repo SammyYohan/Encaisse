@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Encaisse — Quote → Invoice → Paid</title>
-<meta name="description" content="Quote in 60s, invoice with your country's legal mentions, Stripe payment link, guided reminders. Offline-first.">
+<meta name="description" content="Quote in 60s, invoice with your country's legal mentions, online payment link, guided reminders. Offline-first.">
 <meta name="theme-color" content="#0f172a">
 <meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,18 +13,18 @@
 <meta name="apple-mobile-web-app-title" content="Encaisse">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Encaisse — Quote → Invoice → Paid">
-<meta property="og:description" content="Quote in 60s, invoice with legal mentions, Stripe payment link, guided reminders. Offline-first, works on site.">
+<meta property="og:description" content="Quote in 60s, invoice with legal mentions, online payment link, guided reminders. Offline-first, works on site.">
 <meta property="og:image" content="icons/icon-512.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Encaisse — Quote → Invoice → Paid">
-<meta name="twitter:description" content="Quote in 60s, invoice with legal mentions, Stripe payment link, guided reminders.">
+<meta name="twitter:description" content="Quote in 60s, invoice with legal mentions, online payment link, guided reminders.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Encaisse","applicationCategory":"BusinessApplication","operatingSystem":"Web, iOS, Android","offers":{"@type":"Offer","price":"19","priceCurrency":"EUR"},"description":"Devis et factures avec les mentions de ton pays, lien de paiement Stripe, relances guidées. Hors-ligne d'abord."}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Encaisse","applicationCategory":"BusinessApplication","operatingSystem":"Web, iOS, Android","offers":{"@type":"Offer","price":"9","priceCurrency":"EUR"},"description":"Devis et factures avec les mentions de ton pays, lien de paiement en ligne, relances guidées. Hors-ligne d'abord."}
 </script>
 </head>
 <body>
@@ -44,14 +44,14 @@
     <div class="onb-bar"><i id="onbBar"></i></div>
     <div class="onb-slides" id="onbSlides">
       <section class="slide is-active" data-i="0">
-        <div class="art a1" aria-hidden="true"><span class="card-mini m1">DEVIS-2026-014<br><b>12 500 € ✓</b></span><span class="card-mini m2">TVA ✓ PDF<br><b>Paid · Stripe</b></span><span class="coin">₣</span></div>
+        <div class="art a1" aria-hidden="true"><span class="card-mini m1">DEVIS-2026-014<br><b>12 500 € ✓</b></span><span class="card-mini m2">TVA ✓ PDF<br><b>Paid ✓</b></span><span class="coin">₣</span></div>
         <h1 data-i18n-html="Tu travailles.<br>Tu dois être <mark>payé.</mark>">Tu travailles.<br>Tu dois être <mark>payé.</mark></h1>
         <p data-i18n="Devis en 60 secondes sur chantier, même sans réseau. Facture PDF avec les mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.">Devis en 60 secondes sur chantier, même sans réseau. Facture PDF avec les mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.</p>
         <ul class="chips"><li data-i18n="PDF + mentions FR">PDF + mentions FR</li><li data-i18n="PDF + mentions BE">PDF + mentions BE</li><li data-i18n="PDF + mentions CH">PDF + mentions CH</li><li data-i18n="Sales tax US (manuelle)">Sales tax US (manuelle)</li></ul>
         <p class="fine" data-i18n="E-facture certifiée (PDP France, Peppol Belgique, QR SIX) : via plateforme agréée à brancher. Ce document reste un PDF.">E-facture certifiée (PDP France, Peppol Belgique, QR SIX) : via plateforme agréée à brancher. Ce document reste un PDF.</p>
       </section>
       <section class="slide" data-i="1">
-        <div class="art a2" aria-hidden="true"><span class="phone-mini"><i></i><i></i><i class="ok"></i></span><span class="paylist">Stripe ✓ 120,00 €<br>SEPA ✓ 1 250,00 €<br>Stripe ✓ $450.00</span></div>
+        <div class="art a2" aria-hidden="true"><span class="phone-mini"><i></i><i></i><i class="ok"></i></span><span class="paylist">Carte ✓ 120,00 €<br>SEPA ✓ 1 250,00 €<br>Carte ✓ $450.00</span></div>
         <h1 data-i18n-html="Un bouton.<br>Zéro paperasse.">Un bouton.<br>Zéro paperasse.</h1>
         <p data-i18n="Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tout reste sur ton téléphone.">Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tout reste sur ton téléphone.</p>
         <ul class="ticks"><li data-i18n="Photo chantier en preuve">Photo chantier en preuve</li><li data-i18n="Hors-ligne d'abord">Hors-ligne d'abord</li><li data-i18n="Numéros inviolables">Numéros inviolables</li></ul>
@@ -81,8 +81,8 @@
           <button type="button" data-pays="CH" data-i18n="🇨🇭 Suisse · PDF + mentions">🇨🇭 Suisse · PDF + mentions</button>
           <button type="button" data-pays="US" data-i18n="🇺🇸 United States · Sales tax (manuelle)">🇺🇸 United States · Sales tax (manuelle)</button>
         </div>
-        <p class="onb-price" id="onbPrice">🇫🇷 Solo 19 €/mois · Pro 39 €/mois · -20% en annuel</p>
-        <p class="fine" data-i18n="PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements par Stripe.">PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements par Stripe.</p>
+        <p class="onb-price" id="onbPrice">🇫🇷 Pro 9 €/mois · 90 €/an · 2 mois offerts</p>
+        <p class="fine" data-i18n="PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements en ligne.">PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements en ligne.</p>
       </section>
     </div>
     <div class="onb-nav">
@@ -100,7 +100,7 @@
       <span class="dot-net" id="dotNet" title="statut réseau"><i></i><em>Hors-ligne OK</em></span>
     </div>
   </header>
-  <div class="demo-bar" id="demoBar" hidden data-i18n="🧪 Mode démonstration — aucun paiement réel tant que Stripe n'est pas branché.">🧪 Mode démonstration — aucun paiement réel tant que Stripe n'est pas branché.</div>
+  <div class="demo-bar" id="demoBar" hidden data-i18n="🧪 Mode démonstration — aucun paiement réel, liens et boutons simulés.">🧪 Mode démonstration — aucun paiement réel, liens et boutons simulés.</div>
 
   <div class="install-bar" id="installBar" hidden>
     <b data-i18n="📲 Installe Encaisse sur ton écran d'accueil">📲 Installe Encaisse sur ton écran d'accueil</b>
