@@ -1,5 +1,11 @@
 /* Encaisse i18n — Hrvatski. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).hr = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Pošalji link e-mailom/WhatsAppom ili pokaži QR kod. Klijent plaća Stripeom:",
+  "Lien de paiement Stripe + relances": "Stripe link za plaćanje + opomene",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demo način: bez naplate. Spoji tajni Stripe ključ za naplatu.",
+  "Règlement sécurisé par Stripe": "Sigurno plaćanje Stripeom",
+  "Stripe uniquement": "Samo Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Izdaje se račun predujma s vlastitim Stripe linkom. Saldo se automatski odbija od konačnog računa.",
   "{n} facture(s)": "{n} račun(a)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} račun(a) za pratiti · {m} za naplatiti u 30 d · {l} kritično kasni",
   "{n} ligne(s)": "{n} stavka(e)",

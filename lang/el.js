@@ -1,5 +1,11 @@
 /* Encaisse i18n — Ελληνικά. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).el = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Στείλε τον σύνδεσμο με e-mail/WhatsApp ή σκάναρε το QR. Ο πελάτης πληρώνει με Stripe:",
+  "Lien de paiement Stripe + relances": "Σύνδεσμος πληρωμής Stripe + υπενθυμίσεις",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Λειτουργία επίδειξης: καμία χρέωση. Σύνδεσε το μυστικό κλειδί Stripe για εισπράξεις.",
+  "Règlement sécurisé par Stripe": "Ασφαλής πληρωμή με Stripe",
+  "Stripe uniquement": "Μόνο Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Εκδίδεται τιμολόγιο προκαταβολής με δικό του σύνδεσμο πληρωμής Stripe. Το υπόλοιπο αφαιρείται αυτόματα από το τελικό τιμολόγιο.",
   "{n} facture(s)": "{n} τιμολόγιο(α)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} τιμολόγιο(α) προς παρακολούθηση · {m} προς είσπραξη σε 30 ημ. · {l} σε κρίσιμη καθυστέρηση",
   "{n} ligne(s)": "{n} γραμμή(ές)",

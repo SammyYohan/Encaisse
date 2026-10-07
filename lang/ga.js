@@ -1,5 +1,11 @@
 /* Encaisse i18n — Gaeilge. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).ga = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Seol an nasc seo ar ríomhphost/WhatsApp nó scanta QR. Íocann an cliant le Stripe:",
+  "Lien de paiement Stripe + relances": "Nasc íocaíochta Stripe + meabhrúcháin",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Modh taispeána: gan dochar. Nasc do eochair rúnda Stripe chun bailiú.",
+  "Règlement sécurisé par Stripe": "Íocaíocht shlán le Stripe",
+  "Stripe uniquement": "Stripe amháin",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Eisítear sonrasc réamhíoca lena nasc íocaíochta Stripe féin. Baintear an fuílleach go huathoibríoch den sonrasc deiridh.",
   "{n} facture(s)": "{n} sonrasc(anna)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} sonrasc(anna) le leanúint · {m} le bailiú i 30 lá · {l} thar am critically déanach",
   "{n} ligne(s)": "{n} líne(acha)",

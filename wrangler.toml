@@ -2,8 +2,8 @@
 # Sert à `npx wrangler pages dev .` (dev local) et aux CLI wrangler.
 # Sur GitHub → Pages, configure aussi dans le dashboard :
 #   • Settings → Functions → D1 binding nommé « DB »
-#   • Settings → Secrets  → LEMON_API_KEY + LEMON_SIGNING_SECRET (`npx wrangler pages secret put ...`)
-#   • Settings → Variables → LEMON_CFG (JSON : produit Premium + variants facture/devise)
+#   • Settings → Secrets  → STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (`npx wrangler pages secret put ...`)
+#   • Settings → Variables → (aucune requise : prix et produits en dur côté serveur)
 name = "encaisse"
 compatibility_date = "2026-10-01"
 pages_build_output_dir = "."

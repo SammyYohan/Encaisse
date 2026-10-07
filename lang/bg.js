@@ -1,5 +1,11 @@
 /* Encaisse i18n — Български. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).bg = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Изпрати линка по имейл/WhatsApp или покажи QR кода. Клиентът плаща през Stripe:",
+  "Lien de paiement Stripe + relances": "Линк за плащане Stripe + напомняния",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Демо режим: без плащания. Свържи тайния Stripe ключ, за да инкасираш.",
+  "Règlement sécurisé par Stripe": "Сигурно плащане през Stripe",
+  "Stripe uniquement": "Само Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Издава се авансова фактура със собствен Stripe линк. Салдото се приспада автоматично от крайната фактура.",
   "{n} facture(s)": "{n} фактура(и)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} фактура(и) за следене · {m} за събиране до 30 дни · {l} критично закъснели",
   "{n} ligne(s)": "{n} ред(ове)",

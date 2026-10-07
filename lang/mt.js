@@ -1,5 +1,11 @@
 /* Encaisse i18n — Malti. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).mt = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Ibgħat din il-link bl-email/WhatsApp jew skannja l-QR. Il-klijent iħallas bi Stripe:",
+  "Lien de paiement Stripe + relances": "Link ta' ħlas Stripe + tfakkiriet",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Mod dimostrattiv: l-ebda ħlas. Qabbad iċ-ċavetta sigrieta Stripe biex tiġbor.",
+  "Règlement sécurisé par Stripe": "Ħlas sigur bi Stripe",
+  "Stripe uniquement": "Stripe biss",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Tinħareġ fattura ta' depożitu bil-link ta' ħlas Stripe tagħha. Il-bilanċ jitnaqqas awtomatikament mill-fattura finali.",
   "{n} facture(s)": "{n} fattura/i",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} fattura/i x'segwi · {m} x'jiġbru fi 30 jum · {l} tardivi b'mod kritiku",
   "{n} ligne(s)": "{n} linja/i",

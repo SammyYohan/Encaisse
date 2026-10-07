@@ -110,13 +110,13 @@
     <ul>
       <li><b>Pro (plan unique) :</b> 9,99 € par mois, ou 99 € par an (2 mois offerts), facturé en euros quel que soit le pays. Devis + factures illimités, lien de paiement en ligne, relances J+3/J+7/J+15, support prioritaire.</li>
     </ul>
-    <p>Pas de compte multi-utilisateur : l'app est mono-artisan, données sur l'appareil. La sauvegarde chiffrée permet de retrouver ses documents sur un second appareil avec le code de récupération. L'abonnement est facturé en euros, quel que soit le pays. L'abonnement se renouvelle automatiquement jusqu'à résiliation. Pour résilier ou changer de moyen de paiement : Réglages → Gérer mon abonnement, ou par e-mail au support ([E-MAIL À COMPLÉTER]). Les paiements en ligne sont encaissés via Lemon Squeezy au moment de l'abonnement ou du règlement.</p>
+    <p>Pas de compte multi-utilisateur : l'app est mono-artisan, données sur l'appareil. La sauvegarde chiffrée permet de retrouver ses documents sur un second appareil avec le code de récupération. L'abonnement est facturé en euros, quel que soit le pays. L'abonnement se renouvelle automatiquement jusqu'à résiliation. Pour résilier : e-mail au support ([E-MAIL À COMPLÉTER]). Les paiements en ligne sont encaissés via Stripe au moment de l'abonnement ou du règlement.</p>
 
     <h2>4. Paiement</h2>
-    <p>Les paiements en ligne sont traités par <b>Lemon Squeezy</b>, Merchant of Record : carte bancaire, SEPA, ACH et autres moyens selon les pays. L'éditeur ne conserve aucune donnée de carte bancaire. Lemon Squeezy prélève 5 % + 0,30 $ par transaction, collecte la TVA/sales tax applicable et émet les reçus — aucun frais caché en plus de l'abonnement. Les autres moyens affichés (virement, espèces, TWINT) sont des règlements manuels hors ligne, constatés par l'utilisateur lui-même dans l'application.</p>
+    <p>Les paiements en ligne sont traités par <b>Stripe</b> (carte bancaire, SEPA, ACH). L'éditeur ne conserve aucune donnée de carte bancaire. Les frais de transaction Stripe (1,5 % + 0,25 € par transaction en zone euro) sont à la charge du client professionnel, en plus de l'abonnement, et sont payés directement à Stripe. Les autres moyens affichés (virement, espèces, TWINT) sont des règlements manuels hors Stripe, constatés par l'utilisateur lui-même dans l'application.</p>
 
     <h2>5. Facturation et conformité</h2>
-    <p>Le logiciel génère des <b>PDF avec les mentions du pays</b> (raison sociale, adresse, identifiant fiscal, échéance). <b>Ce ne sont pas des e-factures certifiées :</b> France — transmission entre assujettis via plateforme agréée (PDP) requise (réception obligatoire depuis le 01/09/2026, émission TPE/PME dès le 01/09/2027) ; Belgique — Peppol-BIS obligatoire en B2B depuis le 01/01/2026, un PDF seul ne suffit pas (amendes 1 500 – 5 000 €) ; Suisse — le QR affiché ouvre le lien de paiement en ligne, pas un QR SIX bancaire ; États-Unis — sales tax saisie à la main. L'utilisateur doit faire valider ses modèles et ses taux par son comptable.</p>
+    <p>Le logiciel génère des <b>PDF avec les mentions du pays</b> (raison sociale, adresse, identifiant fiscal, échéance). <b>Ce ne sont pas des e-factures certifiées :</b> France — transmission entre assujettis via plateforme agréée (PDP) requise (réception obligatoire depuis le 01/09/2026, émission TPE/PME dès le 01/09/2027) ; Belgique — Peppol-BIS obligatoire en B2B depuis le 01/01/2026, un PDF seul ne suffit pas (amendes 1 500 – 5 000 €) ; Suisse — le QR affiché ouvre le lien Stripe, pas un QR SIX bancaire ; États-Unis — sales tax saisie à la main. L'utilisateur doit faire valider ses modèles et ses taux par son comptable.</p>
 
     <h2>6. Responsabilité</h2>
     <p>Le service est fourni « en l'état ». Données stockées en local (~5 Mo) : en cas de perte, vol ou nettoyage du navigateur sans sauvegarde chiffrée ni export JSON/CSV, l'historique est perdu. La signature au doigt est une image horodatée archivée avec le devis, pas une signature électronique certifiée. L'éditeur ne saurait être tenu des pertes d'exploitation ou des conséquences d'un usage non conforme des documents produits.</p>
@@ -144,13 +144,13 @@
     <ul>
       <li><b>Pro (single plan):</b> €9.99 per month, or €99 per year (2 months free), billed in euros whatever the country. Unlimited quotes + invoices, online payment link, D+3/D+7/D+15 reminders, priority support.</li>
     </ul>
-    <p>No multi-user accounts: single-tradesperson app, data on the device. The encrypted backup restores documents on a second device with the recovery code. The subscription is billed in euros, whatever the country. Subscriptions renew automatically until cancelled. To cancel or change your payment method: Settings → Manage my subscription, or by e-mail to support ([E-MAIL TO COMPLETE]). Online payments are collected via Lemon Squeezy when you subscribe or get paid.</p>
+    <p>No multi-user accounts: single-tradesperson app, data on the device. The encrypted backup restores documents on a second device with the recovery code. The subscription is billed in euros, whatever the country. Subscriptions renew automatically until cancelled. To cancel: e-mail support ([E-MAIL TO COMPLETE]). Online payments are collected via Stripe when you subscribe or get paid.</p>
 
     <h2>4. Payment</h2>
-    <p>Online payments are processed by <b>Lemon Squeezy</b>, Merchant of Record: card, SEPA, ACH and other methods depending on the country. The publisher stores no card data. Lemon Squeezy takes 5% + $0.30 per transaction, collects the applicable VAT/sales tax and issues receipts — no hidden fees on top of the subscription. Other displayed methods (bank transfer, cash, TWINT) are offline manual payments, recorded by the user in the app.</p>
+    <p>Online payments are processed by <b>Stripe</b> (card, SEPA, ACH). The publisher stores no card data. Stripe transaction fees (1.5% + €0.25 per transaction in the euro area) are borne by the professional customer on top of the subscription and are paid directly to Stripe. Other displayed methods (bank transfer, cash, TWINT) are manual payments outside Stripe, recorded by the user in the app.</p>
 
     <h2>5. Invoicing and compliance</h2>
-    <p>The software generates <b>PDFs with the country's mandatory details</b> (legal name, address, tax ID, due date). <b>These are not certified e-invoices:</b> France — transmission between VAT-registered parties via a certified platform (PDP) required (receiving mandatory since 1 Sep 2026, SME issuing from 1 Sep 2027); Belgium — Peppol-BIS mandatory in B2B since 1 Jan 2026, a PDF alone is not enough (fines €1,500–€5,000); Switzerland — the displayed QR opens the online payment link, not a SIX bank QR; United States — sales tax entered by hand. Users must have their templates and rates validated by their accountant.</p>
+    <p>The software generates <b>PDFs with the country's mandatory details</b> (legal name, address, tax ID, due date). <b>These are not certified e-invoices:</b> France — transmission between VAT-registered parties via a certified platform (PDP) required (receiving mandatory since 1 Sep 2026, SME issuing from 1 Sep 2027); Belgium — Peppol-BIS mandatory in B2B since 1 Jan 2026, a PDF alone is not enough (fines €1,500–€5,000); Switzerland — the displayed QR opens the Stripe link, not a SIX bank QR; United States — sales tax entered by hand. Users must have their templates and rates validated by their accountant.</p>
 
     <h2>6. Liability</h2>
     <p>The service is provided "as is". Data stored locally (~5 MB): if the device is lost, stolen or the browser cleared without an encrypted backup or JSON/CSV export, history is lost. Finger signatures are timestamped images archived with the quote, not certified e-signatures. The publisher cannot be held liable for loss of business or consequences of non-compliant use of the generated documents.</p>
@@ -175,7 +175,7 @@
       <li><b>Sur votre appareil (par défaut) :</b> vos clients, devis, factures, avoirs, photos de chantier et réglages restent stockés dans le stockage local de votre navigateur. Ils ne quittent jamais l'appareil, sauf les cas explicites ci-dessous.</li>
       <li><b>Pages client partagées :</b> uniquement quand vous appuyez sur Partager / Lien de paiement / Relancer, une copie du document (coordonnées client incluses) est publiée vers notre base Cloudflare D1 pour afficher la page <code>/r/</code> au destinataire.</li>
       <li><b>Sauvegarde en ligne (si activée) :</b> une copie <b>chiffrée sur votre appareil</b> (AES-GCM) est stockée sur Cloudflare D1. Ni Cloudflare ni l'éditeur ne peuvent la lire ; seule votre clé de récupération (conservée par vous) permet de la déchiffrer.</li>
-      <li><b>Paiement (Lemon Squeezy) :</b> nom, e-mail et montant transmis à Lemon Squeezy au moment de l'abonnement ou du règlement. Lemon Squeezy agit en tant que revendeur (Merchant of Record) : il facture, collecte la TVA et émet les reçus.</li>
+      <li><b>Paiement (Stripe) :</b> nom, e-mail et montant transmis à Stripe au moment de l'abonnement ou du règlement. Stripe agit en tant que sous-traitant de paiement.</li>
       <li><b>E-mails :</b> aucun e-mail transactionnel envoyé par nos serveurs — les relances partent depuis votre appareil (WhatsApp / messagerie).</li>
       <li><b>Journaux techniques (Cloudflare) :</b> adresse IP et navigateur, conservés à des fins de sécurité et de lutte contre la fraude.</li>
     </ul>
@@ -187,7 +187,7 @@
     <ul>
       <li><b>Appareil :</b> tant que vous conservez l'application et ses données (exportez régulièrement en JSON/CSV et activez la sauvegarde chiffrée).</li>
       <li><b>Pages client et sauvegardes (Cloudflare D1) :</b> tant que le lien est actif ; suppression sur simple demande à [E-MAIL À COMPLÉTER].</li>
-      <li><b>Paiements (Lemon Squeezy) :</b> selon sa politique de conservation, le temps des obligations comptables et fiscales.</li>
+      <li><b>Paiements (Stripe) :</b> selon sa politique de conservation, le temps des obligations comptables et fiscales.</li>
       <li><b>Journaux techniques (Cloudflare) :</b> 12 mois maximum.</li>
     </ul>
 
@@ -198,7 +198,7 @@
     <p><b>Exercer vos droits :</b> écrivez à [E-MAIL À COMPLÉTER] (délégué à la protection des données : [E-MAIL À COMPLÉTER]). Réponse sous 30 jours.</p>
 
     <h2>5. Transferts hors de votre région</h2>
-    <p>Le paiement et les journaux peuvent être traités aux États-Unis via Cloudflare et Lemon Squeezy. Vers l'UE/EEE : clauses contractuelles types et, le cas échéant, Data Privacy Framework. Vers la Suisse : garanties contractuelles appropriées équivalentes.</p>
+    <p>Le paiement et les journaux peuvent être traités aux États-Unis via Cloudflare et Stripe. Vers l'UE/EEE : clauses contractuelles types et, le cas échéant, Data Privacy Framework. Vers la Suisse : garanties contractuelles appropriées équivalentes.</p>
 
     <h2>6. Cookies et stockage local</h2>
     <p>Pas de cookie publicitaire ni de mesure d'audience par défaut. Seul le stockage local technique de l'application ; si activée, Cloudflare Web Analytics (statistiques agrégées, sans cookie).</p>
@@ -212,7 +212,7 @@
       <li><b>On your device (default):</b> your clients, quotes, invoices, credit notes, site photos and settings stay in your browser's local storage. They never leave the device, except for the explicit cases below.</li>
       <li><b>Shared customer pages:</b> only when you tap Share / Payment link / Remind, a copy of the document (including customer contact details) is published to our Cloudflare D1 database to display the <code>/r/</code> page to the recipient.</li>
       <li><b>Online backup (if enabled):</b> a copy <b>encrypted on your device</b> (AES-GCM) is stored on Cloudflare D1. Neither Cloudflare nor the publisher can read it; only your recovery key (kept by you) can decrypt it.</li>
-      <li><b>Payment (Lemon Squeezy):</b> name, e-mail and amount sent to Lemon Squeezy when you subscribe or get paid. Lemon Squeezy acts as reseller (Merchant of Record): it invoices, collects VAT and issues receipts.</li>
+      <li><b>Payment (Stripe):</b> name, e-mail and amount sent to Stripe when you subscribe or get paid. Stripe acts as a payment subprocessor.</li>
       <li><b>E-mails:</b> no transactional e-mail sent by our servers — reminders go out from your own device (WhatsApp / mail app).</li>
       <li><b>Technical logs (Cloudflare):</b> IP address and browser, kept for security and fraud prevention.</li>
     </ul>
@@ -224,7 +224,7 @@
     <ul>
       <li><b>Device:</b> as long as you keep the app and its data (export to JSON/CSV regularly and enable the encrypted backup).</li>
       <li><b>Customer pages and backups (Cloudflare D1):</b> while the link is active; deleted on simple request to [E-MAIL TO COMPLETE].</li>
-      <li><b>Payments (Lemon Squeezy):</b> per its own retention policy, for the duration of accounting and tax obligations.</li>
+      <li><b>Payments (Stripe):</b> per its own retention policy, for the duration of accounting and tax obligations.</li>
       <li><b>Technical logs (Cloudflare):</b> 12 months maximum.</li>
     </ul>
 
@@ -235,7 +235,7 @@
     <p><b>Exercise your rights:</b> write to [E-MAIL TO COMPLETE] (data protection officer: [E-MAIL TO COMPLETE]). Reply within 30 days.</p>
 
     <h2>5. Transfers outside your region</h2>
-    <p>Payment and logs may be processed in the United States through Cloudflare and Lemon Squeezy. To the EU/EEA: standard contractual clauses and, where applicable, the Data Privacy Framework. To Switzerland: equivalent appropriate contractual safeguards.</p>
+    <p>Payment and logs may be processed in the United States through Cloudflare and Stripe. To the EU/EEA: standard contractual clauses and, where applicable, the Data Privacy Framework. To Switzerland: equivalent appropriate contractual safeguards.</p>
 
     <h2>6. Cookies and local storage</h2>
     <p>No advertising or analytics cookie by default. Only the app's technical local storage; if enabled, Cloudflare Web Analytics (aggregated statistics, cookie-free).</p>

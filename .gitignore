@@ -13,7 +13,7 @@ encaisse-export.*.json
 *.bak
 *.local.json
 
-# ── Secrets & environnement côté serveur (Worker / Lemon Squeezy) ─────
+# ── Secrets & environnement côté serveur (Worker / Stripe) ─────
 # Jamais versionné. Se remplissent via `wrangler secret put` ou le
 # dashboard Cloudflare (Workers → Settings → Variables).
 .env

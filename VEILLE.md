@@ -83,7 +83,7 @@ Ce sont des différenciateurs réels, vérifiés chez les acteurs ci-dessus :
 | ✅ Faits | État |
 |---|---|
 | **Page client serveur `/r/:slug`** | En ligne (D1, publiée au partage explicite) |
-| **Checkout réel (Lemon Squeezy)** | En ligne (MoR, prix `custom_price` côté serveur) |
+| **Checkout réel (Stripe)** | En ligne (sessions `price_data` côté serveur, sans produit dashboard) |
 | **Avoirs (credit notes)** | Série `AVT`, jamais plafonnés |
 | **Envoi d'e-mail serveur** | Retiré pour le moment (`mailto:`/WhatsApp) |
 | **Plateforme agréée (PDP / Peppol)** | 🔴 Toujours manquante — interdit toute annonce « conforme » Europe (Indy, Tiime, Shine, Qonto, Pennylane, Sellsy, Henrri… sont agréés) |
@@ -107,7 +107,7 @@ Multi-utilisateurs, rapprochement bancaire, CRM, API, modèles de devis, invento
 - L'expérience **60 secondes sur mobile**, le flux unique devis → facture → paiement → relance.
 - **Hors-ligne + photo-preuve + dictée + signature + acompte** : c'est le seul bloc différenciant réellement absent de la concurrence US/EU.
 - La **vue cash unique** et la prévision 30 jours.
-- **Lemon Squeezy (Merchant of Record)** : TVA mondiale gérée, pas de passerelle à câbler (choix correct — même Zoho/FreshBooks proposent 10+ gateways, ce qui brouille le message).
+- **Stripe direct** : montants libres via `price_data`, pas de produit/variant à créer (choix correct — même Zoho/FreshBooks proposent 10+ gateways, ce qui brouille le message).
 - Le **bilinguisme FR/EN** et l'adaptation prix par pays (€ / CHF / $).
 
 ### Ce qu'on RÉAJUSTE
@@ -117,14 +117,14 @@ Multi-utilisateurs, rapprochement bancaire, CRM, API, modèles de devis, invento
 | Positionnement Europe | « facture conforme locale » | « **devis terrain + preuve + encaissement** », conformité via partenaire agréé (à brancher) | On ne peut pas vendre un agrément qu'on n'a pas. |
 | Mention fiscale sur le PDF | « conforme EN 16931 / Factur-X » | Mention **factuelle** + avertissement « PDF, transmission par plateforme agréée à brancher » | Supprime le risque juridique d'une promesse non tenue. |
 | Afrique / QC | CI, SN, QC | **retirés** | Demandé, et chaque pays = un régime fiscal à câbler. |
-| Moyens de paiement | Wave, Orange, MTN, Free, Moov, Interac… | **En ligne** (carte, SEPA, ACH, TWINT via Lemon Squeezy) + virement + espèces | Demandé ; tout le reste était de la dette. |
+| Moyens de paiement | Wave, Orange, MTN, Free, Moov, Interac… | **Stripe** (carte, SEPA, ACH, TWINT) + virement + espèces | Demandé ; tout le reste était de la dette. |
 
 ### Ce qu'on AJOUTE (par ordre de valeur)
 1. ✅ **Avoirs** — fait (série `AVT`, jamais plafonnés).
 2. **Factures récurrentes** (hebdo/mensuel) — standard, forte valeur perçue.
 3. **Relance automatique par e-mail** (Worker cron + fournisseur à choisir).
 4. ✅ **Portail client serveur** — fait (`/r/:slug` D1, partage explicite).
-5. ✅ **Checkout Lemon Squeezy** — fait (MoR, prix serveur).
+5. ✅ **Checkout Stripe** — fait (montants `price_data` serveur).
 6. **Export FEC / CSV** pour le comptable.
 7. **Partenaire PDP/Peppol** (ou renvoi vers une PA agréée gratuite : Indy/Tiime/Shine) — c'est le seul chemin crédible vers « conforme » en Europe.
 8. **Sales tax rate lookup** aux US (API gratuite ou table par État).
@@ -139,4 +139,4 @@ Multi-utilisateurs, rapprochement bancaire, CRM, API, modèles de devis, invento
 > - **FR/BE :** angle *terrain + preuve + relance*, et **conformité branchée** via une PA agréée — à ce moment-là seulement, on peut vendre « conforme ».
 > - **CH :** angle QR-facture + hors-ligne, marché peu couvert.
 
-**Santé du modèle :** Lemon Squeezy prélève 5 % + 0,30 $ par transaction (TVA gérée) — déjà intégrés dans les marges affichées dans l'app. Le vrai risque n'est pas la marge, c'est **le gratuit de la concurrence** : d'où l'importance de l'angle hors-ligne/preuve, seul territoire défendable.
+**Santé du modèle :** Stripe prélève ~1,5 % + 0,25 € par transaction en zone euro — déjà intégrés dans les marges affichées dans l'app. Le vrai risque n'est pas la marge, c'est **le gratuit de la concurrence** : d'où l'importance de l'angle hors-ligne/preuve, seul territoire défendable.

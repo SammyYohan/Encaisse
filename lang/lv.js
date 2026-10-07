@@ -1,5 +1,11 @@
 /* Encaisse i18n — Latviešu. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).lv = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Sūti saiti pa e-pastu/WhatsApp vai rādi QR kodu. Klients maksā ar Stripe:",
+  "Lien de paiement Stripe + relances": "Stripe maksājuma saite + atgādinājumi",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demo režīms: nekādu norakstīšanu. Pievieno slepeno Stripe atslēgu iekasēšanai.",
+  "Règlement sécurisé par Stripe": "Drošs maksājums ar Stripe",
+  "Stripe uniquement": "Tikai Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Tiek izdots avansa rēķins ar savu Stripe maksājuma saiti. Atlikums automātiski atskaitīts no gala rēķina.",
   "{n} facture(s)": "{n} rēķins(i)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} rēķins(i) jāseko · {m} jāiekasē 30 d. laikā · {l} kritiski kavēti",
   "{n} ligne(s)": "{n} rinda(as)",

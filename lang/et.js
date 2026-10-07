@@ -1,5 +1,11 @@
 /* Encaisse i18n — Eesti. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).et = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Saada link e-posti/WhatsAppiga või näita QR-koodi. Klient maksab Stripega:",
+  "Lien de paiement Stripe + relances": "Stripe makselink + meeldetuletused",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demorežiim: tasusid pole. Ühenda salajane Stripe-võti laekumiseks.",
+  "Règlement sécurisé par Stripe": "Turvaline makse Stripega",
+  "Stripe uniquement": "Ainult Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Ettemaksuarve oma Stripe-makselingiga. Jääk arvatakse automaatselt lõpparvelt maha.",
   "{n} facture(s)": "{n} arve(t)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} arve(t) jälgimisel · {m} laekub 30 pv jooksul · {l} kriitiliselt hilinenud",
   "{n} ligne(s)": "{n} rida (rida)",

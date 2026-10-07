@@ -1,5 +1,11 @@
 /* Encaisse i18n — Italiano. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).it = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Invia questo link via e-mail/WhatsApp o fai scansionare il QR. Il cliente paga con Stripe:",
+  "Lien de paiement Stripe + relances": "Link di pagamento Stripe + solleciti",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Modalità demo: nessun addebito. Collega la tua chiave segreta Stripe per incassare.",
+  "Règlement sécurisé par Stripe": "Pagamento sicuro con Stripe",
+  "Stripe uniquement": "Solo Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Viene emessa una fattura di acconto con il suo link di pagamento Stripe. Il saldo è detratto in automatico dalla fattura finale.",
   "{n} facture(s)": "{n} fattura(e)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} fattura(e) da seguire · {m} da incassare in 30 gg · {l} in ritardo critico",
   "{n} ligne(s)": "{n} riga(ghe)",

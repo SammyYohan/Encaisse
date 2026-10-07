@@ -1,5 +1,11 @@
 /* Encaisse i18n — Nederlands. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).nl = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Stuur deze link per e-mail/WhatsApp of laat de QR scannen. De klant betaalt via Stripe:",
+  "Lien de paiement Stripe + relances": "Stripe-betaallink + aanmaningen",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demomodus: geen afschrijving. Koppel je geheime Stripe-sleutel om te innen.",
+  "Règlement sécurisé par Stripe": "Veilige betaling via Stripe",
+  "Stripe uniquement": "Alleen Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Er wordt een aanbetalingsfactuur uitgegeven met eigen Stripe-betaallink. Het saldo wordt automatisch van de eindfactuur afgetrokken.",
   "{n} facture(s)": "{n} factu(u)r(en)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} factu(u)r(en) in beeld · {m} te innen binnen 30 d · {l} kritisch laat",
   "{n} ligne(s)": "{n} regel(s)",

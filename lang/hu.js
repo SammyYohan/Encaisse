@@ -1,5 +1,11 @@
 /* Encaisse i18n — Magyar. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).hu = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Küldd el e-mailben/WhatsAppon vagy olvastasd be a QR-kódot. Az ügyfél Stripe-pal fizet:",
+  "Lien de paiement Stripe + relances": "Stripe fizetési link + felszólítások",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demó mód: nincs terhelés. Csatlakoztasd a titkos Stripe-kulcsod a beszedéshez.",
+  "Règlement sécurisé par Stripe": "Biztonságos fizetés Stripe-pal",
+  "Stripe uniquement": "Csak Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Előlegszámla saját Stripe fizetési linkkel. Az egyenleg automatikusan levonódik a végszámlából.",
   "{n} facture(s)": "{n} számla",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} számla figyelendő · {m} befolyik 30 napon belül · {l} kritikusan késik",
   "{n} ligne(s)": "{n} sor",

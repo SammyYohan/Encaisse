@@ -1,5 +1,11 @@
 /* Encaisse i18n — Čeština. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).cs = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Pošli link e-mailem/WhatsAppem nebo nech naskenovat QR. Klient platí přes Stripe:",
+  "Lien de paiement Stripe + relances": "Platební link Stripe + upomínky",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demo režim: žádné stržení. Připoj tajný klíč Stripe pro inkaso.",
+  "Règlement sécurisé par Stripe": "Bezpečná platba přes Stripe",
+  "Stripe uniquement": "Jen Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Vystavena je zálohová faktura s vlastním linkem Stripe. Doplatek se automaticky odečte z konečné faktury.",
   "{n} facture(s)": "{n} faktura(y)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} faktura(y) ke sledování · {m} k inkasu do 30 dnů · {l} kriticky po splatnosti",
   "{n} ligne(s)": "{n} položka(y)",

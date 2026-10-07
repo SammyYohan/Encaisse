@@ -1,5 +1,5 @@
 /* Encaisse SLC — logique complète, offline-first, montants en centimes
-   Cible : Europe (FR/BE/CH) + États-Unis. Paiement : Lemon Squeezy (Merchant of Record). */
+   Cible : Europe (FR/BE/CH) + États-Unis. Paiement : Stripe uniquement. */
 "use strict";
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const LS="encaisse.v1", LS_ON="encaisse.onboarded";
@@ -23,8 +23,8 @@ const PAYS={
           en:"Peppol-BIS mandatory for B2B since 1 Jan 2026 (receiving AND issuing). A PDF sent by e-mail is not a valid e-invoice. Fines €1,500–€5,000. This document is a PDF: not enough alone between VAT-registered parties without a Peppol access point. Required: legal name, address, BE VAT number, due date."},
     moyens:["stripe_cb","sepa","virement","especes"]},
   CH:{label:"🇨🇭 Suisse",nom:{fr:"Suisse",en:"Switzerland"},devise:"CHF",tva:8.1,archive:"10 ans",prefix:"CH",
-    rule:{fr:"QR-facture (SIX) exigée pour les supports de paiement papier : le QR généré ici ouvre le lien de paiement en ligne, pas un paiement bancaire SIX. TVA 8,1 % (taux normal). Mentions : raison sociale, adresse, n° IDE, date d'échéance.",
-          en:"Swiss QR-bill (SIX) required for paper payment slips: the QR here opens the online payment link, not a SIX bank payment. VAT 8.1% (standard rate). Required: legal name, address, UID number, due date."},
+    rule:{fr:"QR-facture (SIX) exigée pour les supports de paiement papier : le QR généré ici ouvre le lien de paiement Stripe, pas un paiement bancaire SIX. TVA 8,1 % (taux normal). Mentions : raison sociale, adresse, n° IDE, date d'échéance.",
+          en:"Swiss QR-bill (SIX) required for paper payment slips: the QR here opens the Stripe payment link, not a SIX bank payment. VAT 8.1% (standard rate). Required: legal name, address, UID number, due date."},
     moyens:["stripe_cb","twint","virement","especes"]},
   US:{label:"🇺🇸 États-Unis",nom:{fr:"États-Unis",en:"United States"},devise:"$",tva:0,archive:"7 ans",prefix:"US",
     rule:{fr:"Pas de TVA fédérale : la sales tax dépend de l'État et de la ville (economic nexus, dès ~100 000 $ de ventes ou 200 transactions). Taux saisi à la main — fais-le valider par ton comptable. Conservation des écritures : 7 ans (IRS).",
@@ -32,12 +32,12 @@ const PAYS={
     moyens:["stripe_cb","ach","virement","especes"]}
 };
 
-/* ---------- moyens de paiement : en ligne via Lemon Squeezy (+ virement/espèces manuels) ---------- */
+/* ---------- moyens de paiement : Stripe uniquement (+ virement/espèces manuels) ---------- */
 const MOYENS={
-  stripe_cb:{fr:"Carte bancaire",en:"Card"},
-  sepa:{fr:"Prélèvement SEPA",en:"SEPA Direct Debit"},
+  stripe_cb:{fr:"Carte bancaire (Stripe)",en:"Card (Stripe)"},
+  sepa:{fr:"Prélèvement SEPA (Stripe)",en:"SEPA Direct Debit (Stripe)"},
   twint:{fr:"TWINT",en:"TWINT"},
-  ach:{fr:"Prélèvement ACH",en:"ACH Direct Debit"},
+  ach:{fr:"Prélèvement ACH (Stripe)",en:"ACH Direct Debit (Stripe)"},
   virement:{fr:"Virement bancaire",en:"Bank transfer"},
   especes:{fr:"Espèces",en:"Cash"}
 };
@@ -45,7 +45,7 @@ const ALL_MOYENS=["stripe_cb","sepa","twint","ach","virement","especes"];
 const mLabel=k=>loc(MOYENS[k]||{fr:k,en:k});
 /* Table de MIGRATION uniquement (jamais affichée à l'utilisateur) :
    les anciens intitulés de moyens de paiement stockés dans localStorage
-   d'une version antérieure sont convertis vers la clé actuelle. */
+   d'une version antérieure sont convertis vers la nouvelle clé Stripe. */
 const LEGACY_M={"Wave":"stripe_cb","Orange Money":"stripe_cb","MTN":"stripe_cb","Free Money":"stripe_cb","Moov":"stripe_cb","Interac":"ach","TWINT":"twint","Stripe":"stripe_cb","Virement":"virement","Espèces":"especes"};
 
 /* ---------- utilitaires ---------- */
@@ -219,9 +219,9 @@ function openBackupRestore(){
    les factures clients, elles, se paient dans LEUR devise (stores de zone). */
 const SUB={m:9.99,a:99}; // euros : 9,99 €/mois, 99 €/an (2 mois offerts)
 const PLANS={
-  EUR:{zone:{fr:"Europe · €",en:"Europe · €"},dev:"€",fee:.05,feeFixe:.30,infra:.6},
-  CHF:{zone:{fr:"Suisse · CHF",en:"Switzerland · CHF"},dev:"CHF",fee:.05,feeFixe:.30,infra:.6},
-  USD:{zone:{fr:"États-Unis · $",en:"United States · $"},dev:"$",fee:.05,feeFixe:.30,infra:.8}
+  EUR:{zone:{fr:"Europe · €",en:"Europe · €"},dev:"€",fee:.015,feeFixe:.25,infra:.6},
+  CHF:{zone:{fr:"Suisse · CHF",en:"Switzerland · CHF"},dev:"CHF",fee:.017,feeFixe:.30,infra:.6},
+  USD:{zone:{fr:"États-Unis · $",en:"United States · $"},dev:"$",fee:.029,feeFixe:.30,infra:.8}
 };
 
 /* ---------- secteurs : vocabulaires + suggestions 1-clic ---------- */
@@ -632,9 +632,9 @@ function openPaywall(reason){
     +`<h2>${T("Passer au payant")}</h2><p class="sub">${safeReason}</p>`
     +`<div class="cycle" id="cyc"><button class="${onM}" data-c="monthly" type="button">${T("Mensuel")}</button><button class="${onY}" data-c="yearly" type="button">${T("Annuel")}</button></div>`
     +`<div class="plans">`
-    +`<div class="plan is-pro"><b>${T("Pro — tout illimité")}</b><span class="p">${fmtSub(prix)}${per}</span><small>${T("Marge nette ~{m}% après frais + infra",{m:marge})}${cyc==="yearly"?` · ${T("2 mois offerts")}`:""}</small><ul><li>${T("Devis + factures")} <b>${T("illimités")}</b></li><li>${T("Lien de paiement en ligne + relances")}</li><li>${T("Support prioritaire")}</li><li>${T("Facture")} ${esc(paysNom)} + ${T("archivage")} ${PAYS[S.biz.pays]?.archive}</li></ul><button class="btn primary" data-sub="pro" type="button">${T("Choisir Pro")}</button></div>`
+    +`<div class="plan is-pro"><b>${T("Pro — tout illimité")}</b><span class="p">${fmtSub(prix)}${per}</span><small>${T("Marge nette ~{m}% après frais + infra",{m:marge})}${cyc==="yearly"?` · ${T("2 mois offerts")}`:""}</small><ul><li>${T("Devis + factures")} <b>${T("illimités")}</b></li><li>${T("Lien de paiement Stripe + relances")}</li><li>${T("Support prioritaire")}</li><li>${T("Facture")} ${esc(paysNom)} + ${T("archivage")} ${PAYS[S.biz.pays]?.archive}</li></ul><button class="btn primary" data-sub="pro" type="button">${T("Choisir Pro")}</button></div>`
     +`</div>`
-    +`<p class="muted" style="font-size:12px">${T("Sans engagement. 0% commission sur tes encaissements : Lemon Squeezy prélève 5 % + 0,30 $ par transaction, TVA gérée pour toi.")}</p>`
+    +`<p class="muted" style="font-size:12px">${T("Sans engagement. 0% commission sur tes encaissements : tu paies uniquement tes frais Stripe (1,5 % + 0,25 € par transaction).")}</p>`
     +`<button class="btn ghost" id="cancelS" type="button">${T("Plus tard")}</button>`;
   openSheet(html);
   $("#cancelS").onclick=closeSheet;
@@ -643,12 +643,12 @@ function openPaywall(reason){
 
 function paymentsReady(){
   const cfg=window.ENCAISSE_CONFIG||{};
-  return !cfg.DEMO_MODE;
+  return !cfg.DEMO_MODE && !!cfg.STRIPE_PUBLIC_KEY && cfg.STRIPE_LIVE===true;
 }
 async function activatePlan(plan){
   if(paymentsReady()){
-    /* Paiement réel : le serveur crée le checkout Lemon Squeezy (le prix vient
-       de SA table, jamais du client) puis on quitte l'app vers Lemon Squeezy. */
+    /* Paiement réel : le serveur crée la session Stripe Checkout (le prix vient
+       de SA table, jamais du client) puis on quitte l'app vers Stripe. */
     try{
       const r=await fetch(siteBase()+"/api/checkout",{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -662,7 +662,7 @@ async function activatePlan(plan){
       return;
     }
   }
-  const reason=T("Mode démonstration : aucun débit. Configure le paiement pour encaisser.");
+  const reason=T("Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.");
   S.sub={plan,cycle:S.sub?.cycle||"monthly",since:todayISO()};
   save();closeSheet();render();
   toast(`✓ ${T("Plan")} ${plan} — ${reason}`);
@@ -683,23 +683,11 @@ function renderPlanCard(){
     : `<small class="muted">Pro ${prix} · ${T("cycle")} : ${cyc==="monthly"?T("mensuel"):T("annuel")}. ${T("0% commission sur tes encaissements.")}</small>`}
   <div class="row" style="margin-top:10px">${S.sub?.plan==="free"
     ? `<button class="btn primary small" id="goPlans" type="button">${T("Voir les offres →")}</button>`
-    : `<button class="btn primary small" id="manageSub" type="button">${T("Gérer mon abonnement")}</button>`}<button class="btn small ghost" id="cycBtn" type="button">${T("Cycle")} : ${cyc==="monthly"?T("Mensuel"):T("Annuel")}</button></div>`;
+    : `<small class="muted">${T("Résiliation par e-mail au support — voir CGU.")}</small>`}<button class="btn small ghost" id="cycBtn" type="button">${T("Cycle")} : ${cyc==="monthly"?T("Mensuel"):T("Annuel")}</button></div>`;
   const gp=$("#goPlans");if(gp)gp.onclick=()=>openPaywall(T("Un seul plan pour tous : 9,99 €/mois ou 99 €/an."));
-  const ms=$("#manageSub");if(ms)ms.onclick=openManage;
   $("#cycBtn").onclick=()=>{S.sub.cycle=cyc==="monthly"?"yearly":"monthly";save();render();toast(T("Cycle")+" : "+(S.sub.cycle==="monthly"?T("mensuel"):T("annuel")))};
   const b=$("#planBadge");
   if(b){b.textContent=S.sub?.plan==="free"?T("Gratuit"):"Pro ✓";b.classList.toggle("pro",isPaid())}
-}
-/* Portail client Lemon Squeezy : moyen de paiement, résiliation en autonomie
-   (exigence UE : résilier aussi facilement que souscrire). */
-async function openManage(){
-  try{
-    toast(T("Ouverture de la gestion…"));
-    const r=await fetch(siteBase()+"/api/manage",{headers:{"X-Sub-Token":S.sub?.token||"","X-Sub-Oh":ownerKey()||""}});
-    const j=await r.json().catch(()=>({}));
-    if(r.ok&&j.url){location.href=j.url;return}
-    throw new Error(j.error||("http_"+r.status));
-  }catch(e){toast(T("Gestion indisponible pour l'instant — réessaie dans un instant."))}
 }
 
 /* ---------- feuilles : nouveau document ---------- */
@@ -943,7 +931,7 @@ function openAcompte(id){
       <button type="button" data-pct="custom">${T("Libre")}</button>
     </div>
     <label>${T("Montant acompte")} (${S.biz.devise})<input id="acompteAmt" inputmode="decimal" value="${(a30/100).toFixed(dec)}"></label>
-    <p class="muted" style="font-size:12px">${T("Une facture d'acompte est émise avec son propre lien de paiement en ligne. Le solde est automatiquement déduit de la facture finale.")}</p>
+    <p class="muted" style="font-size:12px">${T("Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.")}</p>
     <div class="row">
       <button class="btn primary" id="saveAcompte" type="button" style="flex:1">${T("Créer la facture d'acompte ✓")}</button>
       <button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button>
@@ -1067,7 +1055,7 @@ function fiscalMention(){
   const p=S.biz.pays, id=S.biz.tvaId;
   if(p==="FR")return T("Document PDF édité par l'artisan · transmission e-facture via PDP agréée requise entre assujettis (réception obligatoire depuis le 01/09/2026)")+(id?` · ${T("N° TVA intracom.")} ${id}`:"");
   if(p==="BE")return T("Document PDF · Peppol-BIS obligatoire en B2B depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis")+(id?` · TVA BE ${id}`:"");
-  if(p==="CH")return T("Document PDF avec mentions suisses · QR affiché = lien de paiement en ligne (pas un QR SIX bancaire)")+(id?` · IDE ${id}`:"");
+  if(p==="CH")return T("Document PDF avec mentions suisses · QR affiché = lien de paiement Stripe (pas un QR SIX bancaire)")+(id?` · IDE ${id}`:"");
   return T("Document PDF · sales tax d'État/local saisie à la main — à faire valider par ton comptable")+(id?` · EIN ${id}`:"");
 }
 
@@ -1190,7 +1178,7 @@ function openView(id){
           ${isAvoir
             ? `<strong>${T("Avoir client")}</strong>
                ${T("Avoir au titre de la facture {n} — consultez-le et conservez ce document.",{n:d.avoirSourceNum||"—"})}`
-            : `<strong>${T("Règlement sécurisé en ligne")}</strong>
+            : `<strong>${T("Règlement sécurisé par Stripe")}</strong>
                ${T("Scannez ce QR code pour ouvrir la facture et payer en 1 clic (carte, SEPA, ACH).")}`}
           <br><small style="color:var(--mut)" id="viewLink" data-u="${esc(payUrl)}">${T("Lien direct")} : ${esc(payUrl)}</small>${siteOff?`<br><small style="color:#92400e">⚠️ ${T("Lien local : ne fonctionne que sur cet appareil. Renseigne SITE_URL (config.js) pour un vrai lien client.")}</small>`:""}
         </div>
@@ -1254,7 +1242,7 @@ function openPay(id){
     ${site?`<small class="muted" id="payStat" style="font-size:12px">${T("Génération du lien client…")}</small>`:`<small class="muted" style="font-size:12px">⚠️ ${T("Lien local : ne fonctionne que sur cet appareil. Renseigne SITE_URL (config.js) pour un vrai lien client.")}</small>`}
   </div>
   <p class="muted" style="font-size:12px">${d.type==="facture"
-    ? `${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie en ligne :")} ${(allowed.map(mLabel)).join(", ")}.`
+    ? `${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :")} ${(allowed.map(mLabel)).join(", ")}.`
     : T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code.")}</p>
   <div class="row">${btns}</div>
   <div class="row" style="margin-top:10px">
@@ -1332,7 +1320,7 @@ function syncSettings(){
   const allowed=PAYS[S.biz.pays]?.moyens||[];
   S.biz.moyens=(S.biz.moyens||[]).filter(k=>allowed.includes(k));
   if(!S.biz.moyens.length)S.biz.moyens=[...allowed];
-  $("#payToggles").innerHTML=`<div class="preset-label" style="width:100%;margin-bottom:6px">${T("Moyens de paiement acceptés")} (${T("Paiement en ligne")}) :</div>`+
+  $("#payToggles").innerHTML=`<div class="preset-label" style="width:100%;margin-bottom:6px">${T("Moyens de paiement acceptés")} (${T("Stripe uniquement")}) :</div>`+
     allowed.map(k=>`<button type="button" class="${S.biz.moyens.includes(k)?"is-on":""}" data-m="${k}">${esc(mLabel(k))}</button>`).join("");
   syncBkState();
 }
@@ -1348,54 +1336,34 @@ function checkClientPortalRoute(){
   }catch{}
 }
 
-/* Retour de checkout Lemon Squeezy (?billing=success) : on récupère le jeton
-   d'abonnement VÉRIFIÉ côté serveur — la preuve ne vit plus seulement en localStorage.
-   Le webhook LS a normalement déjà enregistré l'abonnement (custom oh) ; sinon on
-   réessaie quelques fois puis on pose un marqueur de reprise (boot suivant). */
-const LS_PENDING="encaisse.pending";
-const sleep=ms=>new Promise(res=>setTimeout(res,ms));
-async function validateSubTries(silent){
-  const oh=ownerKey()||"";
-  for(let i=0;i<5;i++){
-    try{
-      const r=await fetch(siteBase()+"/api/sub",{headers:{"X-Sub-Oh":oh}});
-      const j=await r.json().catch(()=>({}));
-      if(r.ok&&j.ok&&j.token){
-        S.sub={plan:j.plan,cycle:j.cycle,since:j.since||todayISO(),exp:j.exp,customer:j.customer,token:j.token,checkedAt:Date.now()};
-        try{localStorage.removeItem(LS_PENDING)}catch(e){}
-        save();render();haptic([20,50]);
-        if(!silent)toast(T("Abonnement activé ✓ Bienvenue !"));
-        return true;
-      }
-      /* définitif (pas d'abonnement, jeton refusé, appareil inconnu) : inutile de réessayer */
-      if(r.status===400||r.status===401||r.status===403||r.status===404){
-        try{localStorage.removeItem(LS_PENDING)}catch(e){}
-        if(!silent)toast(T("Paiement non confirmé — réessaie ou contacte le support."));
-        return false;
-      }
-    }catch(e){/* réseau : on réessaie */}
-    await sleep(2500);
-  }
-  if(!silent)toast(T("Paiement bien reçu — validation en cours, reviens dans un instant."));
-  return false;
-}
+/* Retour de Stripe Checkout : on échange session_id contre un jeton d'abonnement
+   VÉRIFIÉ côté serveur — la preuve ne vit plus seulement en localStorage. */
 async function handleCheckoutReturn(){
   const p=new URLSearchParams(window.location.search);
   const clean=k=>{try{const u=new URL(window.location.href);u.searchParams.delete(k);history.replaceState({},"",u.pathname+u.search+u.hash)}catch{}};
   if(p.get("billing")==="cancel"){clean("billing");toast(T("Paiement annulé — réessaie quand tu veux."));return}
-  if(p.get("billing")==="success"){
-    clean("billing"); /* définitif : on nettoie l'URL */
-    try{localStorage.setItem(LS_PENDING,"1")}catch(e){}
-    await validateSubTries(false);
-    return;
-  }
-  if(p.get("session_id")){clean("session_id");return} /* ancien flux Stripe : ignoré */
-  /* Reprise : le webhook a pu valider l'achat pendant notre absence. */
-  let pend=false;try{pend=localStorage.getItem(LS_PENDING)==="1"}catch(e){}
-  if(pend&&!(S.sub&&S.sub.token)){await validateSubTries(true)}
+  const sid=p.get("session_id");if(!sid)return;
+  try{
+    /* Liaison à l'appareil (anti-partage) : le jeton émis sera lié
+       à cette preuve ; copié ailleurs, il sera refusé (403). */
+    const oh=ownerKey()||"";
+    const r=await fetch(siteBase()+"/api/sub?session_id="+encodeURIComponent(sid)+(oh?"&oh="+oh:""));
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ok&&j.token){
+      S.sub={plan:j.plan,cycle:j.cycle,since:j.since,exp:j.exp,customer:j.customer,token:j.token,checkedAt:Date.now()};
+      save();render();haptic([20,50]);toast(T("Abonnement activé ✓ Bienvenue !"));
+      clean("session_id"); /* définitif : on nettoie l'URL */
+    }else if(r.status===400||r.status===409||r.status===401||r.status===403){
+      toast(T("Paiement non confirmé — réessaie ou contacte le support."));
+      clean("session_id");
+    }else{
+      /* transitoire (5xx, réseau) : on garde session_id → rechargement = nouvel essai */
+      toast(T("Connexion requise pour valider l'abonnement."));
+    }
+  }catch{toast(T("Connexion requise pour valider l'abonnement."))}
 }
 
-/* Rafraîchit le jeton quand on est en ligne : la source de vérité est Lemon Squeezy.
+/* Rafraîchit le jeton quand on est en ligne : la source de vérité est Stripe.
    Abonnement résilié → 401/403 → déclassement en Gratuit. Hors-ligne : le jeton
    reste valable jusqu'à exp + 14 j de tolérance (dans isPaid). */
 async function refreshSub(){

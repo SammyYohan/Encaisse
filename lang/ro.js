@@ -1,5 +1,11 @@
 /* Encaisse i18n — Română. Clés = français source ; clé absente => français affiché. */
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).ro = {
+  "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Trimite linkul prin e-mail/WhatsApp sau scanează codul QR. Clientul plătește cu Stripe:",
+  "Lien de paiement Stripe + relances": "Link de plată Stripe + somații",
+  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Mod demo: fără debitări. Conectează cheia secretă Stripe ca să încasezi.",
+  "Règlement sécurisé par Stripe": "Plată securizată cu Stripe",
+  "Stripe uniquement": "Doar Stripe",
+  "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Se emite o factură de avans cu linkul ei de plată Stripe. Soldul se deduce automat din factura finală.",
   "{n} facture(s)": "{n} factură(i)",
   "{n} facture(s) à suivre · {m} à encaisser sous 30 j · {l} en retard critique": "{n} factură(i) de urmărit · {m} de încasat în 30 zile · {l} în întârziere critică",
   "{n} ligne(s)": "{n} linie(ii)",
