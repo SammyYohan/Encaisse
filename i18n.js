@@ -402,16 +402,7 @@
     "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code.": "Send this link by e-mail/WhatsApp or have the QR code scanned.",
     "Bonjour {w}, voici votre avoir {n} émis au titre de la facture {f}, d'un montant de {a} ({b}).\nConsultez-le ici : {u}\n\nMerci pour votre compréhension 🙏": "Hello {w}, here is credit note {n} issued for invoice {f}, for {a} ({b}).\nReview it here: {u}\n\nThank you for your understanding 🙏",
 
-    /* --- P0 n°4 : e-mails transactionnels (Brevo) --- */
-    "Envoyer la relance (e-mail)": "Send the reminder (e-mail)",
-    "Envoi…": "Sending…",
-    "Relance e-mail envoyée ✓ ({n})": "Reminder e-mail sent ✓ ({n})",
-    "Relance déjà envoyée il y a moins de 3 jours.": "A reminder was already sent less than 3 days ago.",
-    "Facture déjà payée — relance annulée.": "Invoice already paid — reminder canceled.",
-    "Service e-mail non configuré — utilise le bouton E-mail ci-dessous.": "E-mail service not configured — use the E-mail button below.",
-    "Ce client n'a pas d'e-mail : complète sa fiche.": "This client has no e-mail: complete their card.",
-    "Envoi impossible — réessaie plus tard.": "Could not send — try again later.",
-    "Connexion requise pour envoyer.": "Connection required to send.",
+    /* (E-mails serveur retirés pour le moment : ces clés restent traduites dans lang/* au cas où.) */
     "Devis déjà converti": "Quote already converted",
     "Acompte impayé — non déduit": "Unpaid deposit — not deducted",
 

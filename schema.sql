@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS portal (
   hash         TEXT NOT NULL,           -- empreinte du payload : évite les réécritures inutiles
   owner        TEXT,                    -- empreinte sha256 de la clé propriétaire de l'appareil (possession)
   paid_at      INTEGER,                 -- Unix ms — rempli au retour de Stripe (?session_id=)
-  remind_count INTEGER DEFAULT 0,       -- relances e-mail envoyées par le serveur (POST /api/remind)
+  remind_count INTEGER DEFAULT 0,       -- relances e-mail (compteur — envoi serveur retiré pour le moment)
   remind_at    INTEGER,                 -- Unix ms de la dernière relance : anti-doublon 72 h
   created_at   INTEGER NOT NULL,
   updated_at   INTEGER NOT NULL

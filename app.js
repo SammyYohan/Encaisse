@@ -1318,17 +1318,15 @@ async function openRelance(id){
   const c=cliOf(d);
   const j=Math.max(0,daysLate(d.eche));
   const ton=j<=3?T("poli"):(j<=10?T("ferme"):T("mise en demeure"));
-  /* ensurePortal rafraîchit la copie D1 (statut/echéance) : le serveur ne
-     relancera jamais sur des données périmées. */
+  /* ensurePortal rafraîchit la copie D1 (statut/échéance) : le lien client
+     partagé est toujours à jour. */
   const portal=await ensurePortal(d), payUrl=portal.url;
   const msg=relanceMsg(d, j, payUrl);
   const tel=(c.tel||"").replace(/[^0-9]/g,"");
   const mail=(c.email||"").trim();
-  /* E-mail envoyé PAR LE SERVEUR (Brevo) : bouton principal dès que le
-     portail est actif. Sinon repli mailto (fonctionne partout, hors-ligne). */
-  const srv=(portal.server&&mail)?`<button class="btn primary" id="sendSrv" type="button">✉️ ${T("Envoyer la relance (e-mail)")}</button>`:"";
+  /* Relances depuis l'appareil uniquement (WhatsApp / e-mail applicatif) :
+     aucun e-mail serveur pour le moment. */
   const actions=[
-    srv,
     `<button class="btn ghost" id="copyM" type="button">${T("Copier")}</button>`,
     tel?`<a class="btn wa" style="text-decoration:none;text-align:center" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent(msg)}" id="sendW">💬 WhatsApp →</a>`:"",
     mail?`<a class="btn" style="text-decoration:none;text-align:center" href="mailto:${esc(mail)}?subject=${encodeURIComponent(d.numero)}&body=${encodeURIComponent(msg)}" id="sendE">✉️ ${T("E-mail →")}</a>`:""
@@ -1342,26 +1340,6 @@ async function openRelance(id){
   const bump=()=>{d.relances=num(d.relances)+1;haptic([20,40]);save();render()};
   const w=$("#sendW");if(w)w.onclick=bump;
   const e=$("#sendE");if(e)e.onclick=bump;
-  const srvBtn=$("#sendSrv");
-  if(srvBtn)srvBtn.onclick=async()=>{
-    srvBtn.disabled=true;const old=srvBtn.textContent;srvBtn.textContent=T("Envoi…");
-    try{
-      /* Même origine que la publication du portail (SITE_URL) : en relatif
-         on raterait le backend quand l'app est ouverte depuis une autre origine. */
-      const remindBase=siteBase();
-      const r=await fetch(remindBase+"/api/remind",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:d.portal?.slug||"",key:ownerKey()})});
-      const j2=await r.json().catch(()=>({}));
-      if(r.ok&&j2.ok){bump();haptic([20,40]);closeSheet();toast(T("Relance e-mail envoyée ✓ ({n})",{n:j2.count}));return}
-      toast(
-        r.status===429?T("Relance déjà envoyée il y a moins de 3 jours.")
-        :r.status===409?T("Facture déjà payée — relance annulée.")
-        :r.status===503?T("Service e-mail non configuré — utilise le bouton E-mail ci-dessous.")
-        :r.status===403?T("Partage protégé — rouvre la fiche depuis cet appareil.")
-        :r.status===400?T("Ce client n'a pas d'e-mail : complète sa fiche.")
-        :T("Envoi impossible — réessaie plus tard."));
-    }catch{toast(T("Connexion requise pour envoyer."))}
-    srvBtn.disabled=false;srvBtn.textContent=old;
-  };
 }
 
 /* ---------- réglages ---------- */

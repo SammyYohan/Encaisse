@@ -13,7 +13,7 @@
 | **Stockage** | `localStorage` sur l'appareil de l'utilisateur — pas de compte, pas de base de données |
 | **Déploiement** | Cloudflare Pages (offre gratuite) |
 | **i18n** | La chaîne française **est** la clé de traduction (style gettext) |
-| **État** | 🟢 Front + backend existent & câblés (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, identité `legal.html` encore fictive → voir [Checklist](#checklist-de-mise-en-ligne) |
+| **État** | 🟢 Front + backend existent & câblés (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, placeholders `legal.html` non remplis → voir [Checklist](#checklist-de-mise-en-ligne) |
 
 ---
 
@@ -43,8 +43,8 @@
 - **Lien de paiement** (carte Stripe, prélèvement SEPA, ACH, TWINT / virement / espèces constatés à part) +
   PDF imprimable avec QR code via le dialogue d'impression du navigateur.
 - **Relances guidées** : J+3 poli → J+7 ferme → J+15 mise en demeure, avec **3
-  messages vraiment distincts** pré-remplis pour WhatsApp ou e-mail (la relance
-  serveur Brevo utilise les mêmes 3 tons), en 1 clic.
+  messages vraiment distincts** pré-remplis pour WhatsApp ou e-mail en 1 clic
+  (aucun e-mail serveur pour le moment).
 - **Écran de trésorerie unique** : qui doit quoi, depuis quand, prévision à 30 jours.
 - **Hors-ligne d'abord** : fonctionne sans réseau sur un chantier, installable en PWA.
 - **Preuves** : photo de chantier rattachée au document, signature sur l'écran
@@ -247,34 +247,23 @@ npx wrangler d1 execute encaisse --remote --file=schema.sql
 # 2. Clé secrète Stripe — jamais dans ce dépôt
 npx wrangler pages secret put STRIPE_SECRET_KEY --project-name=<projet>
 
-# 3. E-mails transactionnels (Brevo) — reçus de paiement + relances serveur
-#    Créer un compte sur app.brevo.com, générer une clé API (v3), puis :
-npx wrangler pages secret put BREVO_API_KEY --project-name=<projet>
-npx wrangler pages secret put EMAIL_FROM     --project-name=<projet>
-#    Format EMAIL_FROM : "Encaisse <bonjour@tondomaine.fr>" — l'expéditeur doit
-#    être vérifié dans Brevo (Settings → Senders & domains).
-#    Sans ces deux secrets, les endpoints répondent 503 et l'app retombe en
-#    silence sur mailto: — rien ne casse, les e-mails restent simplement off.
-
-# 4. Basculer les deux drapeaux de config.js : DEMO_MODE:false, STRIPE_LIVE:true → push
+# 3. Basculer les deux drapeaux de config.js : DEMO_MODE:false, STRIPE_LIVE:true → push
 ```
 
 Endpoints : `POST /api/checkout` (Checkout abonnement, prix côté serveur) ·
 `GET /api/sub` (vérification d'achat + jeton HMAC) · `POST /api/portal`
 (publie `/r/:slug`, uniquement à un partage explicite) · `GET /api/pay`
 (encaissement facture ; le montant vient de D1, jamais du payeur) ·
-`POST /api/remind` (relance e-mail envoyée PAR LE SERVEUR via Brevo,
-anti-doublon 72 h par document, 3 tons J+3/J+7/J+15) · `POST /api/stripe-webhook`
-(webhook Stripe signé, contrôle strict montant + devise, `paid_at` idempotent) ·
-`/r/:slug` (facture rendue par le serveur,
-confirmation de paiement via `?session_id=` et envoi automatique du reçu au
-client — le webhook couvre le cas sans retour navigateur).
+`POST /api/stripe-webhook` (webhook Stripe signé, contrôle strict montant +
+devise, `paid_at` idempotent) · `/r/:slug` (facture rendue par le serveur,
+confirmation de paiement via `?session_id=` avec reçu affiché — le webhook
+couvre le cas sans retour navigateur). Relances via WhatsApp / e-mail
+applicatif (1 clic, 3 tons J+3/J+7/J+15) ; aucun e-mail serveur pour le moment.
 
 > **Les relances automatiques non supervisées sont impossibles sur les Pages
 > Functions** — Cloudflare n'y expose pas de cron trigger. Elles exigent un
 > petit Worker dédié avec cron, lisant la même table D1 (feuille de route P1).
-> La relance déclenchée depuis l'app est elle envoyée par le serveur,
-> immédiatement.
+> Les relances depuis l'app partent via WhatsApp / e-mail applicatif.
 
 ### Checklist de mise en ligne
 
@@ -283,7 +272,6 @@ client — le webhook couvre le cas sans retour navigateur).
 □ Renseigner SITE_URL dans config.js
 □ Créer la base D1 + binding « DB » + exécuter schema.sql (voir ci-dessus)
 □ Mettre STRIPE_SECRET_KEY (wrangler pages secret put) et tester un vrai checkout
-□ Mettre BREVO_API_KEY + EMAIL_FROM (facultatif — reçus & relances par e-mail)
 □ Basculer DEMO_MODE:false + STRIPE_LIVE:true dans config.js
 □ Remplir legal.html (raison sociale, SIRET/RCS/EIN, TVA, e-mail, médiateur)
 □ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
@@ -332,11 +320,10 @@ est **hors-ligne + preuve de chantier + relances guidées** — ce positionnemen
 3. ✅ **Vérification serveur de l'abonnement** — `/api/sub` émet un jeton signé
    HMAC (`exp`), rafraîchi en ligne, tolérance hors-ligne 14 j ; Stripe reste la
    source de vérité.
-4. ✅ **Envoi d'e-mail** (Brevo, REST — sans SDK) : reçu de règlement envoyé par
-   le serveur dès que `/r/:slug?session_id=` confirme le paiement, plus une
-   relance e-mail 1 clic servie par le serveur (`POST /api/remind`,
-   anti-doublon 72 h). Les relances *totalement automatiques* nécessitent un
-   cron trigger, absent des Pages Functions → Worker dédié, reporté en P1.
+4. ⏸️ **Envoi d'e-mail** (retiré pour le moment — relances via WhatsApp / e-mail
+   applicatif, reçus affichés sur `/r/:slug`). Les relances *totalement
+   automatiques* nécessitent un cron trigger, absent des Pages
+   Functions → Worker dédié, reporté en P1.
 5. ✅ **Avoirs** — obligatoires en FR/BE : série `AVT` dédiée, créés depuis une
    facture (montant complet ou partiel, modifiables avant remboursement),
    montants négatifs dans l'aperçu/le portail/l'impression, suivi du
@@ -375,10 +362,9 @@ d'utilisateurs.
 - Ne jamais committer la **clé secrète** Stripe : `wrangler pages secret put STRIPE_SECRET_KEY`.
   Les droits d'abonnement sont signés côté serveur (clé dérivée du secret Stripe) —
   le navigateur ne détient qu'un jeton signé avec une expiration.
-- Les identifiants e-mail (`BREVO_API_KEY`, `EMAIL_FROM`) sont des secrets Pages,
-  jamais committés. `POST /api/remind` est limité par IP, n'agit que sur des
-  documents explicitement partagés (slug 96 bits), impose un intervalle de 72 h
-  par document et refuse les factures déjà payées.
+- Aucun e-mail serveur : les relances partent via WhatsApp / `mailto:` depuis
+  l'appareil (1 clic). Les copies D1 restent limitées aux documents
+  explicitement partagés.
 - `encaisse-export.json` et `.dev.vars` sont ignorés par Git.
 
 ## 11. Reprise du projet & due diligence
@@ -388,18 +374,18 @@ Ce qu'un repreneur doit savoir le jour J :
 | Point | État |
 |---|---|
 | Revenus / clients payants | Aucun — les paiements sont simulés (`DEMO_MODE`) |
-| Backend / base de données | **Existe** : Pages Functions (`functions/`) + table D1 `portal` — les secrets (Stripe, Brevo) vivent dans Cloudflare, jamais dans le dépôt |
+| Backend / base de données | **Existe** : Pages Functions (`functions/`) + table D1 `portal` — les secrets Stripe vivent dans Cloudflare, jamais dans le dépôt |
 | Données personnelles détenues par nous | **Uniquement des copies de documents explicitement partagés** dans D1 (e-mail client + payload du document) ; tout le reste reste sur l'appareil de l'utilisateur |
-| Comptes tiers à transférer | Cloudflare, Stripe, Brevo (e-mails), le registrar de domaine, GitHub |
+| Comptes tiers à transférer | Cloudflare, Stripe, le registrar de domaine, GitHub |
 | Stripe | Clé publishable committée (inoffensive par conception). **Clé secrète absente** |
-| Identité légale | `legal.html` ne contient plus de `[À COMPLÉTER]` littéraux, mais l'identité est encore fictive — **à authentifier (vrai SIRET/adresse) avant tout usage commercial** |
+| Identité légale | `legal.html` contient encore des `[À COMPLÉTER]` — **à remplir avant tout usage commercial** |
 | Conformité fiscale | Plateforme européenne agréée **pas encore branchée** (§7) |
 | Marque & domaine | Le domaine `encaisse.app` apparaît dans d'anciens brouillons — vérifier la propriété |
 | Build / CI | Aucun. Pas de `package.json`, pas de tests en CI |
 | Contrôles automatisés | Scripts exécutés au fil de l'eau pendant le développement (parses, complétude i18n, parcours jsdom) — **non committés** |
 
-Premiers conseils au nouveau mainteneur : reproduire §2, lire `VEILLE.md`, authentifier
-l'identité légale, puis brancher le P0 n° 6 (partenaire agréé e-facturation).
+Premiers conseils au nouveau mainteneur : reproduire §2, lire `VEILLE.md`, remplir
+les mentions légales, puis brancher le P0 n° 6 (partenaire agréé e-facturation).
 
 ## 12. Éléments tiers & licence
 

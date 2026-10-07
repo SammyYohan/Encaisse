@@ -13,7 +13,7 @@
 | **Storage** | `localStorage` on the user's device — no account, no server database |
 | **Deployment** | Cloudflare Pages (free tier) |
 | **i18n** | French source strings are the translation keys (gettext-style) |
-| **Status** | 🟢 Front + backend exist & wired (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, `legal.html` identity still fictional → see [Go-live checklist](#go-live-checklist) |
+| **Status** | 🟢 Front + backend exist & wired (Pages Functions + D1) · 🔴 `DEMO_MODE:true`, `legal.html` placeholders unfilled → see [Go-live checklist](#go-live-checklist) |
 
 ---
 
@@ -44,8 +44,8 @@
 - **Payment link** (Stripe card, SEPA Direct Debit, ACH, TWINT/manual transfer/cash noted separately) + printable
   PDF with QR code via the browser's print dialog.
 - **Guided follow-up**: D+3 polite → D+7 firm → D+15 formal notice, with **three
-  distinct pre-filled messages** for WhatsApp or e-mail (server-side Brevo
-  reminder uses the same 3 tiers), 1 click.
+  distinct pre-filled messages** for WhatsApp or e-mail in 1 click
+  (no server-side e-mail for now).
 - **Single cash screen**: who owes what, how long overdue, 30-day cash forecast.
 - **Offline-first**: works in a basement on a job site; installable as a PWA.
 - **Proof tools**: job-site photo attached to the document, on-device signature
@@ -96,7 +96,7 @@ document numbers are never reused).
 | `functions/` | **Backend (Pages Functions, no build)**: `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay` + server-rendered customer page `/r/:slug` |
 | `schema.sql`, `wrangler.toml` | D1 schema (table `portal`) + wrangler config (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | PWA manifest + PNG icons (192, 512, maskable, apple-touch) |
-| `legal.html` | Legal notice, terms and privacy policy (bilingual, **publisher identity to authenticate**) |
+| `legal.html` | Legal notice, terms and privacy policy (bilingual, **placeholders to fill**) |
 | `robots.txt`, `sitemap.xml`, `_headers` | SEO + Cloudflare security headers |
 | `README.md` / `README.fr.md` | This file |
 | `VEILLE.md` | Market & competitor research (EU + US) and prioritised plan |
@@ -250,33 +250,23 @@ npx wrangler d1 execute encaisse --remote --file=schema.sql
 # 2. Stripe secret — never in this repository
 npx wrangler pages secret put STRIPE_SECRET_KEY --project-name=<project>
 
-# 3. E-mails transactionnels (Brevo) — payment receipts + server-side reminders
-#    Create an account at app.brevo.com, generate an API key (v3), then:
-npx wrangler pages secret put BREVO_API_KEY --project-name=<project>
-npx wrangler pages secret put EMAIL_FROM     --project-name=<project>
-#    EMAIL_FROM format: "Encaisse <bonjour@tondomaine.fr>" — the sender address
-#    must be verified in Brevo (Settings → Senders & domains).
-#    Without these two secrets the endpoints answer 503 and the app silently
-#    falls back to mailto: — nothing breaks, e-mails simply stay off.
-
-# 4. Flip the two flags in config.js: DEMO_MODE:false, STRIPE_LIVE:true → push
+# 3. Flip the two flags in config.js: DEMO_MODE:false, STRIPE_LIVE:true → push
 ```
 
 Endpoints: `POST /api/checkout` (subscription Checkout, server-side prices) ·
 `GET /api/sub` (purchase check + HMAC entitlement token) · `POST /api/portal`
 (publishes `/r/:slug`, only on an explicit share) · `GET /api/pay` (invoice
-payment; amount comes from D1, never from the payer) · `POST /api/remind`
-(1-click reminder e-mailed by the server via Brevo, 72 h anti-doublon per
-document, 3 distinct D+3/D+7/D+15 tiers) · `POST /api/stripe-webhook`
-(signed Stripe webhook, strict amount + currency check, idempotent `paid_at`) ·
-`/r/:slug` (server-rendered invoice, confirms payment via
-`?session_id=` and e-mails the receipt to the customer — webhook is the
-no-browser-return path).
+payment; amount comes from D1, never from the payer) ·
+`POST /api/stripe-webhook` (signed Stripe webhook, strict amount + currency
+check, idempotent `paid_at`) · `/r/:slug` (server-rendered invoice, confirms
+payment via `?session_id=` and shows the receipt — webhook is the
+no-browser-return path). Reminders go out via WhatsApp / app e-mail (1 click,
+3 distinct D+3/D+7/D+15 tiers); no server-side e-mail for now.
 
 > **Automated (unattended) reminders are not possible on Pages Functions** —
 > Cloudflare does not expose cron triggers there. They require a small dedicated
-> Worker with a cron trigger reading the same D1 table (roadmap P1). The
-> reminder sent from the app is server-side and immediate instead.
+> Worker with a cron trigger reading the same D1 table (roadmap P1). Reminders
+> from the app go out via WhatsApp / app e-mail instead.
 
 ### Go-live checklist
 
@@ -285,7 +275,6 @@ no-browser-return path).
 □ Set SITE_URL in config.js
 □ Create D1 database + binding "DB" + run schema.sql (see above)
 □ Put STRIPE_SECRET_KEY (wrangler pages secret put) and test a real checkout
-□ Put BREVO_API_KEY + EMAIL_FROM (optional — receipt & reminder e-mails)
 □ Flip DEMO_MODE:false + STRIPE_LIVE:true in config.js
 □ Fill in legal.html (legal name, registration number, VAT, e-mail, ombudsman)
 □ Fill Réglages → My business (address, VAT number, IBAN) — printed on invoices
@@ -332,11 +321,9 @@ unlimited invoicing. The only defensible wedge is
 3. ✅ **Server-side subscription verification** — `/api/sub` issues an
    HMAC-signed token (`exp`), refreshed when online, 14-day offline grace;
    Stripe remains the source of truth.
-4. ✅ **E-mail sending** (Brevo, REST — no SDK): payment receipt mailed by the
-   server when `/r/:slug?session_id=` confirms the payment, plus a 1-click
-   server-side reminder (`POST /api/remind`, 72 h anti-doublon). *Fully
-   unattended* reminders need a cron trigger, which Pages Functions don't
-   support → separate Worker, moved to P1.
+4. ⏸️ **E-mail sending** (removed for now — reminders go via WhatsApp / app e-mail,
+   receipts display on `/r/:slug`). *Fully unattended* reminders need a cron
+   trigger, which Pages Functions don't support → separate Worker, moved to P1.
 5. ✅ **Credit notes (avoirs)** — legally required in FR/BE: dedicated `AVT`
    series, created from an invoice (full or partial, editable until refunded),
    negative amounts in preview/portal/print, refund tracking, never gated on
@@ -375,10 +362,8 @@ D1 5 GB and 5 M reads/day — ample for the first thousands of users.
   `wrangler pages secret put STRIPE_SECRET_KEY`. Subscription entitlements are
   HMAC-signed server-side (key derived from the Stripe secret) — the browser
   only ever holds a signed token with an expiry.
-- E-mail credentials (`BREVO_API_KEY`, `EMAIL_FROM`) are Pages secrets, never
-  committed. `POST /api/remind` is rate-limited per IP, only acts on documents
-  the user explicitly shared (96-bit slug), enforces a 72 h gap per document
-  and refuses paid invoices.
+- No server-side e-mail: reminders go out via WhatsApp / `mailto:` from the
+  device (1 click). D1 copies stay limited to explicitly shared documents.
 - `encaisse-export.json` and `.dev.vars` are git-ignored.
 
 ## 11. Handover & due diligence
@@ -388,18 +373,18 @@ What an acquirer should know on day one:
 | Item | Status |
 |---|---|
 | Revenue / paying customers | None — payments are simulated (`DEMO_MODE`) |
-| Backend / database | **Exists**: Pages Functions (`functions/`) + D1 table `portal` — secrets (Stripe, Brevo) live in Cloudflare, never in the repo |
+| Backend / database | **Exists**: Pages Functions (`functions/`) + D1 table `portal` — Stripe secrets live in Cloudflare, never in the repo |
 | Users' personal data held by us | **Only copies of explicitly shared documents** in D1 (customer e-mail + document payload); everything else stays on the user's device |
-| Third-party accounts needed to transfer | Cloudflare, Stripe, Brevo (e-mails), the domain registrar, GitHub |
+| Third-party accounts needed to transfer | Cloudflare, Stripe, the domain registrar, GitHub |
 | Stripe | Publishable key committed (harmless by design). **Secret key not present** |
-| Legal identity | `legal.html` has no literal `[TO COMPLETE]` markers left, but the identity inside is still fictional — **authenticate (real SIRET/address) before any commercial use** |
+| Legal identity | `legal.html` still has `[TO COMPLETE]` placeholders — **must be filled before any commercial use** |
 | Tax / invoicing compliance | Certified EU platform **not yet connected** (see §7) |
 | Trademark & domain | Domain `encaisse.app` referenced in older drafts — verify ownership |
 | Build / CI | None. No `package.json`, no tests in CI |
 | Automated checks | Scripts were run ad hoc during development (parse, i18n completeness, jsdom user flow) — **not committed** |
 
-Suggested first tasks for a new maintainer: reproduce §2, read `VEILLE.md`, authenticate the
-legal identity, then connect P0 item 6 (certified e-invoicing partner).
+Suggested first tasks for a new maintainer: reproduce §2, read `VEILLE.md`, fill the
+legal placeholders, then connect P0 item 6 (certified e-invoicing partner).
 
 ## 12. Third-party assets & licensing
 

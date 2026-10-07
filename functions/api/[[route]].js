@@ -1,10 +1,9 @@
 /* Encaisse — Pages Functions (le « Worker » du P0), un seul fichier catch-all :
-   aucune importation, zéro build, zéro dépendance (Stripe + Brevo appelés en REST).
+   aucune importation, zéro build, zéro dépendance (Stripe appelé en REST ; aucun e-mail serveur).
 
    POST /api/checkout  {kind:"sub", plan, cycle, zone} → {url} Stripe Checkout (abonnement ;
      l'origine de retour est celle de la requête, jamais celle du client)
    POST /api/portal    {slug?, hash, key?, doc, biz, cli?, lang} → {slug} page client /r/:slug (D1)
-   POST /api/remind    {slug, key?} → envoie la relance e-mail (Brevo, anti-doublon 72 h)
    POST /api/stripe-webhook (Stripe-Signature) → confirme un paiement sans retour navigateur
    POST /api/backup    {op:"push"|"pull", key, ...} → sauvegarde chiffrée zéro-lecture
    GET  /api/sub       ?session_id=… → vérifie l'achat, émet le jeton d'abonnement
@@ -15,8 +14,7 @@
      npx wrangler d1 create encaisse                    → UUID dans wrangler.toml + binding « DB »
      npx wrangler pages secret put STRIPE_SECRET_KEY
       npx wrangler pages secret put STRIPE_WEBHOOK_SECRET -> "Signing secret" whsec_... du endpoint webhook Stripe    → secret, jamais dans le repo
-     npx wrangler pages secret put BREVO_API_KEY        → clé API Brevo (e-mails transactionnels)
-     npx wrangler pages secret put EMAIL_FROM           → « Encaisse <bonjour@tondomaine.fr> »
+     (aucun e-mail serveur : relances via WhatsApp / e-mail applicatif depuis l'appareil)
    Le secret ne quitte jamais le serveur : le front ne reçoit qu'une URL de
    redirection et un jeton signé. */
 
@@ -57,46 +55,7 @@ function ipOf(request) {
   return request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "?";
 }
 
-/* ---------- e-mails transactionnels (Brevo, appel REST — miroir dans functions/r/[doc].js) ---------- */
-function parseFrom(v) {
-  const m = String(v || "").match(/^\s*([^<]*)<\s*([^>]+)\s*>$/);
-  return m ? { name: (m[1] || "Encaisse").trim().replace(/^"|"$/g, ""), email: m[2].trim() }
-           : { name: "Encaisse", email: String(v || "").trim() };
-}
-const isEmail = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v || ""));
-function emailConfigured(env) { return !!(env.BREVO_API_KEY && env.EMAIL_FROM); }
-
-async function sendMail(env, to, subject, text, replyTo) {
-  if (!emailConfigured(env)) return { ok: false, error: "email_non_configure" };
-  if (!isEmail(to)) return { ok: false, error: "destinataire_invalide" };
-  const payload = {
-    sender: parseFrom(env.EMAIL_FROM),
-    to: [{ email: String(to) }],
-    subject: String(subject).slice(0, 200),
-    textContent: String(text).slice(0, 10000)
-  };
-  if (isEmail(replyTo)) payload.replyTo = { email: String(replyTo) };
-  let res;
-  try {
-    res = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-  } catch (e) {
-    return { ok: false, error: "email_injoignable" };
-  }
-  if (!res.ok) return { ok: false, error: "email_erreur" };
-  return { ok: true };
-}
-
-function fmtCents(c, devise, lang) {
-  const n = (Number(c) || 0) / 100;
-  try {
-    return new Intl.NumberFormat(lang === "en" ? "en-GB" : "fr-FR",
-      { style: "currency", currency: CUR[devise] || "EUR", maximumFractionDigits: 2 }).format(n);
-  } catch (e) { return n.toFixed(2) + " " + devise; }
-}
+/* (E-mails serveur retirés pour le moment : relances via WhatsApp / mailto depuis l'appareil.) */
 
 /* ---------- Stripe en REST (pas de SDK : le dépôt n'a pas de package.json) ---------- */
 function flatten(params, obj, prefix) {
@@ -203,7 +162,6 @@ export async function onRequestPost(ctx) {
   const seg = routeOf(ctx.request);
   if (seg === "checkout") return postCheckout(ctx);
   if (seg === "portal") return postPortal(ctx);
-  if (seg === "remind") return postRemind(ctx);
   if (seg === "stripe-webhook") return postStripeWebhook(ctx);
   if (seg === "backup") return postBackup(ctx);
   if (seg === "sub" || seg === "pay") return json({ error: "methode_invalide" }, 405);
@@ -214,7 +172,7 @@ export async function onRequestGet(ctx) {
   const seg = routeOf(ctx.request);
   if (seg === "sub") return getSub(ctx);
   if (seg === "pay") return getPay(ctx);
-  if (seg === "checkout" || seg === "portal" || seg === "remind" || seg === "stripe-webhook" || seg === "backup") return json({ error: "methode_invalide" }, 405);
+  if (seg === "checkout" || seg === "portal" || seg === "stripe-webhook" || seg === "backup") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
 }
 
@@ -328,89 +286,6 @@ async function postPortal(ctx) {
   }
   return json({ slug: slug });
 }
-
-/* POST /api/remind — relance e-mail envoyée PAR LE SERVEUR (Brevo), en 1 clic
-   depuis la feuille « Relancer » de l'app. Anti-doublon : 72 h minimum entre
-   deux relances sur un même document (colonne remind_at). Le payload D1 est
-   rafraîchi à chaque ouverture de la feuille (ensurePortal) : statut/toujours
-   à jour avant l'envoi. Pas de cron sur Pages Functions (limitation
-   Cloudflare) : les relances automatiques 24/7 = Worker dédié (voir README). */
-async function postRemind(ctx) {
-  const { request, env } = ctx;
-  if (rateLimited("rm:" + ipOf(request), 20)) return json({ error: "trop_de_requetes" }, 429);
-  if (!env.DB) return json({ error: "portail_non_configure" }, 503);
-  let b;
-  try { b = await request.json(); } catch (e) { return json({ error: "json_invalide" }, 400); }
-  const slug = typeof b.slug === "string" && /^[0-9a-f]{24}$/.test(b.slug) ? b.slug : "";
-  if (!slug) return json({ error: "slug_invalide" }, 400);
-  const row = await env.DB.prepare(
-    "SELECT payload, paid_at, remind_count, remind_at, owner FROM portal WHERE slug = ?"
-  ).bind(slug).first();
-  if (!row) return json({ error: "document_introuvable" }, 404);
-  if (row.owner) {
-    const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
-    if (!key || await sha256hex(key) !== row.owner) return json({ error: "acces_refuse" }, 403);
-  }
-  let p;
-  try { p = JSON.parse(row.payload); } catch (e) { return json({ error: "document_corrompu" }, 500); }
-  const d = p.doc || {};
-  if (d.type !== "facture") return json({ error: "pas_une_facture" }, 400);
-  if (row.paid_at || d.statut === "paye") return json({ error: "facture_payee" }, 409);
-  const to = (p.cli || {}).e || "";
-  if (!isEmail(to)) return json({ error: "pas_d_email" }, 400);
-  if (!emailConfigured(env)) return json({ error: "email_non_configure" }, 503);
-  const now = Date.now();
-  const last = Number(row.remind_at) || 0;
-  if (last && now - last < 72 * 3600e3) return json({ error: "relance_recente", remind_at: last }, 429);
-
-  const lang = p.lang === "en" ? "en" : "fr";
-  const biz = p.biz || {};
-  const tt = totals(d);
-  const who = String(d.client || "").split("—")[0].trim();
-  const late = Math.max(0, Math.floor((now - new Date(String(d.eche || today()) + "T12:00:00Z").getTime()) / 864e5));
-  const url = new URL(request.url).origin + "/r/" + slug;
-  const amount = fmtCents(tt.net, biz.devise, lang);
-  /* 3 tons réellement distincts, alignés sur le front (J+3 poli / J+7 ferme / J+15 mise en demeure). */
-  const tier = late <= 3 ? 0 : late <= 10 ? 1 : 2;
-  const subject = lang === "en"
-    ? (tier === 2 ? "Formal notice — invoice " : tier === 1 ? "Overdue — invoice " : "Reminder — invoice ") + (d.numero || "")
-    : (tier === 2 ? "Mise en demeure — facture " : tier === 1 ? "Facture impayée — " : "Relance — facture ") + (d.numero || "");
-  let text;
-  if (lang === "en") {
-    text = tier === 0
-      ? "Hello " + (who || "you") + ", a friendly reminder: invoice " + (d.numero || "") + " of " + amount +
-        " (due " + (d.eche || "") + ", " + late + " day(s) overdue).\nPay securely here: " + url +
-        "\n\nThank you very much \ud83d\ude4f — " + String(biz.nom || "")
-      : tier === 1
-      ? "Hello " + (who || "you") + ", invoice " + (d.numero || "") + " of " + amount + " is unpaid for " + late + " day(s) (due " + (d.eche || "") + ").\nPlease pay here: " + url +
-        "\nWithout payment within 7 days, statutory late penalties will apply.\nRegards, " + String(biz.nom || "")
-      : "Formal notice — invoice " + (d.numero || "") + " of " + amount + " unpaid for " + late + " day(s) (due " + (d.eche || "") + ").\nFinal reminder before collection: pay here " + url +
-        ".\nStatutory penalties + €40 flat recovery fee apply.\n— " + String(biz.nom || "");
-  } else {
-    text = tier === 0
-      ? "Bonjour " + (who || "à vous") + ", petit rappel : facture " + (d.numero || "") + " de " + amount +
-        " (échéance " + (d.eche || "") + ", " + late + "j de retard).\nLien pour régler : " + url +
-        "\n\nMerci beaucoup \ud83d\ude4f — " + String(biz.nom || "")
-      : tier === 1
-      ? "Bonjour " + (who || "à vous") + ", facture " + (d.numero || "") + " de " + amount + " impayée depuis " + late + "j (échéance " + (d.eche || "") + ").\nMerci de régler ici : " + url +
-        "\nSans règlement sous 7 jours, des pénalités légales s'appliqueront.\nCordialement, " + String(biz.nom || "")
-      : "Mise en demeure — facture " + (d.numero || "") + " de " + amount + " impayée depuis " + late + "j (échéance " + (d.eche || "") + ").\nDernier rappel avant recouvrement : réglez ici " + url +
-        ".\nPénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables.\n— " + String(biz.nom || "");
-  }
-
-  const sent = await sendMail(env, to, subject, text, biz.contact || "");
-  if (!sent.ok) {
-    return json({ error: sent.error }, sent.error === "email_non_configure" ? 503 : 502);
-  }
-  const count = (Number(row.remind_count) || 0) + 1;
-  try {
-    await env.DB.prepare("UPDATE portal SET remind_count = ?, remind_at = ? WHERE slug = ?")
-      .bind(count, now, slug).run();
-  } catch (e) { /* l'e-mail est parti : on n'échoue pas la réponse pour la trace */ }
-  return json({ ok: true, count: count });
-}
-
-function today() { return new Date().toISOString().slice(0, 10); }
 
 /* GET /api/sub — vérification serveur de l'abonnement (P0 n°3).
    ?session_id= : après paiement Stripe → vérifie la session, émet le jeton.
@@ -572,19 +447,7 @@ async function postStripeWebhook(ctx) {
   const now = Date.now();
   const up = await env.DB.prepare("UPDATE portal SET paid_at = ? WHERE slug = ? AND paid_at IS NULL").bind(now, slug).run().catch(function () { return null; });
   if (!up || !up.meta || up.meta.changes !== 1) return json({ received: true });
-  /* Reçu e-mail best-effort (miroir du retour navigateur dans functions/r/[doc].js). */
-  try {
-    const cli = (pp && pp.cli) || {}, biz = (pp && pp.biz) || {}, lg = pp && pp.lang === "en" ? "en" : "fr";
-    if (isEmail(cli.e)) {
-      const amt = fmtCents(exp.net, biz.devise, lg);
-      const pageUrl = new URL(request.url).origin + "/r/" + slug;
-      const subject = lg === "en" ? "Payment received — " + (dd.numero || "") : "Paiement reçu — " + (dd.numero || "");
-      const body = lg === "en"
-        ? "Hello,\n\nWe confirm receipt of your payment of " + amt + " for invoice " + (dd.numero || "") + ".\n\nYour receipt is available here: " + pageUrl + "\n\nThank you for your trust!\n— " + String(biz.nom || "")
-        : "Bonjour,\n\nNous confirmons la bonne réception de votre règlement de " + amt + " pour la facture " + (dd.numero || "") + ".\n\nVotre reçu est disponible ici : " + pageUrl + "\n\nMerci pour votre confiance !\n— " + String(biz.nom || "");
-      await sendMail(env, cli.e, subject, body, biz.contact || "");
-    }
-  } catch (e) {}
+  /* Pas de reçu e-mail (envoi serveur retiré) : le reçu reste affiché sur la page /r/:slug. */
   return json({ received: true, paid: true });
 }
 

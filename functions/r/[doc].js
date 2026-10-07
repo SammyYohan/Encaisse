@@ -79,34 +79,7 @@ function totals(d) {
   return { ht, tva, ttc, acompte, net: Math.max(0, ttc - acompte) };
 }
 
-/* ---------- e-mails transactionnels (Brevo) — miroir de functions/api/[[route]].js ---------- */
-function parseFrom(v) {
-  const m = String(v || "").match(/^\s*([^<]*)<\s*([^>]+)\s*>$/);
-  return m ? { name: (m[1] || "Encaisse").trim().replace(/^"|"$/g, ""), email: m[2].trim() }
-           : { name: "Encaisse", email: String(v || "").trim() };
-}
-const isEmail = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v || ""));
-const emailConfigured = env => !!(env.BREVO_API_KEY && env.EMAIL_FROM);
-
-async function sendMail(env, to, subject, text, replyTo) {
-  if (!emailConfigured(env)) return false;
-  if (!isEmail(to)) return false;
-  const payload = {
-    sender: parseFrom(env.EMAIL_FROM),
-    to: [{ email: String(to) }],
-    subject: String(subject).slice(0, 200),
-    textContent: String(text).slice(0, 10000)
-  };
-  if (isEmail(replyTo)) payload.replyTo = { email: String(replyTo) };
-  try {
-    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    return res.ok;
-  } catch (e) { return false; }
-}
+/* (E-mails serveur retirés pour le moment : relances via WhatsApp / mailto depuis l'appareil.) */
 
 /* ---------- gabarit ---------- */
 const CSS = `
@@ -307,28 +280,7 @@ export async function onRequest(ctx) {
     } catch (e) { /* Stripe injoignable : la page reste affichée, sans badge */ }
   }
 
-  /* Reçu au client par e-mail dès le paiement confirmé (best-effort :
-     jamais bloquant pour l'affichage de la page). */
-  if (justPaid && emailConfigured(env)) {
-    try {
-      const pp = pp0;
-      const dd = pp.doc || {};
-      if (dd.type === "facture" && isEmail((pp.cli || {}).e)) {
-        const lg = pp.lang === "en" ? "en" : "fr";
-        const bb = pp.biz || {};
-        const tt2 = totals(dd);
-        const pageUrl = url.origin + "/r/" + slug;
-        const amt = money(tt2.net, bb.devise, lg);
-        const subject = lg === "en" ? "Payment received — " + (dd.numero || "") : "Paiement reçu — " + (dd.numero || "");
-        const body = lg === "en"
-          ? "Hello,\n\nWe confirm receipt of your payment of " + amt + " for invoice " + (dd.numero || "") +
-            ".\n\nYour receipt is available here: " + pageUrl + "\n\nThank you for your trust!\n— " + String(bb.nom || "")
-          : "Bonjour,\n\nNous confirmons la bonne réception de votre règlement de " + amt + " pour la facture " + (dd.numero || "") +
-            ".\n\nVotre reçu est disponible ici : " + pageUrl + "\n\nMerci pour votre confiance !\n— " + String(bb.nom || "");
-        await sendMail(env, pp.cli.e, subject, body, bb.contact || "");
-      }
-    } catch (e) { /* échec d'e-mail : sans conséquence sur la page */ }
-  }
+  /* Pas de reçu e-mail (envoi serveur retiré) : le reçu reste affiché sur cette page. */
 
   const p = pp0;
   const canceled = url.searchParams.get("canceled") === "1";
