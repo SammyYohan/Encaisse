@@ -66,7 +66,7 @@
         <div class="art a4" aria-hidden="true"><span class="kpi"><b data-i18n="À encaisser">À encaisser</b><strong>18 450 €</strong></span><span class="kpi k2"><b data-i18n="En retard">En retard</b><strong>4 500 €</strong></span></div>
         <h1 data-i18n-html="Inscription 30 secondes.<br><mark>Tarif de ton pays.</mark>">Inscription 30 secondes.<br><mark>Tarif de ton pays.</mark></h1>
         <p data-i18n="Dis-moi où tu factures : le prix s'adapte automatiquement. Devis illimités, 3 factures gratuites par mois, sans carte.">Dis-moi où tu factures : le prix s'adapte automatiquement. Devis illimités, 3 factures gratuites par mois, sans carte.</p>
-        <input class="onb-input" id="onbBiz" placeholder="Nom de ta boîte (ex : Atelier Koné)" data-i18n-ph="Nom de ta boîte (ex : Atelier Koné)" maxlength="60" autocomplete="organization">
+        <input class="onb-input" id="onbBiz" placeholder="Le nom qui apparaîtra sur tes factures" data-i18n-ph="Le nom qui apparaîtra sur tes factures" maxlength="60" autocomplete="organization">
         <select class="onb-input" id="onbSecteur" aria-label="Ton activité">
           <option value="artisan" data-i18n="🔨 Artisan / BTP">🔨 Artisan / BTP</option>
           <option value="commerce" data-i18n="🛍️ Commerce / Boutique">🛍️ Commerce / Boutique</option>
@@ -150,7 +150,7 @@
       <h2 class="pad" data-i18n="Mon activité">Mon activité</h2>
       <div class="card plan-card" id="planCard"></div>
       <form class="card form" id="bizForm">
-        <label><span data-i18n="Nom entreprise / activité">Nom entreprise / activité</span><input name="biz" required maxlength="60" placeholder="Ex : Atelier Koné BTP"></label>
+        <label><span data-i18n="Nom entreprise / activité">Nom entreprise / activité</span><input name="biz" required maxlength="60"></label>
         <label><span data-i18n="Ton activité">Ton activité</span><select name="secteur" id="secSel">
           <option value="artisan" data-i18n="🔨 Artisan / BTP">🔨 Artisan / BTP</option>
           <option value="commerce" data-i18n="🛍️ Commerce / Boutique">🛍️ Commerce / Boutique</option>
@@ -170,13 +170,13 @@
         </div>
         <div class="grid2">
           <label><span data-i18n="Langue de l'interface">Langue de l'interface</span><select name="lang" id="langSel"><option value="fr">🇫🇷 Français</option><option value="en">🇬🇧 English</option></select></label>
-          <label><span data-i18n="Adresse (mentions légales)">Adresse (mentions légales)</span><input name="adresse" maxlength="90" placeholder="12 rue des Arts, 75011 Paris"></label>
+          <label><span data-i18n="Adresse (mentions légales)">Adresse (mentions légales)</span><input name="adresse" maxlength="90" placeholder="N°, rue, code postal, ville"></label>
         </div>
         <div class="grid2">
-          <label><span data-i18n="E-mail / téléphone">E-mail / téléphone</span><input name="contact" maxlength="80" placeholder="contact@atelier.fr · +33 6 …"></label>
-          <label><span data-i18n="N° TVA / SIRET / EIN">N° TVA / SIRET / EIN</span><input name="tvaId" maxlength="40" placeholder="FR12345678901"></label>
+          <label><span data-i18n="E-mail / téléphone">E-mail / téléphone</span><input name="contact" maxlength="80" placeholder="nom@exemple.fr · +33 …"></label>
+          <label><span data-i18n="N° TVA / SIRET / EIN">N° TVA / SIRET / EIN</span><input name="tvaId" maxlength="40" placeholder="Ex : FR + 11 chiffres"></label>
         </div>
-        <label><span data-i18n="IBAN / RIB (facultatif)">IBAN / RIB (facultatif)</span><input name="iban" maxlength="40" placeholder="FR76 3000 …"></label>
+        <label><span data-i18n="IBAN / RIB (facultatif)">IBAN / RIB (facultatif)</span><input name="iban" maxlength="40" placeholder="Ex : FR76 …"></label>
         <p class="rule" id="ruleLine"></p>
         <div class="pay-toggles" id="payToggles"></div>
         <button class="btn primary" type="submit" data-i18n="Enregistrer">Enregistrer</button>

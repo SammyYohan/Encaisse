@@ -227,7 +227,7 @@ const PLANS={
 /* ---------- secteurs : vocabulaires + suggestions 1-clic ---------- */
 const SECTEURS={
   artisan:{
-    label:{fr:"🔨 Artisan / BTP",en:"🔨 Contractor / Trades"},ex:{fr:"Peinture salon 45m²",en:"Paint living room 45m²"},unit:"",photo:{fr:"📷 Photo chantier (preuve)",en:"📷 Site photo (proof)"},cli:{fr:"Ex : Awa — Villa Cocody",en:"Ex: Smith — 54 Oak St"},
+    label:{fr:"🔨 Artisan / BTP",en:"🔨 Contractor / Trades"},ex:{fr:"Peinture salon 45m²",en:"Paint living room 45m²"},unit:"",photo:{fr:"📷 Photo chantier (preuve)",en:"📷 Site photo (proof)"},cli:{fr:"Ex : nom du client + repère",en:"E.g. client name + reference"},
     presets:[
       {lib:{fr:"Main d'œuvre journée",en:"Labour — full day"},q:1,p:{"€":350,CHF:450,$:400}},
       {lib:{fr:"Main d'œuvre (1h)",en:"Labour (1h)"},q:2,p:{"€":55,CHF:75,$:65}},
@@ -236,7 +236,7 @@ const SECTEURS={
       {lib:{fr:"Évacuation gravats / nettoyage",en:"Debris removal / cleanup"},q:1,p:{"€":80,CHF:110,$:95}}
     ]},
   commerce:{
-    label:{fr:"🛍️ Commerce / Boutique",en:"🛍️ Retail / Shop"},ex:{fr:"Robe wax taille M",en:"Dress size M"},unit:{fr:"pce",en:"ea"},photo:{fr:"📷 Photo article (preuve)",en:"📷 Product photo (proof)"},cli:{fr:"Ex : Aminata — Boutique Plateau",en:"Ex: Gomez — Main St store"},
+    label:{fr:"🛍️ Commerce / Boutique",en:"🛍️ Retail / Shop"},ex:{fr:"Robe wax taille M",en:"Dress size M"},unit:{fr:"pce",en:"ea"},photo:{fr:"📷 Photo article (preuve)",en:"📷 Product photo (proof)"},cli:{fr:"Ex : nom du client + repère",en:"E.g. client name + reference"},
     presets:[
       {lib:{fr:"Article standard",en:"Standard item"},q:1,p:{"€":35,CHF:45,$:40}},
       {lib:{fr:"Lot / Pack promo",en:"Bundle / promo pack"},q:1,p:{"€":85,CHF:110,$:95}},
@@ -244,7 +244,7 @@ const SECTEURS={
       {lib:{fr:"Frais d'emballage cadeau",en:"Gift wrapping"},q:1,p:{"€":5,CHF:7,$:6}}
     ]},
   services:{
-    label:{fr:"💼 Services / Freelance",en:"💼 Services / Freelance"},ex:{fr:"Logo + charte graphique",en:"Logo + brand guide"},unit:"h",photo:{fr:"📷 Capture livrable (preuve)",en:"📷 Deliverable screenshot"},cli:{fr:"Ex : Cabinet Ndiaye — Audit",en:"Ex: Ndiaye LLP — Audit"},
+    label:{fr:"💼 Services / Freelance",en:"💼 Services / Freelance"},ex:{fr:"Logo + charte graphique",en:"Logo + brand guide"},unit:"h",photo:{fr:"📷 Capture livrable (preuve)",en:"📷 Deliverable screenshot"},cli:{fr:"Ex : nom du client + repère",en:"E.g. client name + reference"},
     presets:[
       {lib:{fr:"Consultation / Conseil (1h)",en:"Consulting (1h)"},q:1,p:{"€":90,CHF:130,$:110}},
       {lib:{fr:"Prestation journée complète",en:"Full-day engagement"},q:1,p:{"€":450,CHF:650,$:550}},
@@ -252,7 +252,7 @@ const SECTEURS={
       {lib:{fr:"Maintenance mensuelle",en:"Monthly maintenance"},q:1,p:{"€":150,CHF:220,$:180}}
     ]},
   food:{
-    label:{fr:"🍲 Resto / Food",en:"🍲 Restaurant / Food"},ex:{fr:"Buffet 20 couverts",en:"Buffet, 20 covers"},unit:{fr:"plat",en:"dish"},photo:{fr:"📷 Photo plat / événement",en:"📷 Dish / event photo"},cli:{fr:"Ex : Mariage Sarr — 100 invités",en:"Ex: Smith wedding — 100 guests"},
+    label:{fr:"🍲 Resto / Food",en:"🍲 Restaurant / Food"},ex:{fr:"Buffet 20 couverts",en:"Buffet, 20 covers"},unit:{fr:"plat",en:"dish"},photo:{fr:"📷 Photo plat / événement",en:"📷 Dish / event photo"},cli:{fr:"Ex : nom du client + repère",en:"E.g. client name + reference"},
     presets:[
       {lib:{fr:"Menu traiteur complet (par pers.)",en:"Full catering menu (per person)"},q:10,p:{"€":28,CHF:38,$:32}},
       {lib:{fr:"Plat signature / Buffet",en:"Signature dish / Buffet"},q:1,p:{"€":180,CHF:240,$:200}},
@@ -260,7 +260,7 @@ const SECTEURS={
       {lib:{fr:"Service & mise en place",en:"Service & setup"},q:1,p:{"€":120,CHF:160,$:140}}
     ]},
   beaute:{
-    label:{fr:"💇 Beauté / Bien-être",en:"💇 Beauty / Wellness"},ex:{fr:"Tresses + pose",en:"Braids + install"},unit:{fr:"séance",en:"session"},photo:{fr:"📷 Photo avant/après",en:"📷 Before / after photo"},cli:{fr:"Ex : Fatou — RDV samedi",en:"Ex: Davis — appointment Sat"},
+    label:{fr:"💇 Beauté / Bien-être",en:"💇 Beauty / Wellness"},ex:{fr:"Tresses + pose",en:"Braids + install"},unit:{fr:"séance",en:"session"},photo:{fr:"📷 Photo avant/après",en:"📷 Before / after photo"},cli:{fr:"Ex : nom du client + repère",en:"E.g. client name + reference"},
     presets:[
       {lib:{fr:"Prestation coiffure / soin",en:"Hair / beauty service"},q:1,p:{"€":60,CHF:85,$:75}},
       {lib:{fr:"Soin complet & massage",en:"Full treatment & massage"},q:1,p:{"€":85,CHF:120,$:105}},
@@ -268,7 +268,7 @@ const SECTEURS={
       {lib:{fr:"Produit de soin à domicile",en:"Take-home care product"},q:1,p:{"€":30,CHF:40,$:35}}
     ]},
   transport:{
-    label:{fr:"🛵 Transport / Livraison",en:"🛵 Transport / Delivery"},ex:{fr:"Livraison centre — banlieue",en:"Delivery downtown — suburbs"},unit:{fr:"course",en:"trip"},photo:{fr:"📷 Photo colis / bord",en:"📷 Parcel / dashboard photo"},cli:{fr:"Ex : Diallo — Course aéroport",en:"Ex: Carter — Airport run"},
+    label:{fr:"🛵 Transport / Livraison",en:"🛵 Transport / Delivery"},ex:{fr:"Livraison centre — banlieue",en:"Delivery downtown — suburbs"},unit:{fr:"course",en:"trip"},photo:{fr:"📷 Photo colis / bord",en:"📷 Parcel / dashboard photo"},cli:{fr:"Ex : nom du client + repère",en:"E.g. client name + reference"},
     presets:[
       {lib:{fr:"Course standard en ville",en:"Standard city run"},q:1,p:{"€":15,CHF:25,$:20}},
       {lib:{fr:"Transfert aéroport / longue dist.",en:"Airport transfer / long distance"},q:1,p:{"€":55,CHF:80,$:70}},
@@ -857,7 +857,7 @@ function openClient(){
       <label>${T("E-mail")}<input id="cMail" type="email" maxlength="80" placeholder="client@exemple.com"></label>
       <label>${T("Téléphone / WhatsApp")}<input id="cTel" placeholder="+33 6 …" inputmode="tel"></label>
     </div>
-    <label>${T("Adresse (pour la facture)")}<input id="cAdr" maxlength="90" placeholder="${T("12 rue des Arts, 75011 Paris")}"></label>
+    <label>${T("Adresse (pour la facture)")}<input id="cAdr" maxlength="90" placeholder="${T("N°, rue, code postal, ville")}"></label>
     <label>${T("N° TVA / VAT / EIN (facultatif)")}<input id="cTva" maxlength="40"></label>
     <div class="row"><button class="btn primary" id="cSave" type="button" style="flex:1">${T("Ajouter ✓")}</button><button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button></div>
   </div>`);
