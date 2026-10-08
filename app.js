@@ -9,8 +9,27 @@ const T=(s,v)=>typeof window.t==="function"?window.t(s,v):s;
 const lang=()=>{try{return window.getLang()||"fr"}catch(e){return "fr"}};
 const loc=v=>(v&&typeof v==="object")?(v[lang()]||v.fr):v;
 
-/* ---------- pays : Europe + US uniquement ----------
-   Libellés = pays uniquement (jamais de promesse de conformité).
+  /* Déduction locale sans GPS, IP ni requête réseau. Elle sert uniquement à
+     présélectionner un pays déjà supporté pendant le premier démarrage. */
+  function detectSupportedCountry(){
+    try{
+      const languages=[...(navigator.languages||[]),navigator.language||""]
+        .map(x=>String(x).toLowerCase());
+      const region=languages.map(x=>x.match(/[-_]([a-z]{2})$/)?.[1]).find(Boolean);
+      const byRegion={fr:"FR",be:"BE",ch:"CH",us:"US",ca:"US"};
+      if(region&&byRegion[region])return byRegion[region];
+      const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
+      const byTimezone={
+        "Europe/Paris":"FR","Europe/Brussels":"BE","Europe/Zurich":"CH",
+        "America/New_York":"US","America/Chicago":"US","America/Denver":"US",
+        "America/Los_Angeles":"US","America/Anchorage":"US","Pacific/Honolulu":"US"
+      };
+      return byTimezone[tz]||"FR";
+    }catch{return "FR"}
+  }
+
+  /* ---------- pays : Europe + US uniquement ----------
+  Libellés = pays uniquement (jamais de promesse de conformité).
    La transmission certifiée (PDP France, Peppol Belgique, QR SIX) exige une
    plateforme agréée branchée — voir fiscalMention() + avertissement produit. */
 const PAYS={
@@ -383,6 +402,8 @@ function setSlide(n){
 function initOnb(){
   if(localStorage.getItem(LS_ON)){$("#onb").hidden=true;return}
   document.querySelector("#app")?.classList.add("onb-on");
+  const suggestedCountry=detectSupportedCountry();
+  $$("#onbPays button").forEach(button=>button.classList.toggle("is-sel",button.dataset.pays===suggestedCountry));
   setSlide(0);
   /* Sélecteur de langue : les 24 langues UE, noms natifs (norme : on ne traduit
      jamais le nom d'une langue). Recharge + réapplique tout à chaque choix. */

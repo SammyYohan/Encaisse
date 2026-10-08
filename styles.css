@@ -283,6 +283,47 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .inv-legal-footer{margin-top:12px;border-top:1px solid var(--line);padding-top:8px;font-size:10px;color:var(--mut);line-height:1.4}
 .inv-signed-box{margin-top:10px;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 
+/* polish premium : profondeur, mouvement et retours d'interaction */
+body{background:radial-gradient(900px 520px at 8% -8%,rgba(167,243,208,.72),transparent 62%),radial-gradient(760px 480px at 100% 0%,rgba(221,214,254,.7),transparent 60%),var(--bg);background-attachment:fixed}
+.phone{box-shadow:0 24px 70px rgba(15,23,42,.16),0 2px 8px rgba(15,23,42,.06);transition:box-shadow .35s ease,transform .35s ease}
+.phone::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;border:1px solid rgba(255,255,255,.7);z-index:25;mix-blend-mode:overlay}
+.top{background:linear-gradient(180deg,rgba(248,250,252,.98) 64%,rgba(248,250,252,0));backdrop-filter:blur(10px)}
+.logo{position:relative;overflow:hidden;box-shadow:0 6px 16px rgba(16,185,129,.28)}
+.logo::after{content:"";position:absolute;inset:-40% auto -40% -80%;width:45%;background:rgba(255,255,255,.45);transform:rotate(22deg);animation:logoSheen 5s ease-in-out infinite}
+@keyframes logoSheen{0%,65%{left:-80%}100%{left:150%}}
+.hero{background:linear-gradient(135deg,#0b1226 0%,#172554 52%,#0f766e 150%);box-shadow:0 16px 34px rgba(15,23,42,.2)}
+.hero::before{content:"";position:absolute;inset:-40% -20% auto auto;width:280px;height:280px;background:radial-gradient(circle,rgba(52,211,153,.25),transparent 68%);animation:heroGlow 8s ease-in-out infinite alternate}
+@keyframes heroGlow{to{transform:translate(-36px,28px) scale(1.15);opacity:.65}}
+.kpi-card{transition:transform .22s cubic-bezier(.22,.9,.3,1),background .22s ease,box-shadow .22s ease}
+.kpi-card:hover{transform:translateY(-3px);background:#ffffff22;box-shadow:0 10px 22px rgba(2,6,23,.14)}
+.doc,.card,.empty{transition:transform .22s cubic-bezier(.22,.9,.3,1),box-shadow .22s ease,border-color .22s ease}
+.doc[data-id]:hover,.card:hover{transform:translateY(-2px);border-color:#cbd5e1;box-shadow:0 12px 28px rgba(15,23,42,.1)}
+.empty{box-shadow:0 6px 18px rgba(15,23,42,.04)}
+.btn,.chip-btn,.filters button,.pay-toggles button{transition:transform .2s cubic-bezier(.22,.9,.3,1),box-shadow .2s ease,background .2s ease,border-color .2s ease}
+.btn:hover,.chip-btn:hover,.filters button:hover,.pay-toggles button:hover{transform:translateY(-2px);box-shadow:0 7px 16px rgba(15,23,42,.1)}
+.btn.primary:hover{box-shadow:0 12px 24px rgba(16,185,129,.4);filter:saturate(1.08)}
+.tabs{box-shadow:0 16px 36px rgba(15,23,42,.16);transition:box-shadow .3s ease}
+.tabs button{transition:color .2s ease,background .25s cubic-bezier(.22,.9,.3,1),transform .2s ease}
+.tabs button:hover{transform:translateY(-2px);color:var(--ink)}
+.tabs button.is-on{box-shadow:0 5px 14px rgba(15,23,42,.18)}
+.fab{animation:fabBreathe 3.8s ease-in-out infinite;transition:transform .2s cubic-bezier(.22,.9,.3,1),box-shadow .2s ease}
+.fab:hover{transform:translateY(-4px) scale(1.03);box-shadow:0 16px 34px rgba(2,6,23,.4)}
+@keyframes fabBreathe{0%,100%{box-shadow:0 12px 30px rgba(2,6,23,.35)}50%{box-shadow:0 14px 36px rgba(16,185,129,.28)}}
+.search{transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+.search:focus-within{box-shadow:0 7px 18px rgba(16,185,129,.12);transform:translateY(-1px)}
+.install-bar,.demo-bar{animation:rise .45s cubic-bezier(.22,.9,.3,1)}
+.sheet{box-shadow:0 -24px 70px rgba(2,6,23,.34)}
+.scrim{animation:scrimIn .25s ease}
+@keyframes scrimIn{from{opacity:0}to{opacity:1}}
+.onb{background:linear-gradient(135deg,#081225,#111c3b)}
+.onb::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.05) 42%,transparent 64%);transform:translateX(-100%);animation:onbSheen 9s ease-in-out infinite;pointer-events:none}
+@keyframes onbSheen{0%,62%{transform:translateX(-100%)}85%,100%{transform:translateX(100%)}}
+.art{box-shadow:inset 0 1px rgba(255,255,255,.12),0 14px 34px rgba(2,6,23,.12)}
+.pays-grid button{transition:transform .2s ease,background .2s ease,border-color .2s ease}
+.pays-grid button:hover{transform:translateY(-2px);background:#ffffff22;border-color:#6ee7b7}
+.dots i.is-on{box-shadow:0 0 0 4px rgba(255,255,255,.1)}
+.toast.show{box-shadow:0 10px 25px rgba(2,6,23,.25)}
+
 /* impression conforme */
 @media print{
   body{background:#fff!important;color:#000!important}
