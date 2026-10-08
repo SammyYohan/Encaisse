@@ -409,7 +409,13 @@ function refreshOnbPrice(){
 }
 function finishOnb(){
   const sel=$("#onbPays .is-sel")?.dataset?.pays||"FR";
-  const biz=($("#onbBiz")?.value||"").trim().slice(0,60);
+  const biz=$("#onbBiz")?.value||"".trim().slice(0,60);
+  if(!biz){
+    const input=$("#onbBiz");
+    input?.focus();
+    toast(T("Nom requis"));
+    return;
+  }
   const sx=$("#onbSecteur")?.value||"artisan";
   /* Compte vierge : aucun seeding — profil configuré, documents à créer. */
   S.biz.pays=sel;S.biz.devise=PAYS[sel].devise;S.biz.moyens=[...PAYS[sel].moyens];
