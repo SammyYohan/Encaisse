@@ -6,7 +6,7 @@
 <title>Encaisse — Quote → Invoice → Paid</title>
 <meta name="description" content="Quote in 60s, invoice with your country's legal mentions, online payment link, guided reminders. Offline-first.">
 <meta name="theme-color" content="#0f172a">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -22,6 +22,8 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/icon-192.png">
+<script>/* Thème clair/sombre/système, posé avant le premier rendu (pas de flash) : lu depuis S.theme, "auto" suit l'appareil. */
+try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"{}");if(__s&&(__s.theme==="light"||__s.theme==="dark"||__s.theme==="auto"))__t=__s.theme}catch(e){}if(__t==="auto"){try{__t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){__t="light"}}document.documentElement.dataset.theme=__t}catch(e){}</script>
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Encaisse","applicationCategory":"BusinessApplication","operatingSystem":"Web, iOS, Android","offers":{"@type":"Offer","price":"9.99","priceCurrency":"EUR"},"description":"Devis et factures avec les mentions de ton pays, lien de paiement en ligne, relances guidées. Hors-ligne d'abord."}
@@ -172,6 +174,7 @@
           <label><span data-i18n="Langue de l'interface">Langue de l'interface</span><select name="lang" id="langSel"><option value="fr">🇫🇷 Français</option><option value="en">🇬🇧 English</option></select></label>
           <label><span data-i18n="Adresse (mentions légales)">Adresse (mentions légales)</span><input name="adresse" maxlength="90" placeholder="N°, rue, code postal, ville"></label>
         </div>
+        <label><span data-i18n="Thème d'affichage">Thème d'affichage</span><select name="theme" id="themeSel"><option value="auto" data-i18n="Système (auto)">Système (auto)</option><option value="light" data-i18n="Clair">Clair</option><option value="dark" data-i18n="Sombre">Sombre</option></select></label>
         <div class="grid2">
           <label><span data-i18n="E-mail / téléphone">E-mail / téléphone</span><input name="contact" maxlength="80" placeholder="nom@exemple.fr · +33 …"></label>
           <label><span data-i18n="N° TVA / SIRET / EIN">N° TVA / SIRET / EIN</span><input name="tvaId" maxlength="40" placeholder="Ex : FR + 11 chiffres"></label>

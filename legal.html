@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#0f172a">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/icon-192.png">
+<script>try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"{}");if(__s&&(__s.theme==="light"||__s.theme==="dark"||__s.theme==="auto"))__t=__s.theme}catch(e){}if(__t==="auto"){try{__t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){__t="light"}}document.documentElement.dataset.theme=__t}catch(e){}</script>
 <style>
   :root{--ink:#0f172a;--mut:#64748b;--acc:#10b981;--line:#e2e8f0;--bg:#f8fafc}
   *{box-sizing:border-box}
@@ -38,6 +39,12 @@
   html .en{display:none}
   html[data-lang="en"] .fr{display:none}
   html[data-lang="en"] .en{display:block}
+  html[data-theme="dark"]{--ink:#e9eff9;--mut:#8ea1bb;--line:#22304d;--bg:#070d1d;color-scheme:dark}
+  html[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
+  html[data-theme="dark"] section{background:#131f38;border-color:var(--line)}
+  html[data-theme="dark"] p,html[data-theme="dark"] li{color:#c2cddd}
+  html[data-theme="dark"] .todo{background:#2a2103;border-color:#f59e0b;color:#fde68a}
+  html[data-theme="dark"] .cta a.ghost{background:#131f38;color:var(--ink);border-color:var(--line)}
 </style>
 </head>
 <body>

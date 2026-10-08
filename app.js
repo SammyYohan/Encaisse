@@ -304,7 +304,7 @@ const planOf=()=>PLANS[zoneKey()];
 const fmtP=v=>{const z=zoneKey();if(z==="EUR")return v+" €";if(z==="CHF")return v+" CHF";return "$"+v};
 const FREE_MONTHLY=3;
 
-let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",clients:[],docs:[],seq:{DEV:{},FAC:{},AVT:{}}};
+let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",theme:"auto",clients:[],docs:[],seq:{DEV:{},FAC:{},AVT:{}}};
 
 /* Langue = source unique i18n (24 langues UE, voir i18n.js) ; repli français. */
 function detectLang(){try{if(window.getLang)return window.getLang()}catch(e){}return "fr"}
@@ -319,6 +319,7 @@ function load(){
       const p=JSON.parse(r);
       S={...S,...p,biz:{...S.biz,...(p.biz||{})},sub:{...S.sub,...(p.sub||{})}};
       if(!S.sub)S.sub={plan:"free",cycle:"monthly",since:null};
+      if(S.theme!=="light"&&S.theme!=="dark")S.theme="auto";
       migrateSeq();migrateMoyens();purgeDemo();
       return;
     }
@@ -1332,12 +1333,31 @@ async function openRelance(id){
   const e=$("#sendE");if(e)e.onclick=bump;
 }
 
+/* ---------- thème clair / sombre / système ---------- */
+function resolvedTheme(){
+  if(S.theme==="dark")return "dark";
+  if(S.theme==="light")return "light";
+  try{return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){return "light"}
+}
+function applyTheme(){try{document.documentElement.dataset.theme=resolvedTheme()}catch(e){}}
+function initTheme(){
+  applyTheme();
+  /* En "auto", on suit l'appareil en direct (centre de contrôle, coucher du soleil…). */
+  try{
+    const mq=matchMedia("(prefers-color-scheme: dark)");
+    const onChange=()=>{if((S.theme||"auto")==="auto")applyTheme()};
+    if(mq.addEventListener)mq.addEventListener("change",onChange);
+    else if(mq.addListener)mq.addListener(onChange);
+  }catch(e){}
+}
+
 /* ---------- réglages ---------- */
 function syncSettings(){
   $("#paysSel").value=S.biz.pays;
   $("#devSel").value=S.biz.devise;
   $("#secSel").value=S.biz.secteur||"artisan";
   if($("#langSel")){const ls=$("#langSel"),list=window.ENCAISSE_LANG_LIST||{fr:"Français",en:"English"};ls.innerHTML=Object.keys(list).map(k=>`<option value="${k}">${list[k]}</option>`).join("");ls.value=lang()}
+  const ts=$("#themeSel");if(ts)ts.value=S.theme||"auto";
   document.querySelector('input[name="biz"]').value=S.biz.nom||"";
   const set=(n,v)=>{const el=document.querySelector(`[name="${n}"]`);if(el)el.value=v||""};
   set("adresse",S.biz.adresse);set("contact",S.biz.contact);set("tvaId",S.biz.tvaId);set("iban",S.biz.iban);
@@ -1512,6 +1532,12 @@ function bind(){
     S.biz.moyens=[...p.moyens];
     save();syncSettings();render();
   };
+  const ts=$("#themeSel");
+  if(ts)ts.onchange=e=>{
+    const v=e.target.value;
+    S.theme=(v==="light"||v==="dark")?v:"auto";
+    save();applyTheme();
+  };
   $("#payToggles").onclick=e=>{
     const b=e.target.closest("button[data-m]");if(!b)return;
     const m=b.dataset.m,a=new Set(S.biz.moyens||[]);
@@ -1657,6 +1683,6 @@ function initInstall(){
 }
 
 /* ---------- boot ---------- */
-load();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();
+load();initTheme();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();
 /* Langue non-inline (dict chargé à la demande) : rattrapage une fois chargé. */
 if(window.setAppLang&&(lang()!=="fr"&&lang()!=="en")){setAppLang(lang()).then(()=>{try{syncSettings()}catch(e){}try{render()}catch(e){}try{if(!localStorage.getItem("encaisse.onboarded")){setSlide(0);refreshOnbPrice()}}catch(e){}})}
