@@ -192,23 +192,23 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .ticks li{background:#ffffff12;border:1px solid #ffffff22;padding:10px 12px;border-radius:12px;font-size:13px;font-weight:700}
 .ticks li::before{content:"✓ ";color:#6ee7b7}
 .art{height:150px;border-radius:20px;background:#ffffff0f;border:1px solid #ffffff22;position:relative;overflow:hidden;backdrop-filter:blur(8px)}
-.card-mini{position:absolute;background:#fff;color:var(--ink);border-radius:12px;padding:10px 12px;font-size:12px;box-shadow:var(--sh);animation:float 5s ease-in-out infinite alternate}
+.card-mini{position:absolute;background:#fff;color:#0f172a;border-radius:12px;padding:10px 12px;font-size:12px;box-shadow:var(--sh);animation:float 5s ease-in-out infinite alternate}
 .m1{left:14px;top:18px;rotate:-4deg}.m2{right:14px;bottom:16px;rotate:3deg;background:#ecfdf5}
 .coin{position:absolute;left:46%;top:8px;width:52px;height:52px;display:grid;place-items:center;background:#fff;border-radius:50%;box-shadow:var(--sh);overflow:hidden;animation:float 4s ease-in-out infinite alternate}
 .coin img{width:100%;height:100%;display:block}
 .phone-mini{position:absolute;left:18px;top:22px;width:86px;height:106px;background:#fff;border-radius:16px;display:grid;gap:6px;padding:12px 10px}
 .phone-mini i{display:block;height:10px;border-radius:99px;background:#e2e8f0}.phone-mini i.ok{background:var(--acc)}
-.paylist{position:absolute;right:14px;top:20px;background:#fff;color:var(--ink);border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.7}
-.bubble{position:absolute;left:14px;right:14px;top:16px;background:#fff;color:var(--ink);border-radius:14px;padding:11px 12px;font-size:13px}
+.paylist{position:absolute;right:14px;top:20px;background:#fff;color:#0f172a;border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.7}
+.bubble{position:absolute;left:14px;right:14px;top:16px;background:#fff;color:#0f172a;border-radius:14px;padding:11px 12px;font-size:13px}
 .bubble.b{top:auto;bottom:14px;background:#d1fae5;font-weight:700}
-.kpi{position:absolute;left:14px;top:22px;background:#fff;color:var(--ink);border-radius:14px;padding:12px 14px;display:grid}
+.kpi{position:absolute;left:14px;top:22px;background:#fff;color:#0f172a;border-radius:14px;padding:12px 14px;display:grid}
 .kpi strong{font-size:18px}.kpi.k2{left:auto;right:14px;top:auto;bottom:18px;background:#fef3c7}
 .pays-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .pays-grid button{background:#ffffff12;border:1px solid #ffffff2b;color:#fff;border-radius:12px;padding:10px;font-size:12px;font-weight:800;text-align:left}
-.pays-grid button.is-sel{background:#fff;color:var(--ink)}
+.pays-grid button.is-sel{background:#fff;color:#0f172a}
 .onb-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 18px;position:relative;z-index:1}
 .dots{display:flex;gap:7px}.dots i{position:relative;width:8px;height:8px;border-radius:99px;background:#ffffff35;transition:all .3s;cursor:pointer}.dots i::after{content:"";position:absolute;inset:-9px}.dots i.is-on{width:26px;background:#fff}
-.onb-input{background:#fff;border:0;border-radius:12px;padding:12px;margin-top:10px;color:var(--ink);font-weight:700}
+.onb-input{background:#fff;border:0;border-radius:12px;padding:12px;margin-top:10px;color:#0f172a;font-weight:700}
 .onb-price{margin:10px 0 0;font-size:12.5px;font-weight:800;color:#a7f3d0;background:#ffffff14;border:1px solid #ffffff2b;border-radius:12px;padding:9px 11px}
 .plan-badge{font-size:11px;font-weight:900;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#451a03;border-radius:99px;padding:6px 10px;white-space:nowrap}
 .plan-badge.pro{background:linear-gradient(135deg,var(--acc),var(--acc-d));color:#fff}
@@ -343,6 +343,7 @@ body{background:radial-gradient(900px 520px at 8% -8%,rgba(167,243,208,.72),tran
 /* Commandes inversées (fondées sur --ink en clair) : pastille claire + texte sombre */
 [data-theme="dark"] .count,[data-theme="dark"] .brand em,[data-theme="dark"] .filters button.is-on,[data-theme="dark"] .chip-btn.go,[data-theme="dark"] .cycle button.is-on,[data-theme="dark"] .tabs button.is-on,[data-theme="dark"] .fab,[data-theme="dark"] .toast{background:#e9eff9;color:#0b1226;border-color:transparent}
 [data-theme="dark"] .filters button.is-on .cnt-badge{background:rgba(11,18,38,.14);color:#0b1226}
+[data-theme="dark"] .cnt-badge{background:var(--line);color:var(--ink)}
 [data-theme="dark"] .tabs{background:rgba(10,17,34,.92)}
 [data-theme="dark"] .link{color:#34d399}
 [data-theme="dark"] .ios-steps li::marker{color:#34d399}
