@@ -1654,7 +1654,11 @@ function installDismissed(){try{return localStorage.getItem(LS_INS)==="1"}catch{
 function updateInstallBar(){
   const bar=document.getElementById("installBar");if(!bar)return;
   let onboarded=false;try{onboarded=!!localStorage.getItem(LS_ON)}catch{}
-  bar.hidden=!(onboarded&&!isStandalone()&&!installDismissed()&&(deferredInstall||isIOS()));
+  const standalone=isStandalone();
+  bar.hidden=!(onboarded&&!standalone&&!installDismissed()&&(deferredInstall||isIOS()));
+  /* App installée : plus aucun bouton d'installation, ni la barre ni Réglages. */
+  const b2row=document.getElementById("installBtn2")?.closest(".row");
+  if(b2row)b2row.hidden=standalone;
 }
 function openIOSGuide(){
   openSheet(`<h2>${T("Installer Encaisse sur ton écran d'accueil")}</h2>
