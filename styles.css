@@ -6,6 +6,8 @@
   --r:18px; --sh:0 10px 30px rgba(15,23,42,.10); --sh-s:0 2px 10px rgba(15,23,42,.08);
   --f:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   color-scheme:light;
+  /* Courbe unique du langage motion « calme » : douce en entrée, posée en sortie. */
+  --ease:cubic-bezier(.22,.9,.3,1);
 }
 /* Thème sombre (data-theme="dark" sur <html>, posé par le script anti-flash
    du <head> puis piloté par Réglages → Thème : clair / sombre / système).
@@ -356,6 +358,39 @@ body{background:radial-gradient(900px 520px at 8% -8%,rgba(167,243,208,.72),tran
 [data-theme="dark"] .sig-pad-box.has-sig{border-color:#0e5c46;background:#0c2b21}
 /* Le papier facture reste blanc (document imprimable) : on fige ses variables locales */
 [data-theme="dark"] .invoice-paper{--ink:#0f172a;--ink2:#334155;--mut:#64748b;--line:#e2e8f0;--soft:#f8fafc}
+
+/* ---------- langage motion « calme » : apaisant, convivial, tactile ----------
+   Un seul module : --ease + fondus de surfaces + micro-interactions.
+   Interface = data-goto/.is-on (dock), :active (press), data-theme (fondu).
+   Aucune keyframe existante n'est touchée ; le coupe-circuit
+   prefers-reduced-motion global couvre aussi tout ce bloc. */
+/* Bascule clair/sombre en fondu (les règles fusionnent les transitions
+   existantes au lieu de les écraser — rien ne se fige, rien ne saute). */
+body{transition:background-color .45s ease}
+.phone{transition:box-shadow .35s ease,transform .35s ease,background-color .45s ease,border-color .45s ease}
+.top,.total,.sig-pad-box,.pill-pays,.dot-net,.cycle{transition:background-color .45s ease,border-color .45s ease}
+.tabs{transition:box-shadow .3s ease,background-color .45s ease,border-color .45s ease}
+input,select,textarea{transition:background-color .45s ease,border-color .45s ease,color .45s ease,box-shadow .2s ease}
+.doc,.card,.empty{transition:transform .22s var(--ease),box-shadow .22s ease,border-color .45s ease,background-color .45s ease}
+.sheet{transition:transform .25s ease,background-color .45s ease,border-color .45s ease;animation:up .34s var(--ease)}
+.search{transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease,background-color .45s ease}
+.btn,.chip-btn,.filters button,.pay-toggles button{transition:transform .2s var(--ease),box-shadow .2s ease,background-color .45s ease,border-color .45s ease,color .45s ease}
+.fab{transition:transform .2s var(--ease),box-shadow .2s ease,background-color .45s ease,color .45s ease}
+/* Entrée de vue adoucie */
+.view{animation:rise .4s var(--ease)}
+/* Dock : l'icône active se soulève, une pastille la souligne — on sait où on est,
+   on a envie d'aller voir ailleurs. */
+.tabs button{transition:color .2s ease,background-color .3s var(--ease),transform .25s var(--ease)}
+.tabs button i{transition:transform .25s var(--ease)}
+.tabs button.is-on{position:relative}
+.tabs button.is-on i{transform:translateY(-2px)}
+.tabs button.is-on::after{content:"";position:absolute;left:50%;bottom:3px;transform:translateX(-50%);width:14px;height:3px;border-radius:99px;background:currentColor;opacity:.55}
+/* Pressé tactile partout : chaque action répond sous le doigt */
+.btn:active,.chip-btn:active,.filters button:active,.pay-toggles button:active,.preset-chip:active{transform:scale(.96)}
+.tabs button:active{transform:scale(.93)}
+/* Sélection de texte assortie */
+::selection{background:#a7f3d0;color:#0f172a}
+[data-theme="dark"] ::selection{background:#0e5c46;color:#e9eff9}
 
 /* impression conforme */
 @media print{
