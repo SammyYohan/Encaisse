@@ -1,10 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Encaisse — € et $">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Encaisse — € et $">
   <title>Encaisse</title>
-  <!-- Pièce biface : émeraude (haut-gauche, €) / slate (bas-droite, $) -->
-  <rect width="512" height="512" fill="#0f172a"/>
-  <path d="M0 0 H512 L0 512 Z" fill="#10b981"/>
-  <!-- La pièce : un seul cercle, deux devises -->
-  <circle cx="256" cy="256" r="170" fill="none" stroke="#ffffff" stroke-width="16"/>
-  <text x="191" y="243" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="150" font-weight="700" fill="#ffffff" text-anchor="middle">€</text>
-  <text x="321" y="373" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="150" font-weight="700" fill="#ffffff" text-anchor="middle">$</text>
+  <style>
+    text{font-family:"DejaVuSans","DejaVu Sans",system-ui,"Segoe UI",Arial,sans-serif}
+    .t0{font-size:1121px;fill:#309a42;font-weight:400}
+    .t1{font-size:351px;fill:#e9f753;font-weight:400}
+  </style>
+  <text transform="translate(153,948)"><tspan x="0" y="0" class="t0">€</tspan></text>
+  <text transform="translate(582,771)"><tspan x="0" y="0" class="t1">$</tspan></text>
+  <text transform="translate(702,647)"><tspan x="0" y="0" class="t1">$</tspan></text>
 </svg>

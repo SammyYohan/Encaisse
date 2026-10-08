@@ -24,7 +24,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px}
 .brand em{font-style:normal;font-size:10px;background:var(--ink);color:#fff;border-radius:6px;padding:2px 6px;letter-spacing:.08em}
 .brand.small{font-size:16px}
-.logo{width:30px;height:30px;display:grid;place-items:center;background:linear-gradient(135deg,var(--acc),#059669);color:#fff;border-radius:10px;font-weight:900;box-shadow:var(--sh-s)}
+.logo{width:30px;height:30px;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--sh-s);overflow:hidden}
+.logo img{width:100%;height:100%;display:block}
 .top-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
 .pill-pays{font-size:12px;font-weight:800;background:#fff;border:1px solid var(--line);border-radius:99px;padding:6px 10px;box-shadow:var(--sh-s)}
 .dot-net{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mut);background:#fff;border:1px solid var(--line);padding:6px 9px;border-radius:99px}
@@ -182,7 +183,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .art{height:150px;border-radius:20px;background:#ffffff0f;border:1px solid #ffffff22;position:relative;overflow:hidden;backdrop-filter:blur(8px)}
 .card-mini{position:absolute;background:#fff;color:var(--ink);border-radius:12px;padding:10px 12px;font-size:12px;box-shadow:var(--sh);animation:float 5s ease-in-out infinite alternate}
 .m1{left:14px;top:18px;rotate:-4deg}.m2{right:14px;bottom:16px;rotate:3deg;background:#ecfdf5}
-.coin{position:absolute;left:46%;top:8px;width:52px;height:52px;display:grid;place-items:center;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:50%;font-size:26px;font-weight:900;color:#451a03;box-shadow:var(--sh);animation:float 4s ease-in-out infinite alternate}
+.coin{position:absolute;left:46%;top:8px;width:52px;height:52px;display:grid;place-items:center;background:#fff;border-radius:50%;box-shadow:var(--sh);overflow:hidden;animation:float 4s ease-in-out infinite alternate}
+.coin img{width:100%;height:100%;display:block}
 .phone-mini{position:absolute;left:18px;top:22px;width:86px;height:106px;background:#fff;border-radius:16px;display:grid;gap:6px;padding:12px 10px}
 .phone-mini i{display:block;height:10px;border-radius:99px;background:#e2e8f0}.phone-mini i.ok{background:var(--acc)}
 .paylist{position:absolute;right:14px;top:20px;background:#fff;color:var(--ink);border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.7}
