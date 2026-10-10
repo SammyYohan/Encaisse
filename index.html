@@ -118,9 +118,9 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
       <div class="hero">
         <p class="eyebrow" id="helloLine">Bonjour 👋 · Voici ton cash</p>
         <div class="kpis">
-          <button class="kpi-card" type="button" data-kpi="facture"><span data-i18n="À encaisser">À encaisser</span><strong id="kpiDue">0</strong><em id="kpiDueN">0 factures</em></button>
+          <button class="kpi-card" type="button" data-kpi="due"><span data-i18n="À encaisser">À encaisser</span><strong id="kpiDue">0</strong><em id="kpiDueN">0 factures</em></button>
           <button class="kpi-card alert" type="button" data-kpi="late"><span data-i18n="En retard &gt;7j">En retard &gt;7j</span><strong id="kpiLate">0</strong><em id="kpiLateN">0 factures</em></button>
-          <button class="kpi-card ok" type="button" data-kpi="facture"><span data-i18n="Encaissé ce mois">Encaissé ce mois</span><strong id="kpiPaid">0</strong><em id="kpiPaidN">0 factures</em></button>
+          <button class="kpi-card ok" type="button" data-kpi="paid"><span data-i18n="Encaissé ce mois">Encaissé ce mois</span><strong id="kpiPaid">0</strong><em id="kpiPaidN">0 factures</em></button>
         </div>
         <div class="cashbar"><div class="cashbar-top"><span data-i18n="Prévision 30 jours">Prévision 30 jours</span><b id="cashPct">0%</b></div><div class="track"><i id="cashFill"></i></div><small id="cashHint">Crée ta première facture pour activer la prévision.</small></div>
       </div>
@@ -137,9 +137,12 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
           <button class="is-on" data-f="all" type="button"><span data-i18n="Tous">Tous</span> <span class="cnt-badge" id="cAll">0</span></button>
           <button data-f="devis" type="button"><span data-i18n="Devis">Devis</span> <span class="cnt-badge" id="cDev">0</span></button>
           <button data-f="facture" type="button"><span data-i18n="Factures">Factures</span> <span class="cnt-badge" id="cFac">0</span></button>
+          <button data-f="due" type="button"><span data-i18n="Impayées">Impayées</span> <span class="cnt-badge" id="cDue">0</span></button>
           <button data-f="late" type="button"><span data-i18n="En retard">En retard</span> <span class="cnt-badge alert" id="cLate">0</span></button>
+          <button data-f="paid" type="button"><span data-i18n="Payées">Payées</span> <span class="cnt-badge" id="cPaid">0</span></button>
         </div>
       </div>
+      <div class="row" style="margin:0 0 10px"><button class="btn small ghost" id="recurBtn" type="button">🔁 <span data-i18n="Récurrences">Récurrences</span></button></div>
       <div class="list" id="docList"></div>
     </section>
 

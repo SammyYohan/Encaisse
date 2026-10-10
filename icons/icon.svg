@@ -1,11 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Encaisse — € et $">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Encaisse — € et $">
   <title>Encaisse</title>
   <style>
-    text{font-family:"DejaVuSans","DejaVu Sans",system-ui,"Segoe UI",Arial,sans-serif}
-    .t0{font-size:1121px;fill:#309a42;font-weight:400}
-    .t1{font-size:351px;fill:#e9f753;font-weight:400}
+    text{font-family:"Segoe UI",system-ui,Arial,sans-serif;font-weight:700}
+    .e{font-size:273px;fill:#1da164}
+    .d{font-size:182px;fill:#92d401}
   </style>
-  <text transform="translate(153,948)"><tspan x="0" y="0" class="t0">€</tspan></text>
-  <text transform="translate(582,771)"><tspan x="0" y="0" class="t1">$</tspan></text>
-  <text transform="translate(702,647)"><tspan x="0" y="0" class="t1">$</tspan></text>
+  <text x="18" y="266" dominant-baseline="central" class="e">&#8364;</text>
+  <text x="145" y="281" dominant-baseline="central" class="d">$</text>
 </svg>

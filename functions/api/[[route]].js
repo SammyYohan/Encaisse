@@ -162,7 +162,7 @@ export async function onRequestPost(ctx) {
   if (seg === "portal") return postPortal(ctx);
   if (seg === "stripe-webhook") return postStripeWebhook(ctx);
   if (seg === "backup") return postBackup(ctx);
-  if (seg === "sub" || seg === "pay") return json({ error: "methode_invalide" }, 405);
+  if (seg === "sub" || seg === "pay" || seg === "status") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
 }
 
@@ -170,6 +170,7 @@ export async function onRequestGet(ctx) {
   const seg = routeOf(ctx.request);
   if (seg === "sub") return getSub(ctx);
   if (seg === "pay") return getPay(ctx);
+  if (seg === "status") return getStatus(ctx);
   if (seg === "checkout" || seg === "portal" || seg === "stripe-webhook" || seg === "backup") return json({ error: "methode_invalide" }, 405);
   return json({ error: "route_inconnue" }, 404);
 }
@@ -281,7 +282,14 @@ async function postPortal(ctx) {
   } catch (e) {
     return json({ error: "stockage_invalide" }, 500);
   }
-  return json({ slug: slug });
+  /* Statut de paiement actuel (pour l'auto-marquage cote app : le client
+     a peut-etre paye en ligne depuis — webhook ou retour ?session_id). */
+  let paid_at = 0;
+  try {
+    const st = await env.DB.prepare("SELECT paid_at FROM portal WHERE slug = ?").bind(slug).first();
+    paid_at = (st && st.paid_at) || 0;
+  } catch (e) {}
+  return json({ slug: slug, paid: !!paid_at, paid_at: paid_at });
 }
 
 /* GET /api/sub — vérification serveur de l'abonnement (P0 n°3).
@@ -346,6 +354,21 @@ async function subFromSession(env, sessionId, oh) {
 /* GET /api/pay — encaissement d'une facture : le montant vient de D1 (jamais du
    client payeur), la session est en mode « payment » et le retour Stripe
    confirme le règlement sur /r/:slug?session_id=… */
+/* GET /api/status — lecture seule du statut de paiement d'un partage.
+   Possession du slug = autorisation (comme /r/:slug, page publique).
+   Leger (pas de payload) : l'app l'interroge pour marquer ses factures
+   payees toutes seules quand le client a regle en ligne. */
+async function getStatus(ctx) {
+  const { request, env } = ctx;
+  if (rateLimited("st:" + ipOf(request), 120)) return json({ error: "trop_de_requetes" }, 429);
+  if (!env.DB) return json({ error: "portail_non_configure" }, 503);
+  const slug = new URL(request.url).searchParams.get("slug") || "";
+  if (!/^[0-9a-f]{24}$/.test(slug)) return json({ error: "slug_invalide" }, 400);
+  const row = await env.DB.prepare("SELECT paid_at FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
+  if (!row) return json({ error: "document_introuvable" }, 404);
+  return json({ paid: !!row.paid_at, paid_at: row.paid_at || 0 });
+}
+
 async function getPay(ctx) {
   const { request, env } = ctx;
   if (rateLimited("py:" + ipOf(request), 40)) return json({ error: "trop_de_requetes" }, 429);

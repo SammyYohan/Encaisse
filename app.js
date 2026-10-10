@@ -145,7 +145,7 @@ async function ensurePortal(d,silent){
   const site=siteBase();
   if(!site) return{url:getDocUrl(d.id),server:false};
   const payload=portalPayload(d), h=fnv1a(JSON.stringify(payload));
-  if(d.portal?.slug&&d.portal.hash===h) return{url:site+"/r/"+d.portal.slug,server:true};
+  if(d.portal?.slug&&d.portal.hash===h) return{url:site+"/r/"+d.portal.slug,server:true,cached:true};
   try{
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),15000);
@@ -158,9 +158,10 @@ async function ensurePortal(d,silent){
     if(!r.ok||!j.slug)throw new Error(j.error||("http_"+r.status));
     const first=!d.portal?.slug;
     d.portal={slug:j.slug,hash:h};
+    if(j.paid)applyServerPaid(d,j.paid_at);
     save();
     if(first&&!silent)toast(T("Lien client sécurisé activé ✓"));
-    return{url:site+"/r/"+j.slug,server:true};
+    return{url:site+"/r/"+j.slug,server:true,paid:!!j.paid};
   }catch(e){
     console.warn("Portail :",e);
     if(!silent)toast(T("Portail client indisponible — lien local utilisé."));
@@ -172,6 +173,62 @@ async function ensurePortal(d,silent){
    Tout l'état S est chiffré en AES-GCM sur l'appareil AVANT envoi : le serveur ne
    stocke qu'un blob opaque. Restauration multi-appareils via le code de récupération
    (= la clé propriétaire). Sans SITE_URL : 100 % local, rien ne part. */
+/* ---------- synchro auto des paiements en ligne ----------
+   Le client paie sur SON appareil (/r/:slug -> /api/pay -> webhook ou retour
+   ?session_id). L'appareil du pro l'apprend ici, sans geste :
+   - ensurePortal() applique le flag paid renvoye par POST /api/portal ;
+   - checkPortalPaid() lit GET /api/status (leger, sans reecriture) ;
+   - syncPaidFromServer() balaye les factures impayees partagees (throttle
+     60 s en auto) et les marque payees. Declenchee au boot, au retour
+     en ligne, au retour visible, et vers Accueil/Documents. */
+function applyServerPaid(d,paid_at){
+  if(!d||d.type!=="facture"||d.statut==="paye")return false;
+  d.statut="paye";
+  try{
+    const iso=paid_at?new Date(Number(paid_at)).toISOString().slice(0,10):todayISO();
+    d.payeLe=/^\d{4}-\d{2}-\d{2}$/.test(iso||"")?iso:todayISO();
+  }catch(e){d.payeLe=todayISO()}
+  return true;
+}
+async function checkPortalPaid(slug){
+  const site=siteBase();
+  if(!site||!/^[0-9a-f]{24}$/.test(slug||""))return null;
+  try{
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),10000);
+    const r=await fetch(site+"/api/status?slug="+encodeURIComponent(slug),{signal:ctrl.signal});
+    clearTimeout(timer);
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)return null;
+    return{paid:!!j.paid,paid_at:j.paid_at||0};
+  }catch(e){return null}
+}
+let syncPaidBusy=false,syncPaidAt=0;
+async function syncPaidFromServer(manual){
+  if(syncPaidBusy)return false;
+  const site=siteBase();
+  if(!site)return false;
+  const now=Date.now();
+  if(!manual&&now-syncPaidAt<60000)return false;
+  const targets=S.docs.filter(d=>d&&d.type==="facture"&&d.statut!=="paye"&&d.portal&&d.portal.slug);
+  if(!targets.length)return false;
+  syncPaidBusy=true;syncPaidAt=now;
+  let changed=0;
+  try{
+    for(const d of targets){
+      const st=await checkPortalPaid(d.portal.slug);
+      if(st&&st.paid&&applyServerPaid(d,st.paid_at))changed++;
+    }
+  }catch(e){console.warn("Sync paid :",e)}
+  syncPaidBusy=false;
+  if(changed){
+    save();render();
+    toast(T("Encaissé 🎉 Bravo"));
+    haptic([20,50]);
+  }
+  return changed>0;
+}
+
 const BK_LS="encaisse.backup";
 const b64e=a=>{let s="";a.forEach(x=>s+=String.fromCharCode(x));return btoa(s)};
 const b64d=s=>Uint8Array.from(atob(String(s||"")),c=>c.charCodeAt(0));
@@ -296,6 +353,15 @@ const SECTEURS={
     ]}
 };
 
+/* ---------- sales tax US : taux de base par Etat, INDICATIFS 2026 ----------
+   Les localites ajoutent leurs propres taxes (le total reel est souvent
+   superieur) et les taux bougent : le pro garde la main, le champ reste
+   editable, et l'avertissement comptable reste affiche. Source : a faire
+   valider par le comptable du client, comme tout taux saisi a la main. */
+const ETATS_US={AL:4,AK:0,AZ:5.6,AR:6.5,CA:7.25,CO:2.9,CT:6.35,DE:0,DC:6,FL:6,GA:4,HI:4,ID:6,IL:6.25,IN:7,IA:6,KS:6.5,KY:6,LA:4.45,ME:5.5,MD:6,MA:6.25,MI:6,MN:6.875,MS:7,MO:4.225,MT:0,NE:5.5,NV:6.85,NH:0,NJ:6.625,NM:5.125,NY:4,NC:4.75,ND:5,OH:5.75,OK:4.5,OR:0,PA:6,RI:7,SC:6,SD:4.2,TN:7,TX:6.25,UT:4.85,VT:6,VA:5.3,WA:6.5,WV:6,WI:5,WY:4};
+const US_RATE=et=>et&&ETATS_US[et]!=null?ETATS_US[et]:null;
+const etatOpts=sel=>`<option value="">—</option>`+Object.keys(ETATS_US).map(k=>`<option value="${k}"${k===sel?" selected":""}>${k} · ${ETATS_US[k]}%</option>`).join("");
+
 const sec=()=>SECTEURS[S.biz.secteur]||SECTEURS.artisan;
 const sLabel=v=>loc(v)||"";
 const ZONE_FOR={FR:"EUR",BE:"EUR",CH:"CHF",US:"USD"};
@@ -304,7 +370,7 @@ const planOf=()=>PLANS[zoneKey()];
 const fmtP=v=>{const z=zoneKey();if(z==="EUR")return v+" €";if(z==="CHF")return v+" CHF";return "$"+v};
 const FREE_MONTHLY=3;
 
-let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",theme:"auto",clients:[],docs:[],seq:{DEV:{},FAC:{},AVT:{}}};
+let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",theme:"auto",clients:[],docs:[],rec:[],time:[],seq:{DEV:{},FAC:{},AVT:{}}};
 
 /* Langue = source unique i18n (24 langues UE, voir i18n.js) ; repli français. */
 function detectLang(){try{if(window.getLang)return window.getLang()}catch(e){}return "fr"}
@@ -321,6 +387,8 @@ function load(){
       if(!S.sub)S.sub={plan:"free",cycle:"monthly",since:null};
       if(S.theme!=="light"&&S.theme!=="dark")S.theme="auto";
       migrateSeq();migrateMoyens();purgeDemo();
+      if(!Array.isArray(S.rec))S.rec=[];
+      if(!Array.isArray(S.time))S.time=[];
       return;
     }
   }catch{}
@@ -355,6 +423,14 @@ function nextNum(type){
   const k=type==="devis"?"DEV":type==="avoir"?"AVT":"FAC";
   S.seq[k]=S.seq[k]||{};S.seq[k][y]=((S.seq[k][y]||0)+1);
   return `${k}-${y}-${String(S.seq[k][y]).padStart(4,"0")}`;
+}
+/* Annule un nextNum + push dont le save() a échoué (stockage plein) :
+   sinon un second tap crée un doublon et brûle un numéro jamais persisté. */
+function undoCreate(type){
+  S.docs.pop();
+  const y=String(new Date().getFullYear());
+  const k=type==="devis"?"DEV":type==="avoir"?"AVT":"FAC";
+  if(S.seq&&S.seq[k]&&S.seq[k][y]>0)S.seq[k][y]--;
 }
 function totals(doc){
   const ht=doc.items.reduce((a,l)=>a+l.q*l.p,0);
@@ -431,10 +507,12 @@ function refreshOnbPrice(){
 }
 function finishOnb(){
   const sel=$("#onbPays .is-sel")?.dataset?.pays||"FR";
-  const biz=$("#onbBiz")?.value||"".trim().slice(0,60);
+  const biz=($("#onbBiz")?.value||"").trim().slice(0,60);
   if(!biz){
-    const input=$("#onbBiz");
-    input?.focus();
+    /* « Passer » peut être tapé dès la 1re slide : le champ est sur la dernière.
+       On y amène l'utilisateur au lieu d'un toast sans champ visible. */
+    setSlide(NS-1);
+    $("#onbBiz")?.focus();
     toast(T("Nom requis"));
     return;
   }
@@ -463,14 +541,18 @@ function goto(v){
   /* restaure la position de défilement de la vue précédente plutôt que de
      toujours remonter : revenir à l'accueil retrouve sa place */
   requestAnimationFrame(()=>window.scrollTo({top:scrollMem[v]||0,behavior:"auto"}));
+  if(v==="home"||v==="docs"){try{syncPaidFromServer(false);genRecurrences()}catch(e){}}
 }
 
 /* ---------- statuts ---------- */
 function relanceStage(d){
   if(d.type!=="facture"||d.statut==="paye")return null;
   const j=daysLate(d.eche);if(!(j>0))return null;
-  if(j<=3)return["s-envoye",T("Relance due · rappel poli (J+3)")];
-  if(j<=10)return["s-retard",T("Relance due · ferme · {j}j",{j})];
+  /* Calendrier annoncé : J+3 poli, J+7 ferme, J+15 mise en demeure.
+     Avant J+3 on signale le retard sans le présenter comme une relance due. */
+  if(j<3)return["s-envoye",T("Échue depuis {j} j",{j})];
+  if(j<7)return["s-envoye",T("Relance due · rappel poli (J+3)")];
+  if(j<15)return["s-retard",T("Relance due · ferme · {j}j",{j})];
   return["s-retard",T("Mise en demeure · {j}j",{j})];
 }
 function docStatus(d){
@@ -568,6 +650,7 @@ function openDocActions(id){
   }
   /* L'avoir est le correctif LÉGAL d'une facture : accessible même après
      paiement (remboursement) et hors plafond gratuit. */
+  h+=B("recur",`🔁 ${T("Rendre récurrent")}`);
   if(d.type==="facture")h+=B("avoir",`↩️ ${T("Émettre un avoir")}`);
   if(d.avoirNums&&d.avoirNums.length)h+=`<p class="sub" style="margin:4px 0 0">↩️ ${T("Avoirs émis")} : ${esc(d.avoirNums.join(", "))}</p>`;
   if(!conv){if(wa)h+=B("shareWa","💬 WhatsApp");if(mail)h+=B("shareMail",`✉️ ${T("E-mail")}`)}
@@ -582,6 +665,7 @@ let filter="all";
 /* Filtre Documents : une seule source de vérité (état + UI des puces + rendu).
    Utilisé par les puces de filtres ET par les KPI cliquables de l'accueil. */
 function applyFilter(f){
+  if(f!=="all"&&f!=="devis"&&f!=="facture"&&f!=="due"&&f!=="late"&&f!=="paid")f="all";
   filter=f;
   $$(".toolbar .filters button").forEach(x=>x.classList.toggle("is-on",x.dataset.f===f));
   renderDocs();
@@ -592,13 +676,17 @@ function renderDocs(){
   const cAll=S.docs.length;
   const cDev=S.docs.filter(d=>d.type==="devis").length;
   const cFac=S.docs.filter(d=>d.type==="facture").length;
+  const cDue=S.docs.filter(d=>d.type==="facture"&&d.statut!=="paye").length;
   const cLate=S.docs.filter(d=>d.type==="facture"&&d.statut!=="paye"&&daysLate(d.eche)>0).length;
+  const cPaid=S.docs.filter(d=>d.type==="facture"&&d.statut==="paye").length;
   const set=(id,v)=>{const b=$(id);if(b)b.textContent=v};
-  set("#cAll",cAll);set("#cDev",cDev);set("#cFac",cFac);set("#cLate",cLate);
+  set("#cAll",cAll);set("#cDev",cDev);set("#cFac",cFac);set("#cDue",cDue);set("#cLate",cLate);set("#cPaid",cPaid);
 
   if(filter==="devis")arr=arr.filter(d=>d.type==="devis");
   if(filter==="facture")arr=arr.filter(d=>d.type==="facture");
+  if(filter==="due")arr=arr.filter(d=>d.type==="facture"&&d.statut!=="paye");
   if(filter==="late")arr=arr.filter(d=>d.type==="facture"&&d.statut!=="paye"&&daysLate(d.eche)>0);
+  if(filter==="paid")arr=arr.filter(d=>d.type==="facture"&&d.statut==="paye");
   if(q){
     arr=arr.filter(d=>{
       const str=(d.numero+" "+d.client+" "+(d.items||[]).map(i=>itemLib(i)).join(" ")).toLowerCase();
@@ -620,7 +708,7 @@ function renderClis(){
     const mailBtn=mail?`<a class="chip-btn" style="text-decoration:none;background:#f8fafc" href="mailto:${esc(mail)}">✉️ ${T("E-mail")}</a>`:"";
     const callBtn=rawTel?`<a class="chip-btn" style="text-decoration:none;background:#f8fafc" href="tel:${esc(rawTel)}">📞 ${T("Appeler")}</a>`:"";
     const first=esc((name.split("—")[0]||name).trim().split(" ")[0]);
-    return `<article class="doc"><div class="doc-top"><div><b>☺ ${esc(name)}</b><br><small>${esc(c.tel||c.email||"—")} ${dueBy[c.id]?`· ${T("doit")} <b style="color:var(--red)">${fmt(dueBy[c.id],S.biz.devise)}</b>`:`· ${T("à jour ✓")}`}</small></div><span class="status ${dueBy[c.id]?"s-retard":"s-paye"}">${dueBy[c.id]?T("À suivre"):"OK"}</span></div><div class="doc-actions"><button class="chip-btn go" data-cnew="${c.id}" type="button">+ ${T("Devis pour")} ${first}</button>${waBtn}${mailBtn}${callBtn}<button class="chip-btn" data-cdel="${c.id}" type="button">${T("Retirer")}</button></div></article>`;
+    return `<article class="doc" data-cfiche="${c.id}"><div class="doc-top"><div><b>☺ ${esc(name)}</b><br><small>${esc(c.tel||c.email||"—")} ${dueBy[c.id]?`· ${T("doit")} <b style="color:var(--red)">${fmt(dueBy[c.id],S.biz.devise)}</b>`:`· ${T("à jour ✓")}`}</small></div><span class="status ${dueBy[c.id]?"s-retard":"s-paye"}">${dueBy[c.id]?T("À suivre"):"OK"}</span></div><div class="doc-actions"><button class="chip-btn go" data-cnew="${c.id}" type="button">+ ${T("Devis pour")} ${first}</button>${waBtn}${mailBtn}${callBtn}<button class="chip-btn" data-cedit="${c.id}" type="button">✎ ${T("Modifier")}</button><button class="chip-btn" data-cdel="${c.id}" type="button">${T("Retirer")}</button></div></article>`;
   }).join(""):`<div class="empty">☺️ ${T("Ajoute ton premier client pour facturer en 1 clic.")}<br><button class="btn primary small" data-addcli="1" type="button">${T("+ Client")}</button></div>`;
 }
 /* ---------- abonnement ---------- */
@@ -739,6 +827,12 @@ function openNew(prefillClient){
   <div class="filters" id="nt"><button class="is-on" data-t="devis" type="button">🧾 ${T("Devis")}</button><button data-t="facture" type="button">💰 ${T("Facture")}</button></div>
   <div class="form" style="margin-top:10px">
   <label>${T("Client")}<select id="fCli">${cliOpts}</select></label>
+  <div class="row"><button class="btn small ghost" id="inlineCliBtn" type="button">+ ${T("Nouveau client")}</button></div>
+  <div id="inlineCli" hidden class="form" style="background:var(--soft);border:1px dashed var(--line);border-radius:12px;padding:10px">
+    <label>${T("Nom + repère")}<input id="icNom" maxlength="60"></label>
+    <div class="grid2"><label>${T("E-mail")}<input id="icMail" type="email" maxlength="80"></label><label>${T("Téléphone / WhatsApp")}<input id="icTel" inputmode="tel"></label></div>
+    <button class="btn small primary" id="icSave" type="button">${T("Ajouter ✓")}</button>
+  </div>
   ${presetChipsHTML()}
   <div class="lines" id="fLines"></div>
   <button class="btn small" id="addLine" type="button">+ ${T("Ajouter une ligne vide")}</button>
@@ -748,12 +842,28 @@ function openNew(prefillClient){
     <button class="chip-btn" id="dictBtn" type="button" hidden>🎙 ${T("Dicter la prestation")}</button>
   </div>
   <div id="photoPrev"></div>
+  ${S.biz.pays==="US"?`<label>${T("État US")}<select id="fEtat">${etatOpts("")}</select></label><p class="muted" style="font-size:12px;margin:0">${T("Sales tax n'est pas la TVA : taux d'État/local à appliquer")}</p>`:""}
   <div class="grid3"><label>${taxLbl()} %<input id="fTva" inputmode="decimal" value="${PAYS[S.biz.pays]?.tva??20}"></label><label>${T("Unité")}<input id="fUnit" maxlength="12" value="${esc(sLabel(sec().unit))}" placeholder="${T("h, pce…")}"></label><label>${T("Échéance")}<input id="fEche" type="date" value="${addDays(todayISO(),15)}"></label></div>
   <div class="total"><span>${T("Total TTC estimé")}</span><b id="fTot">0</b></div>
   <div class="row"><button class="btn primary" id="saveDoc" type="button" style="flex:1">${T("Créer le devis ✓")}</button><button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button></div>
   <small class="muted">${T("Numérotation inviolable")} ${esc(loc(PAYS[S.biz.pays]?.nom))} · ${T("preuve horodatée")} · ${T("archivage")} ${PAYS[S.biz.pays]?.archive||"10 ans"}. <em>${T("Démo : rendu à valider par ton comptable tant que la plateforme d'e-invoicing n'est pas branchée.")}</em>${S.biz.pays==="BE"?" "+T("⚠️ B2B : Peppol-BIS obligatoire depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis."):""}${S.biz.pays==="FR"?" "+T("⚠️ Entre assujettis : transmission via PDP agréée requise (réception obligatoire depuis le 01/09/2026)."):""}</small></div>`);
 
   wireDocForm({mode:"new"});
+  /* Client inline : cree sans quitter la feuille (le formulaire doc garde
+     ses lignes, sa photo et ses totaux). */
+  const icBtn=$("#inlineCliBtn"),icBox=$("#inlineCli");
+  if(icBtn&&icBox)icBtn.onclick=()=>{icBox.hidden=!icBox.hidden;if(!icBox.hidden)$("#icNom")?.focus()};
+  const icSave=$("#icSave");
+  if(icSave)icSave.onclick=()=>{
+    const n=($("#icNom").value||"").trim();
+    if(!n){toast(T("Nom requis"));return}
+    const nc={id:uid(),nom:n,tel:($("#icTel").value||"").trim(),email:($("#icMail").value||"").trim(),adresse:"",tvaId:""};
+    S.clients.push(nc);
+    if(!save()){S.clients.pop();return}
+    const sel=$("#fCli");
+    if(sel){const o=document.createElement("option");o.value=nc.id;o.textContent=cliName(nc);sel.appendChild(o);sel.value=nc.id}
+    icBox.hidden=true;render();toast(T("Client ajouté ✓"));
+  };
 }
 
 /* ---------- formulaire document (création + modification partagent la logique) ---------- */
@@ -800,6 +910,7 @@ function wireDocForm(opt){
   calc();
 
   $("#addLine").onclick=()=>{addL();calc()};
+  const etSel=$("#fEtat");if(etSel)etSel.onchange=()=>{const r=US_RATE(etSel.value);if(r!=null)$("#fTva").value=r};
   $("#cancelS").onclick=closeSheet;
 
   const compressPhoto=file=>new Promise((res,rej)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);const max=1000,r=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext("2d").drawImage(img,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",0.7))};img.onerror=rej;img.src=url});
@@ -826,28 +937,31 @@ function wireDocForm(opt){
   if(ntEl)ntEl.onclick=e=>{const b=e.target.closest("button");if(!b)return;$$("#nt button").forEach(x=>x.classList.remove("is-on"));b.classList.add("is-on");ntype=b.dataset.t;$("#saveDoc").textContent=ntype==="devis"?T("Créer le devis ✓"):T("Créer la facture ✓")};
 
   $("#saveDoc").onclick=()=>{
-    const cid=$("#fCli").value;if(!cid){toast(T("Ajoute d'abord un client"));return}
+    const cid=$("#fCli").value;
+    if(!cid){const bx=$("#inlineCli");if(bx&&bx.hidden){bx.hidden=false;$("#icNom")?.focus()}toast(T("Ajoute d'abord un client"));return}
     const items=readLines();
     if(!items.length){toast(T("Mets au moins un prix"));return}
     const tva=Math.max(0,Math.min(30,Number($("#fTva").value)||0));
+    const usState=$("#fEtat")?String($("#fEtat").value||""):"";
     const unite=($("#fUnit").value||"").trim().slice(0,12);
     const eche=$("#fEche").value||addDays(todayISO(),15);
 
     if(opt.mode==="edit"){
       const d=opt.doc;
+      const bkEdit={clientId:d.clientId,client:d.client,items:d.items,total:d.total,tva:d.tva,unite:d.unite,eche:d.eche,usState:d.usState};
       d.clientId=cid;d.client=cliName(S.clients.find(c=>c.id===cid)||{});d.items=items;
-      d.total=items.reduce((a,l)=>a+l.q*l.p,0);d.tva=tva;d.unite=unite;d.eche=eche;
+      d.total=items.reduce((a,l)=>a+l.q*l.p,0);d.tva=tva;d.unite=unite;d.eche=eche;d.usState=usState;
       haptic([20,40]);
-      if(!save())return;closeSheet();render();ensurePortal(d,true);toast(`${d.numero} ${T("mis à jour ✓")}`);
+      if(!save()){d.clientId=bkEdit.clientId;d.client=bkEdit.client;d.items=bkEdit.items;d.total=bkEdit.total;d.tva=bkEdit.tva;d.unite=bkEdit.unite;d.eche=bkEdit.eche;d.usState=bkEdit.usState;return}closeSheet();render();ensurePortal(d,true);toast(`${d.numero} ${T("mis à jour ✓")}`);
       return;
     }
     if(!canCreate(ntype)){closeSheet();openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}
     const numero=nextNum(ntype), id=uid();
     S.docs.push({id,type:ntype,numero,clientId:cid,client:cliName(S.clients.find(c=>c.id===cid)||{}),
-      items,total:items.reduce((a,l)=>a+l.q*l.p,0),tva,unite,statut:"envoye",emis:todayISO(),eche,
+      items,total:items.reduce((a,l)=>a+l.q*l.p,0),tva,unite,usState:usState||"",statut:"envoye",emis:todayISO(),eche,
       relances:0,photo:photoData});
     haptic([20,40]);
-    if(!save())return;closeSheet();render();
+    if(!save()){undoCreate(ntype);return}closeSheet();render();
     toast(`${ntype==="devis"?T("Devis"):T("Facture")} ${numero} ${T("créée ✓")}`);
   };
 }
@@ -862,6 +976,7 @@ function openEdit(id){
     ${presetChipsHTML()}
     <div class="lines" id="fLines"></div>
     <button class="btn small" id="addLine" type="button">+ ${T("Ajouter une ligne vide")}</button>
+    ${S.biz.pays==="US"?`<label>${T("État US")}<select id="fEtat">${etatOpts(d.usState||"")}</select></label><p class="muted" style="font-size:12px;margin:0">${T("Sales tax n'est pas la TVA : taux d'État/local à appliquer")}</p>`:""}
     <div class="grid3">
       <label>${taxLbl()} %<input id="fTva" inputmode="decimal" value="${num(d.tva)}"></label>
       <label>${T("Unité")}<input id="fUnit" maxlength="12" value="${esc(d.unite||sLabel(sec().unit))}" placeholder="${T("h, pce…")}"></label>
@@ -894,9 +1009,149 @@ function openClient(){
     const n=$("#cNom").value.trim();
     if(!n){toast(T("Nom requis"));return}
     S.clients.push({id:uid(),nom:n,tel:$("#cTel").value.trim(),email:$("#cMail").value.trim(),adresse:$("#cAdr").value.trim(),tvaId:$("#cTva").value.trim()});
-    save();closeSheet();render();toast(T("Client ajouté ✓"));
+    if(!save()){S.clients.pop();return}closeSheet();render();toast(T("Client ajouté ✓"));
   };
 }
+/* ---------- edition client (fiche pre-remplie, rollback si stockage plein) ---------- */
+function openEditClient(id){
+  const c=S.clients.find(x=>x.id===id);if(!c)return;
+  openSheet(`<h2>${T("Modifier")} · ${esc(cliName(c))}</h2><p class="sub">${T("Un nom suffit. L'e-mail active l'envoi en 1 clic, le téléphone la relance WhatsApp.")}</p>
+  <div class="form">
+    <label>${T("Nom + repère")}<input id="cNom" maxlength="60" value="${esc(loc(c.nom)||"")}"></label>
+    <div class="grid2">
+      <label>${T("E-mail")}<input id="cMail" type="email" maxlength="80" value="${esc(c.email||"")}"></label>
+      <label>${T("Téléphone / WhatsApp")}<input id="cTel" inputmode="tel" value="${esc(c.tel||"")}"></label>
+    </div>
+    <label>${T("Adresse (pour la facture)")}<input id="cAdr" maxlength="90" value="${esc(c.adresse||"")}"></label>
+    <label>${T("N° TVA / VAT / EIN (facultatif)")}<input id="cTva" maxlength="40" value="${esc(c.tvaId||"")}"></label>
+    <div class="row"><button class="btn primary" id="cSave" type="button" style="flex:1">${T("Enregistrer les modifications ✓")}</button><button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button></div>
+  </div>`);
+  $("#cancelS").onclick=closeSheet;
+  $("#cSave").onclick=()=>{
+    const n=$("#cNom").value.trim();
+    if(!n){toast(T("Nom requis"));return}
+    const bk={...c};
+    c.nom=n;c.tel=$("#cTel").value.trim();c.email=$("#cMail").value.trim();c.adresse=$("#cAdr").value.trim();c.tvaId=$("#cTva").value.trim();
+    if(!save()){Object.assign(c,bk);return}
+    /* Les documents gardent un instantane du nom : on realigne ceux du client. */
+    S.docs.forEach(d=>{if(d&&d.clientId===c.id)d.client=cliName(c)});
+    save();closeSheet();render();toast(`${cliName(c)} ${T("mis à jour ✓")}`);
+  };
+}
+/* ---------- fiche client : solde, historique, temps suivi ----------
+   Le "portail" cote pro, 100 % local : tout est deja dans S. La carte
+   client ouvre cette fiche (boutons WhatsApp/e-mail/appel gardent la main).
+   Le temps suivi (chrono ou saisie) se facture en 1 clic vers devis/facture. */
+function fmtDuree(min){min=Math.max(0,Math.round(num(min)));const h=Math.floor(min/60),m=min%60;return h?h+"h"+String(m).padStart(2,"0"):m+" min"}
+let chronoT0=null;
+function openFicheClient(id){
+  const c=S.clients.find(x=>x.id===id);if(!c)return;
+  const docs=S.docs.filter(d=>d.clientId===id).sort((a,b)=>(b.emis||"")<(a.emis||"")?-1:1);
+  const facs=docs.filter(d=>d.type==="facture");
+  const due=facs.filter(d=>d.statut!=="paye"), late=due.filter(d=>daysLate(d.eche)>7);
+  const sum=a=>a.reduce((x,d)=>x+totals(d).net,0);
+  const dev=S.biz.devise;
+  const tel=(c.tel||"").replace(/[^0-9]/g,""), mail=(c.email||"").trim();
+  const tEntries=(S.time||[]).filter(t=>t.clientId===id).sort((a,b)=>(b.date||"")<(a.date||"")?-1:1);
+  const tMin=tEntries.filter(t=>!t.done).reduce((a,t)=>a+num(t.min),0);
+  const docRows=docs.length?docs.map(d=>{
+    return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button" style="width:100%;text-align:left;display:flex;justify-content:space-between;gap:8px"><span>${d.type==="devis"?"🧾":d.type==="avoir"?"↩️":"💰"} ${esc(d.numero)} · ${esc(d.emis||"")}</span><b>${amtOf(d)}</b></button>`;
+  }).join(""):`<div class="empty">${T("Aucun document.")}</div>`;
+  const tRows=tEntries.length?tEntries.map(t=>`<div class="doc-meta" style="align-items:center"><span>⏱ ${esc(t.label||T("Article"))} · ${esc(t.date||"")} · ${fmtDuree(t.min)}${t.done?" ✓":""}</span><button class="chip-btn" data-tdel="${t.id}" type="button" aria-label="${T("Supprimer")}">×</button></div>`).join(""):`<div class="empty">${T("Aucun temps à facturer.")}</div>`;
+  openSheet(`<h2>☺ ${esc(cliName(c))}</h2><p class="sub">${esc(c.tel||c.email||"—")}${c.adresse?" · "+esc(c.adresse):""}</p>
+  <div class="card" style="margin:0 0 10px">
+    <div class="doc-meta"><span>${T("À encaisser")}</span><b>${fmt(sum(due),dev)}</b></div>
+    <div class="doc-meta"><span>${T("En retard >7j")}</span><b>${fmt(sum(late),dev)}</b></div>
+    <div class="doc-meta"><span>${T("Total facturé")}</span><b>${fmt(sum(facs),dev)}</b></div>
+  </div>
+  <div class="row" style="margin-bottom:10px">
+    <button class="btn small primary" id="fNewDoc" type="button">+ ${T("Devis")}</button>
+    ${tel?`<a class="btn small wa" style="text-decoration:none" href="https://wa.me/${tel}" target="_blank" rel="noopener">💬 WhatsApp</a>`:""}
+    ${mail?`<a class="btn small" style="text-decoration:none" href="mailto:${esc(mail)}">✉️ ${T("E-mail")}</a>`:""}
+    <button class="btn small ghost" id="fEdit" type="button">✎ ${T("Modifier")}</button>
+    <button class="btn small ghost" id="fDel" type="button">${T("Supprimer")}</button>
+  </div>
+  <h3 style="font-size:14px;margin:12px 0 6px">${T("Documents")} (${docs.length})</h3>
+  <div class="list">${docRows}</div>
+  <h3 style="font-size:14px;margin:12px 0 6px">⏱ ${T("Temps suivi")} (${fmtDuree(tMin)})</h3>
+  <div class="list">${tRows}</div>
+  <div class="form" style="margin-top:8px">
+    <label>${T("Libellé")}<input id="fTLabel" maxlength="60" placeholder="${esc(sLabel(sec().ex))}"></label>
+    <label>${T("Minutes")}<input id="fTMin" inputmode="numeric" placeholder="60"></label>
+    <div class="row">
+      <button class="btn small ghost" id="fTAdd" type="button">+ ${T("Ajouter ✓")}</button>
+      <button class="btn small ghost" id="fTStart" type="button">▶ ${T("Démarrer")}</button>
+      <button class="btn small ghost" id="fTStop" type="button" hidden>⏹ ${T("Stop")}</button>
+      <button class="btn small primary" id="fTBill" type="button">${T("Facturer le temps")}</button>
+    </div>
+  </div>
+  <div class="row" style="margin-top:10px"><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div>`);
+  $("#cancelS").onclick=closeSheet;
+  $("#fNewDoc").onclick=()=>openNew(id);
+  $("#fEdit").onclick=()=>openEditClient(id);
+  $("#fDel").onclick=()=>{if(!confirm(T("Retirer ce client ?")))return;const bk=S.clients;S.clients=S.clients.filter(x=>x.id!==id);if(!save()){S.clients=bk;return}closeSheet();render()};
+  $("#fTAdd").onclick=()=>{
+    const lb=($("#fTLabel").value||"").trim()||T("Article");
+    const mn=Math.max(1,Math.round(Number($("#fTMin").value)||60));
+    S.time.push({id:uid(),clientId:id,label:lb.slice(0,60),min:mn,date:todayISO(),done:null});
+    if(!save()){S.time.pop();return}
+    render();openFicheClient(id);toast("+ "+fmtDuree(mn));
+  };
+  const stB=$("#fTStart"),spB=$("#fTStop");
+  if(stB)stB.onclick=()=>{chronoT0=Date.now();stB.hidden=true;spB.hidden=false;toast(T("Démarrer")+"...")};
+  if(spB)spB.onclick=()=>{
+    if(!chronoT0){stB.hidden=false;spB.hidden=true;return}
+    const mn=Math.max(1,Math.round((Date.now()-chronoT0)/60000));chronoT0=null;
+    const lb=($("#fTLabel").value||"").trim()||T("Article");
+    S.time.push({id:uid(),clientId:id,label:lb.slice(0,60),min:mn,date:todayISO(),done:null});
+    stB.hidden=false;spB.hidden=true;
+    if(!save()){S.time.pop();return}
+    render();openFicheClient(id);toast("⏱ "+fmtDuree(mn));
+  };
+  $$("#sheet [data-tdel]").forEach(b=>b.onclick=()=>{
+    const bk=S.time;S.time=S.time.filter(x=>x.id!==b.dataset.tdel);
+    if(!save()){S.time=bk;return}
+    render();openFicheClient(id);
+  });
+  $("#fTBill").onclick=()=>openTimeBill(id);
+}
+function openTimeBill(id){
+  const c=S.clients.find(x=>x.id===id);if(!c)return;
+  const entries=(S.time||[]).filter(t=>t.clientId===id&&!t.done);
+  if(!entries.length){toast(T("Aucun temps à facturer."));return}
+  const mins=entries.reduce((a,t)=>a+num(t.min),0);
+  openSheet(`<h2>⏱ ${T("Facturer le temps")}</h2>
+  <p class="sub">${esc(cliName(c))} · ${entries.length} · ${fmtDuree(mins)}</p>
+  <div class="form">
+    <div class="filters" id="tt"><button class="is-on" data-t="devis" type="button">🧾 ${T("Devis")}</button><button data-t="facture" type="button">💰 ${T("Facture")}</button></div>
+    <label>${T("Prix / heure")} (${S.biz.devise})<input id="tPrice" inputmode="decimal"></label>
+    <label>${T("Échéance")}<input id="tEche" type="date" value="${addDays(todayISO(),15)}"></label>
+    <div class="total"><span>${T("Total TTC estimé")}</span><b id="tTot">0</b></div>
+    <div class="row"><button class="btn primary" id="tGo" type="button" style="flex:1">${T("Créer le devis ✓")}</button><button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button></div>
+  </div>`);
+  $("#cancelS").onclick=closeSheet;
+  let ttype="devis";
+  $("#tt").onclick=e=>{const b=e.target.closest("button");if(!b)return;$$("#tt button").forEach(x=>x.classList.remove("is-on"));b.classList.add("is-on");ttype=b.dataset.t;$("#tGo").textContent=ttype==="devis"?T("Créer le devis ✓"):T("Créer la facture ✓")};
+  $("#tPrice").oninput=()=>{$("#tTot").textContent=fmt(toCents($("#tPrice").value),S.biz.devise)};
+  $("#tGo").onclick=()=>{
+    const hourly=toCents($("#tPrice").value);
+    if(!(hourly>0)){toast(T("Mets au moins un prix"));return}
+    if(!canCreate(ttype)){closeSheet();openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}
+    const hrs=Math.round(mins/60*100)/100;
+    const total=Math.round(hourly*hrs);
+    const lib=entries.map(e=>e.label).filter(Boolean).slice(0,3).join(", ")||T("Article");
+    const nid=uid(),num_=nextNum(ttype);
+    const eche=$("#tEche").value||addDays(todayISO(),15);
+    S.docs.push({id:nid,type:ttype,numero:num_,clientId:id,client:cliName(c),
+      items:[{lib:fmtDuree(mins)+" · "+lib,q:1,p:total}],total,tva:PAYS[S.biz.pays]?.tva??20,unite:"",usState:"",
+      statut:"envoye",emis:todayISO(),eche,relances:0,photo:null});
+    const prevDone=entries.map(e=>e.done);
+    entries.forEach(e=>{e.done=nid});
+    if(!save()){undoCreate(ttype);entries.forEach((e,i)=>{e.done=prevDone[i]});return}
+    closeSheet();render();toast(T("Temps facturé ✓"));openView(nid);
+  };
+}
+
 /* ---------- signature client (Bon pour accord) ---------- */
 function openSign(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
@@ -934,9 +1189,11 @@ function openSign(id){
   $("#sigClear").onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);hasDrawn=false};
   $("#sigSave").onclick=()=>{
     if(!hasDrawn){toast(T("Fais signer le client avant de valider"));return}
+    const prevSig=d.signature,prevSigned=d.signedAt;
     d.signature=canvas.toDataURL("image/png");
     d.signedAt=new Date().toLocaleDateString(BCP47[lang()]||"fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
-    haptic([30,50,30]);save();closeSheet();render();
+    haptic([30,50,30]);
+    if(!save()){d.signature=prevSig;d.signedAt=prevSigned;return}closeSheet();render();
     toast(T("Devis signé ✓ Bon pour accord validé !"));
   };
 }
@@ -991,8 +1248,10 @@ function openAcompte(id){
       total:cents,tva:0,statut:"envoye",emis:todayISO(),eche:addDays(todayISO(),7),
       relances:0,isAcompte:true,devisSourceId:d.id,devisSourceNum:d.numero
     });
+    const prevAc={id:d.acompteFactureId,num:d.acompteFactureNum,mont:d.acompteMontant};
     d.acompteFactureId=nid;d.acompteFactureNum=num_;d.acompteMontant=cents;
-    haptic([20,40,20]);save();closeSheet();render();
+    haptic([20,40,20]);
+    if(!save()){undoCreate("facture");d.acompteFactureId=prevAc.id;d.acompteFactureNum=prevAc.num;d.acompteMontant=prevAc.mont;return}closeSheet();render();
     toast(`${T("Facture d'acompte")} ${num_} ${T("créée ✓ Envoie-la au client")}`);
     openPay(nid);
   };
@@ -1021,9 +1280,10 @@ function openAvoir(id){
       statut:"envoye",emis:todayISO(),eche:todayISO(),relances:0,photo:d.photo||null,
       avoirSourceId:d.id,avoirSourceNum:d.numero
     });
+    const prevAvoirNums=d.avoirNums;
     d.avoirNums=(d.avoirNums||[]).concat(num_);
     haptic([20,40]);
-    if(!save())return;
+    if(!save()){undoCreate("avoir");d.avoirNums=prevAvoirNums;return}
     render();closeSheet();
     toast(`${T("Avoir")} ${num_} ${T("créée ✓")}`);
     openView(nid);
@@ -1031,6 +1291,101 @@ function openAvoir(id){
 }
 
 /* ---------- partage : WhatsApp, e-mail, lien ---------- */
+/* ---------- factures recurrentes (hebdo / mensuel) ----------
+   S.rec = [{id, clientId, items (centimes), tva, unite, usState, echeDays,
+   freq: "weekly"|"monthly", next: "AAAA-MM-JJ", active}].
+   - Creation depuis une facture existante (act="recur", jamais plafonnee :
+     la generation, elle, respecte canCreate comme toute facture).
+   - genRecurrences() tourne au boot / retour en ligne / retour visible /
+     Accueil-Documents : avance `next` UNIQUEMENT quand la facture est creee
+     (quota bloque => on reessaie au prochain reveil, rien n'est perdu).
+   - Compteurs inviolables : nextNum("facture") comme partout. */
+function addInterval(iso,freq){
+  if(freq==="weekly")return addDays(iso,7);
+  const p=String(iso||"").split("-");let y=+p[0]||1970,m=+p[1]||1;
+  m++;if(m>12){m=1;y++}
+  const dim=new Date(y,m,0).getDate(), dd=Math.min(+p[2]||1,dim);
+  return y+"-"+String(m).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
+}
+function openRecur(id){
+  const d=S.docs.find(x=>x.id===id);if(!d||d.type!=="facture")return;
+  const tt=totals(d);
+  openSheet(`<h2>🔁 ${T("Rendre récurrent")}</h2>
+  <p class="sub">${esc(d.numero)} · ${fmt(tt.net??tt.ttc,S.biz.devise)} · ${esc(d.client)}</p>
+  <div class="form">
+    <div class="filters" id="recFreq">
+      <button type="button" class="is-on" data-f="weekly">${T("Hebdomadaire")}</button>
+      <button type="button" data-f="monthly">${T("Mensuelle")}</button>
+    </div>
+    <label>${T("Prochaine émission")}<input id="recNext" type="date" value="${todayISO()}"></label>
+    <div class="row">
+      <button class="btn primary" id="recSave" type="button" style="flex:1">${T("Rendre récurrent")}</button>
+      <button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button>
+    </div>
+  </div>`);
+  $("#cancelS").onclick=closeSheet;
+  let freq="weekly";
+  $("#recFreq").onclick=e=>{const b=e.target.closest("button");if(!b)return;$$("#recFreq button").forEach(x=>x.classList.remove("is-on"));b.classList.add("is-on");freq=b.dataset.f};
+  $("#recSave").onclick=()=>{
+    const next=$("#recNext").value||todayISO();
+    S.rec.push({id:uid(),clientId:d.clientId,items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",usState:d.usState||"",echeDays:15,freq,next,active:true});
+    if(!save()){S.rec.pop();return}
+    closeSheet();toast(T("Récurrence créée ✓"));
+  };
+}
+function openRecList(){
+  const rows=(S.rec||[]).map(r=>{
+    const c=S.clients.find(x=>x.id===r.clientId)||{};
+    const nm=cliName(c);
+    const st=r.active?`<span class="status s-paye">${T("Active")}</span>`:`<span class="status s-brouillon">${T("En pause")}</span>`;
+    return `<article class="doc"><div class="doc-top"><div><b>🔁 ${esc(nm)}</b><br><small>${r.freq==="weekly"?T("Hebdomadaire"):T("Mensuelle")} · ${T("Prochaine émission")} ${esc(r.next||"—")}</small></div>${st}</div><div class="doc-actions"><button class="chip-btn" data-rtoggle="${r.id}" type="button">${r.active?T("Suspendre"):T("Reprendre")}</button><button class="chip-btn" data-rdel="${r.id}" type="button">${T("Supprimer")}</button></div></article>`;
+  }).join("");
+  openSheet(`<h2>🔁 ${T("Récurrences")}</h2><p class="sub">${T("Hebdomadaire")} / ${T("Mensuelle")} · ${T("Prochaine émission")}</p>
+  <div class="list">${rows||`<div class="empty">${T("Aucune récurrence.")}</div>`}</div>
+  <div class="row" style="margin-top:10px"><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div>`);
+  $("#cancelS").onclick=closeSheet;
+  $$("#sheet [data-rtoggle]").forEach(b=>b.onclick=()=>{
+    const r=S.rec.find(x=>x.id===b.dataset.rtoggle);if(!r)return;
+    const prev=r.active;r.active=!r.active;
+    if(!save()){r.active=prev;return}
+    render();openRecList();
+  });
+  $$("#sheet [data-rdel]").forEach(b=>b.onclick=()=>{
+    const r=S.rec.find(x=>x.id===b.dataset.rdel);if(!r)return;
+    if(!confirm(T("Supprimer la récurrence ?")))return;
+    const bk=S.rec;S.rec=S.rec.filter(x=>x.id!==r.id);
+    if(!save()){S.rec=bk;return}
+    render();openRecList();
+  });
+}
+function genRecurrences(){
+  if(!Array.isArray(S.rec)||!S.rec.length)return 0;
+  const today=todayISO();
+  const due=S.rec.filter(r=>r&&r.active&&r.next&&r.next<=today);
+  if(!due.length)return 0;
+  const pushed=[],advanced=[];
+  for(const r of due){
+    /* Quota gratuit : une recurrence bloquee attend le prochain reveil. */
+    if(!canCreate("facture"))continue;
+    const items=JSON.parse(JSON.stringify(r.items||[]));
+    if(!items.length)continue;
+    const cli=S.clients.find(c=>c.id===r.clientId)||{};
+    const nid=uid(),num_=nextNum("facture");
+    const eche=addDays(today,Math.max(0,Number(r.echeDays)||15));
+    S.docs.push({id:nid,type:"facture",numero:num_,clientId:r.clientId,client:cliName(cli),
+      items,total:items.reduce((a,l)=>a+(num(l.q)||0)*(num(l.p)||0),0),tva:num(r.tva),unite:r.unite||"",usState:r.usState||"",
+      statut:"envoye",emis:today,eche,relances:0,photo:null,recurId:r.id});
+    pushed.push(r);advanced.push([r,r.next]);
+    r.next=addInterval(r.next,r.freq);
+  }
+  if(!pushed.length)return 0;
+  if(!save()){pushed.forEach(()=>undoCreate("facture"));advanced.forEach(([r,nx])=>{r.next=nx});return 0}
+  render();
+  toast(T("Factures récurrentes : {n} créée(s) ✓",{n:pushed.length}));
+  haptic([20,40]);
+  return pushed.length;
+}
+
 async function docMessage(d){
   const tt=totals(d);
   const c=cliOf(d);
@@ -1094,6 +1449,7 @@ function openView(id){
   const pCfg=PAYS[S.biz.pays]||PAYS.FR;
   const isDevis=d.type==="devis", isAvoir=d.type==="avoir";
   const neg=isAvoir?"− ":""; /* avoir : montants en négatif (crédit) */
+  const taxTitle=(S.biz.pays==="US"&&d.usState)?"Sales tax "+d.usState+" ("+num(d.tva)+"%)":taxLbl()+" ("+num(d.tva)+"%)";
   const rows=d.items.map(l=>`
     <tr>
       <td><b>${esc(itemLib(l))}</b></td>
@@ -1192,7 +1548,7 @@ function openView(id){
 
       <div class="inv-totals">
         <div class="inv-tot-row"><span>${T("Total HT")} :</span><span>${neg}${fmt(tt.ht,S.biz.devise)}</span></div>
-        <div class="inv-tot-row"><span>${taxLbl()} (${num(d.tva)}%) :</span><span>${neg}${fmt(tt.tva,S.biz.devise)}</span></div>
+        <div class="inv-tot-row"><span>${taxTitle} :</span><span>${neg}${fmt(tt.tva,S.biz.devise)}</span></div>
         <div class="inv-tot-row grand"><span>${T("Total TTC")} :</span><span>${neg}${fmt(tt.ttc,S.biz.devise)}</span></div>
         ${acompteLine}
         ${d.acompteDeduction?`<div class="inv-tot-row grand" style="color:var(--acc-d)"><span>${T("Net à payer")} :</span><span>${fmt(tt.net,S.biz.devise)}</span></div>`:""}
@@ -1252,6 +1608,7 @@ function openView(id){
       const qr=document.getElementById("viewQR");
       if(qr)qr.innerHTML=makeQR(res.url);
     }
+    if(res&&res.paid){render()}
   });
 }
 /* ---------- lien de paiement ---------- */
@@ -1282,15 +1639,16 @@ function openPay(id){
   </div>`);
   $("#copyL").onclick=async()=>{try{await navigator.clipboard.writeText(payUrl);toast(T("Lien copié ✓"))}catch{toast(T("Lien : ")+payUrl)}};
   const mp=$("#markP");
-  if(mp)mp.onclick=()=>{d.statut="paye";d.payeLe=todayISO();haptic([20,50]);save();closeSheet();render();toast(T("Encaissé 🎉 Bravo"))};
+  if(mp)mp.onclick=()=>{const ps=d.statut,pl=d.payeLe;d.statut="paye";d.payeLe=todayISO();haptic([20,50]);if(!save()){d.statut=ps;d.payeLe=pl;return}closeSheet();render();toast(T("Encaissé 🎉 Bravo"))};
   const rp=$("#refundP");
-  if(rp)rp.onclick=()=>{if(!confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero})))return;d.statut="paye";d.payeLe=todayISO();haptic([20,50]);save();closeSheet();render();toast(T("Avoir remboursé ✓"))};
+  if(rp)rp.onclick=()=>{if(!confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero})))return;const ps=d.statut,pl=d.payeLe;d.statut="paye";d.payeLe=todayISO();haptic([20,50]);if(!save()){d.statut=ps;d.payeLe=pl;return}closeSheet();render();toast(T("Avoir remboursé ✓"))};
   /* Publication serveur : uniquement ici, au moment du partage (jamais en fond).
      Le lien affiché/QR/copie est remplacé dès que le slug est prêt. */
   if(site)ensurePortal(d).then(res=>{
     payUrl=res.url;
     const c=$("#payCode");if(c)c.textContent=payUrl;
     const q=$("#payQR");if(q)q.innerHTML=makeQR(payUrl);
+    if(res&&res.paid){render();toast(T("Facture payée ✓"))}
     const st=$("#payStat");if(st)st.textContent=res.server?"":T("Portail client indisponible — lien local utilisé.");
   });
 }
@@ -1300,18 +1658,19 @@ function relanceMsg(d, j, payUrl){
   const tt=totals(d);
   const who=(d.client||"").split("—")[0].trim();
   const v={w:who,n:d.numero,a:fmt(tt.net??tt.ttc,S.biz.devise),e:d.eche,j,u:payUrl,b:S.biz.nom||""};
-  if(j<=3)return T("Bonjour {w}, petit rappel : facture {n} de {a} (échéance {e}, {j}j de retard). Lien pour régler : {u} Merci beaucoup 🙏 — {b}", v);
-  if(j<=10)return T("Bonjour {w}, facture {n} de {a} impayée depuis {j}j (échéance {e}). Merci de régler ici : {u} — sans règlement sous 7 jours, des pénalités légales s'appliqueront. Cordialement, {b}", v);
+  if(j<7)return T("Bonjour {w}, petit rappel : facture {n} de {a} (échéance {e}, {j}j de retard). Lien pour régler : {u} Merci beaucoup 🙏 — {b}", v);
+  if(j<15)return T("Bonjour {w}, facture {n} de {a} impayée depuis {j}j (échéance {e}). Merci de régler ici : {u} — sans règlement sous 7 jours, des pénalités légales s'appliqueront. Cordialement, {b}", v);
   return T("Mise en demeure — facture {n} de {a} impayée depuis {j}j (échéance {e}). Dernier rappel avant recouvrement : réglez ici {u}. Pénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables. — {b}", v);
 }
 async function openRelance(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const c=cliOf(d);
   const j=Math.max(0,daysLate(d.eche));
-  const ton=j<=3?T("poli"):(j<=10?T("ferme"):T("mise en demeure"));
+  const ton=j<7?T("poli"):(j<15?T("ferme"):T("mise en demeure"));
   /* ensurePortal rafraîchit la copie D1 (statut/échéance) : le lien client
      partagé est toujours à jour. */
   const portal=await ensurePortal(d), payUrl=portal.url;
+  if(portal&&portal.paid){render();toast(T("Facture payée ✓"));return}
   const msg=relanceMsg(d, j, payUrl);
   const tel=(c.tel||"").replace(/[^0-9]/g,"");
   const mail=(c.email||"").trim();
@@ -1328,7 +1687,7 @@ async function openRelance(id){
   <div class="row" style="margin-top:10px">${actions}</div>
   ${(!tel&&!mail)?`<p class="muted" style="font-size:12px">${T("Ce client n'a ni téléphone ni e-mail : complète sa fiche pour activer l'envoi en 1 clic.")}</p>`:""}`);
   $("#copyM").onclick=async()=>{try{await navigator.clipboard.writeText(msg);toast(T("Message copié ✓"))}catch{toast(T("Copie manuelle"))}};
-  const bump=()=>{d.relances=num(d.relances)+1;haptic([20,40]);save();render()};
+  const bump=()=>{d.relances=num(d.relances)+1;haptic([20,40]);if(!save()){d.relances=num(d.relances)-1;return}render()};
   const w=$("#sendW");if(w)w.onclick=bump;
   const e=$("#sendE");if(e)e.onclick=bump;
 }
@@ -1436,7 +1795,9 @@ function bind(){
     const g=e.target.closest("[data-goto]");if(g){goto(g.dataset.goto);return}
     if(e.target.closest("[data-new]")){openNew();return}
     const cnew=e.target.closest("[data-cnew]");if(cnew){openNew(cnew.dataset.cnew);goto("docs");return}
-    const cdel=e.target.closest("[data-cdel]");if(cdel){if(confirm(T("Retirer ce client ?"))){S.clients=S.clients.filter(c=>c.id!==cdel.dataset.cdel);save();render()}return}
+    const cedit=e.target.closest("[data-cedit]");if(cedit){openEditClient(cedit.dataset.cedit);return}
+    const cf=e.target.closest("[data-cfiche]");if(cf&&!e.target.closest("button,a")){openFicheClient(cf.dataset.cfiche);return}
+    const cdel=e.target.closest("[data-cdel]");if(cdel){if(confirm(T("Retirer ce client ?"))){const bkClis=S.clients;S.clients=S.clients.filter(c=>c.id!==cdel.dataset.cdel);if(!save()){S.clients=bkClis;return}render()}return}
     /* KPI de l'accueil → Documents filtrés (le tableau de bord est cliquable) */
     const kp=e.target.closest("[data-kpi]");if(kp){goto("docs");applyFilter(kp.dataset.kpi);haptic([10]);return}
     if(e.target.closest("[data-addcli]")){openClient();return}
@@ -1455,10 +1816,11 @@ function bind(){
     if(act==="sign")openSign(id);
     if(act==="acompte")openAcompte(id);
     if(act==="avoir")openAvoir(id);
+    if(act==="recur")openRecur(id);
     if(act==="shareWa")shareWhatsApp(id);
     if(act==="shareMail")shareEmail(id);
-    if(act==="paid"){if(d&&confirm(T("Confirmer encaissement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();ensurePortal(d,true);closeSheet();toast(T("Encaissé 🎉"))}}
-    if(act==="refund"){if(d&&confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero}))){d.statut="paye";d.payeLe=todayISO();haptic([30,60]);save();render();ensurePortal(d,true);closeSheet();toast(T("Avoir remboursé ✓"))}}
+    if(act==="paid"){if(d&&confirm(T("Confirmer encaissement de {n} ?",{n:d.numero}))){const ps=d.statut,pl=d.payeLe;d.statut="paye";d.payeLe=todayISO();haptic([30,60]);if(!save()){d.statut=ps;d.payeLe=pl;return}render();ensurePortal(d,true);closeSheet();toast(T("Encaissé 🎉"))}}
+    if(act==="refund"){if(d&&confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero}))){const ps=d.statut,pl=d.payeLe;d.statut="paye";d.payeLe=todayISO();haptic([30,60]);if(!save()){d.statut=ps;d.payeLe=pl;return}render();ensurePortal(d,true);closeSheet();toast(T("Avoir remboursé ✓"))}}
     if(act==="del"){if(d&&confirm(T("Supprimer {n} ? Le compteur reste inviolable.",{n:d.numero}))){S.docs=S.docs.filter(x=>x.id!==id);save();render();closeSheet()}}
     if(act==="convert"&&d){
       if(d.statut==="converti"){toast(T("Devis déjà converti"));closeSheet();return}
@@ -1476,7 +1838,9 @@ function bind(){
         relances:0,photo:d.photo||null,signature:d.signature||null,signedAt:d.signedAt||null,
         acompteDeduction:acompteDed,devisSourceId:d.id,devisSourceNum:d.numero
       });
-      d.statut="converti";haptic([30,60]);save();closeSheet();render();
+      const prevConverti=d.statut;
+      d.statut="converti";haptic([30,60]);
+      if(!save()){undoCreate("facture");d.statut=prevConverti;return}closeSheet();render();
       toast(`${T("Facture")} ${num_} ${T("créée ✓")}${acompteDed?" ("+T("acompte déduit")+")":""}`);
     }
     if(act==="dup"&&d){
@@ -1485,7 +1849,7 @@ function bind(){
       S.docs.push({id:nid,type:d.type,numero:num_,clientId:d.clientId,client:d.client,
         items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",
         statut:"envoye",emis:todayISO(),eche:addDays(todayISO(),15),relances:0,photo:null});
-      save();render();closeSheet();toast(`${d.type==="devis"?T("Devis"):T("Facture")} ${num_} ${T("dupliquée ✓")}`);
+      if(!save()){undoCreate(d.type);return}render();closeSheet();toast(`${d.type==="devis"?T("Devis"):T("Facture")} ${num_} ${T("dupliquée ✓")}`);
     }
   });
 
@@ -1493,6 +1857,7 @@ function bind(){
   $$(".toolbar .filters button").forEach(b=>b.onclick=()=>applyFilter(b.dataset.f));
   $("#q").oninput=renderDocs;
   $("#fab").onclick=()=>openNew();
+  const rb=$("#recurBtn");if(rb)rb.onclick=openRecList;
   $("#addCliBtn").onclick=openClient;
   $("#scrim").onclick=closeSheet;
   /* feuille : glisser vers le bas (à partir du haut) pour fermer */
@@ -1580,15 +1945,15 @@ function bind(){
       const jc="VE", jl="Ventes", piece=clean(d.numero), aux=clean(d.clientId||"");
       const lib=clean((d.type==="avoir"?"Avoir ":"Facture ")+d.numero+" "+cli);
       const tvaTx=`TVA ${num(d.tva)}%`;
-      const L=(cp,cl,auxn,auxl,db,cr)=>[jc,jl,piece,dt,cp,cl,auxn,auxl,piece,dt,lib,db,cr,"","",au,eur(db||cr),isoDev].join("|");
+      const L=(cp,cl,auxn,auxl,dbC,crC)=>{const db=dbC?eur(dbC):"",cr=crC?eur(crC):"";return[jc,jl,piece,dt,cp,cl,auxn,auxl,piece,dt,lib,db,cr,"","",au,eur(dbC||crC),isoDev].join("|")};
       if(d.type==="avoir"){
-        rows.push(L("411000","Clients",aux,cli,"",eur(t.ttc)));
-        rows.push(L("707000","Ventes de prestations","","",eur(t.ht),""));
-        if(t.tva>0)rows.push(L("445710",tvaTx,"","",eur(t.tva),""));
+        rows.push(L("411000","Clients",aux,cli,0,t.ttc));
+        rows.push(L("707000","Ventes de prestations","","",t.ht,0));
+        if(t.tva>0)rows.push(L("445710",tvaTx,"","",t.tva,0));
       }else{
-        rows.push(L("411000","Clients",aux,cli,eur(t.ttc),""));
-        rows.push(L("707000","Ventes de prestations","","","",eur(t.ht)));
-        if(t.tva>0)rows.push(L("445710",tvaTx,"","","",eur(t.tva)));
+        rows.push(L("411000","Clients",aux,cli,t.ttc,0));
+        rows.push(L("707000","Ventes de prestations","","",0,t.ht));
+        if(t.tva>0)rows.push(L("445710",tvaTx,"","",0,t.tva));
       }
     });
     if(!rows.length){toast(T("Aucune facture à exporter."));return}
@@ -1613,6 +1978,8 @@ function bind(){
           S={...S,...data,biz:{...S.biz,...data.biz},sub:{...S.sub,...(data.sub||{})}};
           S.docs=data.docs.map(d=>({...d,tva:num(d.tva),items:(d.items||[]).map(i=>({lib:normLib(i.lib),q:num(i.q)||1,p:num(i.p)}))}));
           S.clients=data.clients.map(c=>({id:String(c.id||uid()),nom:String(c.nom||T("Client")),tel:String(c.tel||""),email:String(c.email||""),adresse:String(c.adresse||""),tvaId:String(c.tvaId||"")}));
+          S.rec=Array.isArray(data.rec)?data.rec:[];
+          S.time=Array.isArray(data.time)?data.time:[];
           migrateSeq();migrateMoyens();
           save();syncSettings();render();toast(T("Sauvegarde importée ✓"));
         }catch{toast(T("Erreur de lecture du fichier JSON"))}
@@ -1624,8 +1991,8 @@ function bind(){
 
   const up=()=>{const off=!navigator.onLine;const em=$("#dotNet").querySelector("em");if(em)em.textContent=off?T("Hors-ligne · tout marche"):T("En ligne")};
   window.addEventListener("online",up);window.addEventListener("offline",up);up();
-  window.addEventListener("online",()=>flushBackup(true));
-  document.addEventListener("visibilitychange",()=>{if(document.hidden)flushBackup(true)});
+  window.addEventListener("online",()=>{flushBackup(true);syncPaidFromServer(false);genRecurrences()});
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)flushBackup(true);else{syncPaidFromServer(false);genRecurrences()}});
 
   const db=$("#demoBar");if(db)db.hidden=paymentsReady();
 
@@ -1687,6 +2054,6 @@ function initInstall(){
 }
 
 /* ---------- boot ---------- */
-load();initTheme();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();
+load();initTheme();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();syncPaidFromServer(false);genRecurrences();
 /* Langue non-inline (dict chargé à la demande) : rattrapage une fois chargé. */
 if(window.setAppLang&&(lang()!=="fr"&&lang()!=="en")){setAppLang(lang()).then(()=>{try{syncSettings()}catch(e){}try{render()}catch(e){}try{if(!localStorage.getItem("encaisse.onboarded")){setSlide(0);refreshOnbPrice()}}catch(e){}})}
