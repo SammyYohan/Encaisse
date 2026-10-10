@@ -76,7 +76,9 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
           <option value="food" data-i18n="🍲 Resto / Food">🍲 Resto / Food</option>
           <option value="beaute" data-i18n="💇 Beauté / Bien-être">💇 Beauté / Bien-être</option>
           <option value="transport" data-i18n="🛵 Transport / Livraison">🛵 Transport / Livraison</option>
+          <option value="autres" data-i18n="🧰 Autres">🧰 Autres</option>
         </select>
+        <div class="preset-preview" id="onbPresets"></div>
         <div class="pays-grid" id="onbPays">
           <button type="button" data-pays="FR" class="is-sel" data-i18n="🇫🇷 France · PDF + mentions">🇫🇷 France · PDF + mentions</button>
           <button type="button" data-pays="BE" data-i18n="🇧🇪 Belgique · PDF + mentions">🇧🇪 Belgique · PDF + mentions</button>
@@ -89,6 +91,7 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
     </div>
     <div class="onb-nav">
       <div class="dots" id="onbDots" aria-hidden="true"><i class="is-on"></i><i></i><i></i><i></i></div>
+      <span class="onb-count" id="onbCount">1 / 4</span>
       <button class="btn primary big" id="onbNext" type="button">Continuer →</button>
     </div>
   </div>
@@ -163,6 +166,7 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
           <option value="food" data-i18n="🍲 Resto / Food">🍲 Resto / Food</option>
           <option value="beaute" data-i18n="💇 Beauté / Bien-être">💇 Beauté / Bien-être</option>
           <option value="transport" data-i18n="🛵 Transport / Livraison">🛵 Transport / Livraison</option>
+          <option value="autres" data-i18n="🧰 Autres">🧰 Autres</option>
         </select></label>
         <div class="grid2">
           <label><span data-i18n="Pays fiscal">Pays fiscal</span><select name="pays" id="paysSel">

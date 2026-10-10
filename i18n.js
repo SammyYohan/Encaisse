@@ -1,5 +1,5 @@
 /* Encaisse i18n — clés = texte source français (pattern gettext).
-   Clé absente du dictionnaire => le français reste affiché (dégradation propre).
+   Clé absente du dictionnaire => repli anglais puis français (jamais de crash).
    Variables : t("Bonjour {w}", {w:"Ana"}) remplace {w}. */
 (function () {
   "use strict";
@@ -17,6 +17,7 @@
     "🧪 Mode démonstration — aucun paiement réel, liens et boutons simulés.": "🧪 Demo mode — no real payments; links and buttons are simulated.",
     "🛍️ Commerce / Boutique": "🛍️ Retail / Shop",
     "🛵 Transport / Livraison": "🛵 Transport / Delivery",
+    "🧰 Autres": "🧰 Other",
     "0% commission sur tes encaissements.": "0% commission on your collections.",
     "N°, rue, code postal, ville": "No., street, postcode, city",
     "Le nom qui apparaîtra sur tes factures": "The name that will appear on your invoices",
@@ -513,6 +514,9 @@
     } else if (LANG !== "fr") {
       var dd = LOADED[LANG];
       if (dd && dd[out] !== undefined) out = dd[out];
+      /* Relais anglais : les 22 dictionnaires UE suivent avec retard ; mieux
+         vaut l'anglais (2e langue officielle de l'app) que le français. */
+      else if (EN[out] !== undefined) out = EN[out];
     }
     if (vars) {
       for (var k in vars) {

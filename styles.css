@@ -212,6 +212,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .dots{display:flex;gap:7px}.dots i{position:relative;width:8px;height:8px;border-radius:99px;background:#ffffff35;transition:all .3s;cursor:pointer}.dots i::after{content:"";position:absolute;inset:-9px}.dots i.is-on{width:26px;background:#fff}
 .onb-input{background:#fff;border:0;border-radius:12px;padding:12px;margin-top:10px;color:#0f172a;font-weight:700}
 .onb-price{margin:10px 0 0;font-size:12.5px;font-weight:800;color:#a7f3d0;background:#ffffff14;border:1px solid #ffffff2b;border-radius:12px;padding:9px 11px}
+.onb-count{color:#e2e8f0;font-size:12px;font-weight:800;white-space:nowrap}
+.preset-preview{margin-top:10px}
+.preset-preview .preset-label{color:#cbd5e1}
+.preset-preview .preset-chip{background:#ffffff16;border-color:#ffffff2b;color:#fff;cursor:default}
+.onb-input.err{outline:2px solid #f87171;animation:shake .35s ease}
+@keyframes shake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
 .plan-badge{font-size:11px;font-weight:900;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#451a03;border-radius:99px;padding:6px 10px;white-space:nowrap}
 .plan-badge.pro{background:linear-gradient(135deg,var(--acc),var(--acc-d));color:#fff}
 .plan-card{border:2px solid #a7f3d0;background:linear-gradient(180deg,#ecfdf5,#fff)}

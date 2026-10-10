@@ -350,6 +350,14 @@ const SECTEURS={
       {lib:{fr:"Transfert aéroport / longue dist.",en:"Airport transfer / long distance"},q:1,p:{"€":55,CHF:80,$:70}},
       {lib:{fr:"Mise à disposition (demi-journée)",en:"Half-day hire"},q:1,p:{"€":140,CHF:190,$:165}},
       {lib:{fr:"Frais d'attente / manutention",en:"Waiting / handling fee"},q:1,p:{"€":25,CHF:35,$:30}}
+    ]},
+  autres:{
+    label:{fr:"🧰 Autres",en:"🧰 Other"},ex:{fr:"Décris ta prestation en quelques mots",en:"Describe your job in a few words"},unit:"",photo:{fr:"📷 Photo (preuve)",en:"📷 Photo (proof)"},cli:{fr:"Ex : nom du client + repère",en:"E.g. client name + reference"},
+    presets:[
+      {lib:{fr:"Prestation standard",en:"Standard service"},q:1,p:{"€":80,CHF:110,$:95}},
+      {lib:{fr:"Produit / Article",en:"Product / Item"},q:1,p:{"€":50,CHF:65,$:60}},
+      {lib:{fr:"Déplacement",en:"Travel"},q:1,p:{"€":25,CHF:35,$:30}},
+      {lib:{fr:"Frais divers",en:"Miscellaneous fee"},q:1,p:{"€":30,CHF:40,$:35}}
     ]}
 };
 
@@ -473,6 +481,7 @@ function setSlide(n){
   oi=Math.max(0,Math.min(NS-1,n));
   $$("#onbSlides .slide").forEach((el,i)=>el.classList.toggle("is-active",i===oi));
   $$("#onbDots i").forEach((d,i)=>d.classList.toggle("is-on",i===oi));
+  const oc=$("#onbCount");if(oc)oc.textContent=(oi+1)+" / "+NS;
   $("#onbBar").style.width=((oi+1)/NS*100)+"%";
   $("#onbNext").textContent=oi===NS-1?T("Créer mon compte →"):T("Continuer →");
 }
@@ -488,18 +497,33 @@ function initOnb(){
   if(langSel){
     const list=window.ENCAISSE_LANG_LIST||{fr:"Français",en:"English"};
     langSel.innerHTML=Object.keys(list).map(k=>`<option value="${k}"${k===lang()?" selected":""}>${list[k]}</option>`).join("");
-    langSel.onchange=()=>{setAppLang(langSel.value).then(()=>{setSlide(oi);refreshOnbPrice()})};
+    langSel.onchange=()=>{setAppLang(langSel.value).then(()=>{setSlide(oi);refreshOnbPrice();onbPresetPreview()})};
   }
-  const upd=refreshOnbPrice;
+  const upd=()=>{refreshOnbPrice();onbPresetPreview()};
   upd();
+  const sxSel=$("#onbSecteur");if(sxSel)sxSel.onchange=upd;
   $("#onbNext").onclick=()=>{ if(oi<NS-1){setSlide(oi+1);return} finishOnb(); };
   $("#onbSkip").onclick=finishOnb;
+  const bizField=$("#onbBiz");if(bizField)bizField.addEventListener("input",e=>e.target.classList.remove("err"));
   /* pastilles de progression cliquables (le swipe existe aussi) */
   $$("#onbDots i").forEach((dot,i)=>{dot.onclick=()=>setSlide(i)});
   $("#onbSlides").addEventListener("click",e=>{const b=e.target.closest("#onbPays button");if(!b)return;$$("#onbPays button").forEach(x=>x.classList.remove("is-sel"));b.classList.add("is-sel");upd()});
   let sx=null;const el=$("#onbSlides");
   el.addEventListener("touchstart",e=>sx=e.touches[0].clientX,{passive:true});
   el.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(dx<-50)setSlide(oi+1);if(dx>50)setSlide(oi-1);sx=null},{passive:true});
+}
+/* Apercu dynamique slide 4 : les 3 suggestions 1-clic du metier choisi,
+   dans la devise du pays selectionne. L'utilisateur voit son futur
+   formulaire avant meme de creer son compte. */
+function onbPresetPreview(){
+  const box=$("#onbPresets");if(!box)return;
+  const sx=$("#onbSecteur")?.value||"artisan";
+  const secDef=SECTEURS[sx]||SECTEURS.artisan;
+  const pays=$("#onbPays .is-sel")?.dataset?.pays||"FR";
+  const dev=(PAYS[pays]||PAYS.FR).devise;
+  const show=v=>pays==="CH"?v+" CHF":pays==="US"?"$"+v:v+" €";
+  const items=(secDef.presets||[]).slice(0,3);
+  box.innerHTML=`<div class="preset-label">⚡ ${T("Suggestions rapides")} :</div><div class="preset-chips">`+items.map(p=>`<span class="preset-chip">+ ${esc(loc(p.lib))} (${show(p.p[dev]||Object.values(p.p)[0]||0)})</span>`).join("")+`</div>`;
 }
 function refreshOnbPrice(){
   const sel=$("#onbPays .is-sel")?.dataset?.pays||"FR";
@@ -512,7 +536,8 @@ function finishOnb(){
     /* « Passer » peut être tapé dès la 1re slide : le champ est sur la dernière.
        On y amène l'utilisateur au lieu d'un toast sans champ visible. */
     setSlide(NS-1);
-    $("#onbBiz")?.focus();
+    const bizInput=$("#onbBiz");
+    if(bizInput){bizInput.classList.add("err");bizInput.focus()}
     toast(T("Nom requis"));
     return;
   }
