@@ -166,9 +166,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .grain{position:absolute;inset:0;background:radial-gradient(rgba(255,255,255,.14) 1px,transparent 1px);background-size:14px 14px;opacity:.25}
 .onb-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:16px;position:relative;z-index:1}
 .onb-top-right{display:flex;gap:14px;align-items:center}
-.onb-top-right .link{background:#ffffff1a;border:1px solid #ffffff2e;border-radius:99px;padding:5px 12px;color:#fff;cursor:pointer;font-weight:800}
+.onb-top-right .link{background:rgba(11,18,38,.78);border:1px solid #ffffff4d;border-radius:99px;padding:5px 12px;color:#fff;cursor:pointer;font-weight:800;backdrop-filter:blur(6px)}
 .onb-top-right select.link{appearance:auto;max-width:150px}
-.onb-top-right select.link option{color:#0f172a}
+.onb-top-right select.link option{background:#fff;color:#0f172a}
 .onb-top .brand{color:#fff}.onb-top .link{color:#e2e8f0}
 .onb-bar{height:4px;background:#ffffff22;margin:0 16px;border-radius:99px;position:relative;z-index:1;overflow:hidden}
 .onb-bar i{display:block;height:100%;width:25%;background:linear-gradient(90deg,#34d399,#a7f3d0);border-radius:99px;transition:width .4s ease}
