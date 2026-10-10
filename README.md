@@ -405,3 +405,8 @@ legal placeholders, then connect P0 item 6 (certified e-invoicing partner).
 - Run `node --check app.js && node --check i18n.js` before pushing.
 - Do not reintroduce non-Stripe payment providers, non-target countries, or
   FCFA/CAD currencies: the scope is **FR · BE · CH · US, Stripe only**.
+
+
+## Technical audit (10 October 2026)
+
+See [`AUDIT_TECHNIQUE_FR.md`](AUDIT_TECHNIQUE_FR.md) for the security changes, remaining risks and production checklist. API smoke tests: `node tests/security-smoke.mjs` (Node.js 20+). Syntax checks: `node --check app.js && node --check i18n.js`.

@@ -24,17 +24,26 @@ const SUB = { m: 999, a: 9900 }; // centimes : 9,99 €/mois, 99 €/an (2 mois 
 const ZONES = ["EUR", "CHF", "USD"];
 const CUR = { "€": "EUR", CHF: "CHF", $: "USD" };
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, X-Sub-Token, X-Sub-Oh",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Max-Age": "86400"
-};
+/* Les endpoints sont same-origin : aucun besoin de CORS wildcard. Refuser
+   les POST navigateur cross-origin protège notamment les routes de partage,
+   checkout et sauvegarde contre les appels déclenchés depuis un autre site.
+   Les clients non-navigateurs peuvent ne pas envoyer Origin. */
+function crossOriginMutation(request) {
+  const origin = request.headers.get("Origin");
+  if (!origin) return false;
+  try { return new URL(origin).origin !== new URL(request.url).origin; }
+  catch (e) { return true; }
+}
 
 function json(body, status) {
   return new Response(JSON.stringify(body), {
     status: status || 200,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...CORS }
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer"
+    }
   });
 }
 
@@ -44,9 +53,27 @@ const hits = new Map();
 function rateLimited(key, max) {
   const now = Date.now(), win = 3600e3;
   const arr = (hits.get(key) || []).filter(function (t) { return now - t < win; });
-  if (arr.length >= (max || 30)) return true;
+  if (arr.length >= (max || 30)) {
+    hits.set(key, arr);
+    return true;
+  }
   arr.push(now);
   hits.set(key, arr);
+  /* Évite que des clés d'IP anciennes occupent indéfiniment la mémoire d'un
+     isolat. Ce compteur reste best-effort, pas un rate-limit distribué. */
+  if (hits.size > 10000) {
+    hits.forEach(function (times, k) {
+      if (!times.length || now - times[times.length - 1] >= win) hits.delete(k);
+    });
+    if (hits.size > 12000) {
+      const it = hits.keys();
+      for (let i = 0; i < 2000; i++) {
+        const next = it.next();
+        if (next.done) break;
+        hits.delete(next.value);
+      }
+    }
+  }
   return false;
 }
 function ipOf(request) {
@@ -153,11 +180,15 @@ function newSlug() {
 
 /* ---------- routes ---------- */
 export async function onRequestOptions() {
-  return new Response(null, { status: 204, headers: CORS });
+  // Pas de CORS cross-origin : l'API est consommée depuis la même origine.
+  return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 }
 
 export async function onRequestPost(ctx) {
   const seg = routeOf(ctx.request);
+  if (seg !== "stripe-webhook" && crossOriginMutation(ctx.request)) {
+    return json({ error: "origine_refusee" }, 403);
+  }
   if (seg === "checkout") return postCheckout(ctx);
   if (seg === "portal") return postPortal(ctx);
   if (seg === "stripe-webhook") return postStripeWebhook(ctx);
@@ -186,8 +217,11 @@ async function postCheckout(ctx) {
   const { request, env } = ctx;
   if (!env.STRIPE_SECRET_KEY) return json({ error: "stripe_non_configure" }, 503);
   if (rateLimited("ck:" + ipOf(request), 30)) return json({ error: "trop_de_requetes" }, 429);
+  const len = Number(request.headers.get("content-length") || 0);
+  if (len > 16000) return json({ error: "trop_gros" }, 413);
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: "json_invalide" }, 400); }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "requete_invalide" }, 400);
   const plan = body.plan === "pro" ? "pro" : null; // UN SEUL plan en vente (solo historique toléré en lecture)
   const cycle = body.cycle === "yearly" ? "yearly" : body.cycle === "monthly" ? "monthly" : null;
   const zone = ZONES.indexOf(body.zone) !== -1 ? body.zone : null; // zone d'origine (le prix, lui, est toujours en EUR)
@@ -232,6 +266,7 @@ async function postPortal(ctx) {
   if (len > 1500000) return json({ error: "trop_gros" }, 413);
   let b;
   try { b = await request.json(); } catch (e) { return json({ error: "json_invalide" }, 400); }
+  if (!b || typeof b !== "object" || Array.isArray(b)) return json({ error: "requete_invalide" }, 400);
   if (!b.doc || typeof b.doc !== "object" || !Array.isArray(b.doc.items) || b.doc.items.length > 300) {
     return json({ error: "document_invalide" }, 400);
   }
@@ -480,8 +515,11 @@ async function postBackup(ctx) {
   if (!env.DB) return json({ error: "portail_non_configure" }, 503);
   if (rateLimited("bk:" + ipOf(request), 200)) return json({ error: "trop_de_requetes" }, 429);
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS backup (owner TEXT PRIMARY KEY, blob TEXT NOT NULL, rev INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL)").run().catch(function () {});
+  const len = Number(request.headers.get("content-length") || 0);
+  if (len > 2100000) return json({ error: "trop_gros" }, 413);
   let b;
   try { b = await request.json(); } catch (e) { return json({ error: "json_invalide" }, 400); }
+  if (!b || typeof b !== "object" || Array.isArray(b)) return json({ error: "requete_invalide" }, 400);
   const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
   if (!key) return json({ error: "cle_requise" }, 400);
   const owner = await sha256hex(key);

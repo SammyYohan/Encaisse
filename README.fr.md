@@ -408,3 +408,8 @@ les mentions légales, puis brancher le P0 n° 6 (partenaire agréé e-facturati
 - `node --check app.js && node --check i18n.js` avant de pousser.
 - Ne pas réintroduire de moyens de paiement hors Stripe, de pays hors cible, ni de
   monnaies FCFA/CAD : le périmètre est **FR · BE · CH · US, Stripe uniquement**.
+
+
+## Audit technique (10 octobre 2026)
+
+Voir [`AUDIT_TECHNIQUE_FR.md`](AUDIT_TECHNIQUE_FR.md) pour les modifications de sécurité, les risques restant à traiter et la checklist de mise en production. Tests smoke API : `node tests/security-smoke.mjs` (Node.js 20+). Vérification syntaxique : `node --check app.js && node --check i18n.js`.
