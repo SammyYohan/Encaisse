@@ -13,7 +13,7 @@
 | **Stockage** | `localStorage` sur l'appareil de l'utilisateur — pas de compte, pas de base de données |
 | **Déploiement** | Cloudflare Pages (offre gratuite) |
 | **i18n** | La chaîne française **est** la clé de traduction (style gettext) |
-| **État** | 🟢 En ligne — front + backend câblés, vrai Checkout Stripe (`DEMO_MODE:false`) · 🟡 placeholders `legal.html` non remplis → voir [Checklist](#checklist-de-mise-en-ligne) |
+| **État** | 🟢 En ligne — front + backend câblés, vrai Checkout Stripe (`DEMO_MODE:false`), `legal.html` complété |
 
 ---
 
@@ -95,7 +95,7 @@ npx wrangler pages dev . --port 8788   # → http://localhost:8788
 | `functions/` | **Backend (Pages Functions, sans build)** : `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay`, `/api/stripe-webhook`, `/api/backup` + page client serveur `/r/:slug` (+ garde 404 `encaisse-export.json.js`) |
 | `schema.sql`, `wrangler.toml` | Schéma D1 (table `portal`) + config wrangler (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | Manifest PWA + icônes PNG (192, 512, maskable, apple-touch) |
-| `legal.html` | Mentions légales, CGU/CGV, confidentialité (bilingue, **cases à remplir**) |
+| `legal.html` | Mentions légales, CGU/CGV, confidentialité (bilingue, complété) |
 | `robots.txt`, `sitemap.xml`, `_headers` | SEO + en-têtes de sécurité Cloudflare |
 | `README.md` / `README.fr.md` | Ce fichier |
 | `VEILLE.md` | Étude concurrentielle (Europe + US) et plan priorisé |
@@ -272,16 +272,9 @@ aucun e-mail serveur pour le moment.
 ✅ Créer la base D1 + binding « DB » + exécuter schema.sql (voir ci-dessus)
 ✅ Mettre STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (wrangler pages secret put)
 □ Tester un vrai checkout (petit montant, puis remboursement) + vérifier le webhook
-□ Remplir legal.html (raison sociale, SIRET/RCS/EIN, TVA, e-mail, médiateur)
+✅ legal.html rempli (éditeur, hébergement, e-mail, médiateur)
 □ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
 □ Ajouter le domaine dans Cloudflare (Custom domains) + mettre à jour SITE_URL/robots/sitemap
-□ Vérifier les en-têtes : CSP, HSTS, X-Content-Type-Options, X-Frame-Options
-□ Vérifier que /encaisse-export.json renvoie 404
-□ Tester l'installation PWA sur Android et iOS
-```
-□ Remplir legal.html (raison sociale, SIRET/RCS/EIN, TVA, e-mail, médiateur)
-□ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
-□ Ajouter le domaine dans Cloudflare (Custom domains)
 □ Vérifier les en-têtes : CSP, HSTS, X-Content-Type-Options, X-Frame-Options
 □ Vérifier que /encaisse-export.json renvoie 404
 □ Tester l'installation PWA sur Android et iOS

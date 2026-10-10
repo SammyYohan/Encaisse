@@ -13,7 +13,7 @@
 | **Storage** | `localStorage` on the user's device — no account, no server database |
 | **Deployment** | Cloudflare Pages (free tier) |
 | **i18n** | French source strings are the translation keys (gettext-style) |
-| **Status** | 🟢 Live — front + backend wired, real Stripe Checkout (`DEMO_MODE:false`) · 🟡 `legal.html` placeholders unfilled → see [Go-live checklist](#go-live-checklist) |
+| **Status** | 🟢 Live — front + backend wired, real Stripe Checkout (`DEMO_MODE:false`), `legal.html` completed |
 
 ---
 
@@ -96,7 +96,7 @@ npx wrangler pages dev . --port 8788   # → http://localhost:8788
 | `functions/` | **Backend (Pages Functions, no build)**: `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay`, `/api/stripe-webhook`, `/api/backup` + server-rendered customer page `/r/:slug` (+ `encaisse-export.json.js` 404 guard) |
 | `schema.sql`, `wrangler.toml` | D1 schema (table `portal`) + wrangler config (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | PWA manifest + PNG icons (192, 512, maskable, apple-touch) |
-| `legal.html` | Legal notice, terms and privacy policy (bilingual, **placeholders to fill**) |
+| `legal.html` | Legal notice, terms and privacy policy (bilingual, completed) |
 | `robots.txt`, `sitemap.xml`, `_headers` | SEO + Cloudflare security headers |
 | `README.md` / `README.fr.md` | This file |
 | `VEILLE.md` | Market & competitor research (EU + US) and prioritised plan |
@@ -273,7 +273,7 @@ no-browser-return path). Reminders go out via WhatsApp / app e-mail (1 click,
 ✅ Create D1 database + binding "DB" + run schema.sql (see above)
 ✅ Put STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (wrangler pages secret put — already live)
 □ Test a real checkout (small amount, then refund) + verify webhook delivery
-□ Fill in legal.html (legal name, registration number, VAT, e-mail, ombudsman)
+✅ legal.html filled (publisher, hosting, e-mail, ombudsman)
 □ Fill Réglages → My business (address, VAT number, IBAN) — printed on invoices
 □ Add the custom domain in Cloudflare (Workers & Pages → Custom domains) + update SITE_URL/robots/sitemap
 □ Verify headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options
