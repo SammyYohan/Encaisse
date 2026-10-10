@@ -148,7 +148,7 @@ Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`, `encai
 |---|---|---|
 | Quotes | **unlimited** | unlimited |
 | Credit notes (avoirs) | **unlimited** | unlimited |
-| Invoices / month | **3** (`FREE_MONTHLY`) | unlimited |
+| Invoices / month | **5** (`FREE_MONTHLY`) | unlimited |
 | Monthly | 0 | 9,99 € |
 | Yearly (2 months free) | 0 | 99 € |
 

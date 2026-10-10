@@ -211,7 +211,6 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .onb-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 18px;position:relative;z-index:1}
 .dots{display:flex;gap:7px}.dots i{position:relative;width:8px;height:8px;border-radius:99px;background:#ffffff35;transition:all .3s;cursor:pointer}.dots i::after{content:"";position:absolute;inset:-9px}.dots i.is-on{width:26px;background:#fff}
 .onb-input{background:#fff;border:0;border-radius:12px;padding:12px;margin-top:10px;color:#0f172a;font-weight:700}
-.onb-price{margin:10px 0 0;font-size:12.5px;font-weight:800;color:#a7f3d0;background:#ffffff14;border:1px solid #ffffff2b;border-radius:12px;padding:9px 11px}
 .onb-count{color:#e2e8f0;font-size:12px;font-weight:800;white-space:nowrap}
 .preset-preview{margin-top:10px}
 .preset-preview .preset-label{color:#cbd5e1}

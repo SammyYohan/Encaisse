@@ -376,7 +376,7 @@ const ZONE_FOR={FR:"EUR",BE:"EUR",CH:"CHF",US:"USD"};
 const zoneKey=()=>ZONE_FOR[S.biz.pays]||"EUR";
 const planOf=()=>PLANS[zoneKey()];
 const fmtP=v=>{const z=zoneKey();if(z==="EUR")return v+" €";if(z==="CHF")return v+" CHF";return "$"+v};
-const FREE_MONTHLY=3;
+const FREE_MONTHLY=5;
 
 let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",theme:"auto",clients:[],docs:[],rec:[],time:[],seq:{DEV:{},FAC:{},AVT:{}}};
 
@@ -467,11 +467,7 @@ const normLib=v=>{if(typeof v==="string")return v;if(v&&typeof v==="object"){con
 const cliOf=d=>S.clients.find(c=>c.id===d.clientId)||{};
 const cliName=c=>loc(c&&c.nom)||T("Client");
 
-const fmtSub=v=>(lang()==="en"?String(v):String(v).replace(".",","))+" €"; // prix Premium, virgule FR
-function priceLine(pays){
-  const flag=(PAYS[pays]?.label||"").split(" ")[0]||"";
-  return `${flag} Pro ${fmtSub(SUB.m)}/${T("mois")} · ${fmtSub(SUB.a)}/${T("an")} · ${T("2 mois offerts")}`;
-}
+const fmtSub=v=>(lang()==="en"?String(v):String(v).replace(".",","))+" €"; // prix Premium, virgule FR (paywall post-compte)
 
 /* ---------- onboarding ---------- */
 let oi=0;const NS=4;
@@ -497,9 +493,9 @@ function initOnb(){
   if(langSel){
     const list=window.ENCAISSE_LANG_LIST||{fr:"Français",en:"English"};
     langSel.innerHTML=Object.keys(list).map(k=>`<option value="${k}"${k===lang()?" selected":""}>${list[k]}</option>`).join("");
-    langSel.onchange=()=>{setAppLang(langSel.value).then(()=>{setSlide(oi);refreshOnbPrice();onbPresetPreview()})};
+    langSel.onchange=()=>{setAppLang(langSel.value).then(()=>{setSlide(oi);onbPresetPreview()})};
   }
-  const upd=()=>{refreshOnbPrice();onbPresetPreview()};
+  const upd=()=>{onbPresetPreview()};
   upd();
   const sxSel=$("#onbSecteur");if(sxSel)sxSel.onchange=upd;
   $("#onbNext").onclick=()=>{ if(oi<NS-1){setSlide(oi+1);return} finishOnb(); };
@@ -524,10 +520,6 @@ function onbPresetPreview(){
   const show=v=>pays==="CH"?v+" CHF":pays==="US"?"$"+v:v+" €";
   const items=(secDef.presets||[]).slice(0,3);
   box.innerHTML=`<div class="preset-label">⚡ ${T("Suggestions rapides")} :</div><div class="preset-chips">`+items.map(p=>`<span class="preset-chip">+ ${esc(loc(p.lib))} (${show(p.p[dev]||Object.values(p.p)[0]||0)})</span>`).join("")+`</div>`;
-}
-function refreshOnbPrice(){
-  const sel=$("#onbPays .is-sel")?.dataset?.pays||"FR";
-  const el=$("#onbPrice");if(el)el.textContent=priceLine(sel);
 }
 function finishOnb(){
   const sel=$("#onbPays .is-sel")?.dataset?.pays||"FR";
@@ -749,7 +741,7 @@ function isPaid(){
   return true;
 }
 function realDocs(){return S.docs.filter(d=>!d.demo)}
-/* Offre gratuite : devis ILLIMITÉS, 3 factures par mois (les devis sont le
+/* Offre gratuite : devis ILLIMITÉS, 5 factures par mois (les devis sont le
    canal d'acquisition, la facture est la valeur payante). */
 function docsCeMois(){const m=todayISO().slice(0,7);return realDocs().filter(d=>d.type==="facture"&&String(d.emis||"").slice(0,7)===m)}
 /* canCreate(type) : seul le passage en facture est plafonné. */
@@ -2081,4 +2073,4 @@ function initInstall(){
 /* ---------- boot ---------- */
 load();initTheme();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();syncPaidFromServer(false);genRecurrences();
 /* Langue non-inline (dict chargé à la demande) : rattrapage une fois chargé. */
-if(window.setAppLang&&(lang()!=="fr"&&lang()!=="en")){setAppLang(lang()).then(()=>{try{syncSettings()}catch(e){}try{render()}catch(e){}try{if(!localStorage.getItem("encaisse.onboarded")){setSlide(0);refreshOnbPrice()}}catch(e){}})}
+if(window.setAppLang&&(lang()!=="fr"&&lang()!=="en")){setAppLang(lang()).then(()=>{try{syncSettings()}catch(e){}try{render()}catch(e){}try{if(!localStorage.getItem("encaisse.onboarded")){setSlide(0)}}catch(e){}})}

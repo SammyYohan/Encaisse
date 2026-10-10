@@ -113,7 +113,7 @@ Multi-utilisateurs, rapprochement bancaire, CRM, API, modèles de devis, invento
 ### Ce qu'on RÉAJUSTE
 | Point | Avant | Après | Raison |
 |---|---|---|---|
-| Offre gratuite | 3 documents/mois (devis + factures) | **Devis illimités + 3 factures/mois** | Les devis sont le canal d'acquisition ; plafonner les devis bloque la découverte (Wave/Zoho : illimité). |
+| Offre gratuite | 3 documents/mois (devis + factures) | **Devis illimités + 5 factures/mois** | Les devis sont le canal d'acquisition ; plafonner les devis bloque la découverte (Wave/Zoho : illimité). |
 | Positionnement Europe | « facture conforme locale » | « **devis terrain + preuve + encaissement** », conformité via partenaire agréé (à brancher) | On ne peut pas vendre un agrément qu'on n'a pas. |
 | Mention fiscale sur le PDF | « conforme EN 16931 / Factur-X » | Mention **factuelle** + avertissement « PDF, transmission par plateforme agréée à brancher » | Supprime le risque juridique d'une promesse non tenue. |
 | Afrique / QC | CI, SN, QC | **retirés** | Demandé, et chaque pays = un régime fiscal à câbler. |

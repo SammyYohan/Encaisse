@@ -1,7 +1,7 @@
 /* Encaisse SW — cache-first ultra-léger.
    ⚠️ VERSION : à incrémenter à chaque release (les fichiers critiques passent en
    network-first, donc config.js et ce SW sont rechargés même avec un ancien cache). */
-const C = "encaisse-v24";
+const C = "encaisse-v25";
 const A = [
   "./", "index.html", "styles.css",
   "app.js", "i18n.js", "qr.js", "config.js",

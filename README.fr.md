@@ -147,7 +147,7 @@ Autres clés : `encaisse.onboarded`, `encaisse.lang`, `encaisse.owner` (clé d'a
 |---|---|---|
 | Devis | **illimités** | illimités |
 | Avoirs | **illimités** | illimités |
-| Factures / mois | **3** (`FREE_MONTHLY`) | illimitées |
+| Factures / mois | **5** (`FREE_MONTHLY`) | illimitées |
 | Mensuel | 0 | 9,99 € |
 | Annuel (2 mois offerts) | 0 | 99 € |
 
