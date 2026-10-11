@@ -26,7 +26,8 @@
 try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"{}");if(__s&&(__s.theme==="light"||__s.theme==="dark"||__s.theme==="auto"))__t=__s.theme}catch(e){}if(__t==="auto"){try{__t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){__t="light"}}document.documentElement.dataset.theme=__t}catch(e){}</script>
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Encaisse","applicationCategory":"BusinessApplication","operatingSystem":"Web, iOS, Android","offers":{"@type":"Offer","price":"9.99","priceCurrency":"EUR"},"description":"Devis et factures avec les mentions de ton pays, lien de paiement en ligne, relances guidées. Hors-ligne d'abord."}
+<!-- BÊTA GRATUITE : prix 0 pendant la semaine de lancement ; restaurer "9.99" au lancement commercial. -->
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Encaisse","applicationCategory":"BusinessApplication","operatingSystem":"Web, iOS, Android","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Devis et factures avec les mentions de ton pays, lien de paiement en ligne, relances guidées. Hors-ligne d'abord."}
 </script>
 </head>
 <body>
@@ -67,7 +68,8 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
       <section class="slide" data-i="3">
         <div class="art a4" aria-hidden="true"><span class="kpi"><b data-i18n="À encaisser">À encaisser</b><strong>18 450 €</strong></span><span class="kpi k2"><b data-i18n="En retard">En retard</b><strong>4 500 €</strong></span></div>
         <h1 data-i18n-html="Inscription 30 secondes.<br><mark>Prêt à encaisser.</mark>">Inscription 30 secondes.<br><mark>Prêt à encaisser.</mark></h1>
-        <p data-i18n="Dis-moi où tu factures : tout s'adapte automatiquement. Devis illimités, 5 factures gratuites par mois, sans carte.">Dis-moi où tu factures : tout s'adapte automatiquement. Devis illimités, 5 factures gratuites par mois, sans carte.</p>
+        <!-- BÊTA GRATUITE : wording sans quota ni carte ; restaurer la mention d'offre au lancement commercial. -->
+        <p data-i18n="Dis-moi où tu factures : tout s'adapte automatiquement. Devis et factures illimités.">Dis-moi où tu factures : tout s'adapte automatiquement. Devis et factures illimités.</p>
         <input class="onb-input" id="onbBiz" placeholder="Le nom qui apparaîtra sur tes factures" data-i18n-ph="Le nom qui apparaîtra sur tes factures" maxlength="60" autocomplete="organization" required aria-required="true">
         <select class="onb-input" id="onbSecteur" aria-label="Ton activité">
           <option value="artisan" data-i18n="🔨 Artisan / BTP">🔨 Artisan / BTP</option>
@@ -85,7 +87,8 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
           <button type="button" data-pays="CH" data-i18n="🇨🇭 Suisse · PDF + mentions">🇨🇭 Suisse · PDF + mentions</button>
           <button type="button" data-pays="US" data-i18n="🇺🇸 United States · Sales tax (manuelle)">🇺🇸 United States · Sales tax (manuelle)</button>
         </div>
-        <p class="fine" data-i18n="PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements en ligne.">PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher. Paiements en ligne.</p>
+        <!-- BÊTA GRATUITE : mention « Paiements en ligne » retirée ; la restaurer au lancement commercial. -->
+        <p class="fine" data-i18n="PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher.">PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher.</p>
       </section>
     </div>
     <div class="onb-nav">

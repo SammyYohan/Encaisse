@@ -461,6 +461,14 @@
     "Minutes": "Minutes",
     "Total facturé": "Total billed",
     "Documents": "Documents",
+    /* BÊTA GRATUITE (semaine de lancement) : paires des wordings temporaires
+       sans mention de paiement. Réutilisables telles quelles après la bêta. */
+    "Bêta": "Beta",
+    "Accès complet": "Full access",
+    "Devis, factures et avoirs illimités pendant le lancement.": "Unlimited quotes, invoices and credit notes during the launch.",
+    "Compte créé ✓ accès complet : devis et factures illimités": "Account created ✓ full access: unlimited quotes and invoices",
+    "Dis-moi où tu factures : tout s'adapte automatiquement. Devis et factures illimités.": "Tell me where you invoice: everything adapts automatically. Unlimited quotes and invoices.",
+    "PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher.": "PDF with your country's details. Certified e-invoicing (FR PDP from 09/2027, BE Peppol-BIS mandatory) via a certified platform to connect.",
   };
 
   /* 24 langues officielles de l'UE (nom natif = libellé affiché, norme Switch) :

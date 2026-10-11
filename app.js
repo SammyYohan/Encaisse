@@ -565,7 +565,7 @@ function finishOnb(){
   document.querySelector("#app")?.classList.remove("onb-on");
   applyI18n();syncSettings();render();
   try{updateInstallBar()}catch{}
-  toast(T("Compte créé ✓ {n} factures gratuites par mois · devis illimités",{n:FREE_MONTHLY}));
+  toast(betaFree()?T("Compte créé ✓ accès complet : devis et factures illimités"):T("Compte créé ✓ {n} factures gratuites par mois · devis illimités",{n:FREE_MONTHLY}));
 }
 
 /* ---------- navigation ---------- */
@@ -751,6 +751,10 @@ function renderClis(){
   }).join(""):`<div class="empty">☺️ ${T("Ajoute ton premier client pour facturer en 1 clic.")}<br><button class="btn primary small" data-addcli="1" type="button">${T("+ Client")}</button></div>`;
 }
 /* ---------- abonnement ---------- */
+/* BÊTA GRATUITE (semaine de lancement) : betaFree() neutralise le système
+   commercial (quota, paywall, prix, mentions d'offre) sans le supprimer.
+   Lancement commercial = BETA_GRATUITE:false dans config.js, rien d'autre. */
+function betaFree(){return !!((window.ENCAISSE_CONFIG||{}).BETA_GRATUITE)}
 function isPaid(){
   const s=S.sub;
   if(!(s&&(s.plan==="solo"||s.plan==="pro")))return false;
@@ -767,7 +771,7 @@ function realDocs(){return S.docs.filter(d=>!d.demo)}
    canal d'acquisition, la facture est la valeur payante). */
 function docsCeMois(){const m=todayISO().slice(0,7);return realDocs().filter(d=>d.type==="facture"&&String(d.emis||"").slice(0,7)===m)}
 /* canCreate(type) : seul le passage en facture est plafonné. */
-function canCreate(type){return isPaid()||type!=="facture"||docsCeMois().length<FREE_MONTHLY}
+function canCreate(type){if(betaFree())return true;return isPaid()||type!=="facture"||docsCeMois().length<FREE_MONTHLY}
 function marginPct(priceMonthly){
   const p=planOf();
   const feeV=priceMonthly*p.fee+p.feeFixe;
@@ -776,6 +780,7 @@ function marginPct(priceMonthly){
 }
 
 function openPaywall(reason){
+  if(betaFree())return; /* BÊTA GRATUITE : le paywall commercial est masqué, pas supprimé. */
   const cyc=(S.sub&&S.sub.cycle)||"monthly";
   const prix=cyc==="monthly"?SUB.m:SUB.a;
   const per=cyc==="monthly"?`/${T("mois")}`:`/${T("an")}`;
@@ -825,6 +830,16 @@ async function activatePlan(plan){
 
 function renderPlanCard(){
   const el=$("#planCard");if(!el)return;
+  /* BÊTA GRATUITE : carte neutre — ni prix, ni compteur, ni bouton d'offre.
+     La version commerciale ci-dessous est inchangée. */
+  if(betaFree()){
+    el.innerHTML=`<h3>✨ ${T("Accès complet")}</h3>
+    <div class="doc-meta"><span>${T("Plan actuel")}</span><b>${T("Bêta")}</b></div>
+    <small class="muted">${T("Devis, factures et avoirs illimités pendant le lancement.")}</small>`;
+    const b=$("#planBadge");
+    if(b){b.textContent=T("Bêta");b.classList.remove("pro")}
+    return;
+  }
   const cyc=S.sub?.cycle||"monthly";
   const nMonth=docsCeMois().length;
   const prix=cyc==="monthly"?`${fmtSub(SUB.m)}/${T("mois")}`:`${fmtSub(SUB.a)}/${T("an")}`;
@@ -840,7 +855,7 @@ function renderPlanCard(){
     ? `<button class="btn primary small" id="goPlans" type="button">${T("Voir les offres →")}</button>`
     : `<small class="muted">${T("Résiliation par e-mail au support — voir CGU.")}</small>`}<button class="btn small ghost" id="cycBtn" type="button">${T("Cycle")} : ${cyc==="monthly"?T("Mensuel"):T("Annuel")}</button></div>`;
   const gp=$("#goPlans");if(gp)gp.onclick=()=>openPaywall(T("Un seul plan pour tous : 9,99 €/mois ou 99 €/an."));
-  $("#cycBtn").onclick=()=>{S.sub.cycle=cyc==="monthly"?"yearly":"monthly";save();render();toast(T("Cycle")+" : "+(S.sub.cycle==="monthly"?T("mensuel"):T("annuel")))};
+  const cb=$("#cycBtn");if(cb)cb.onclick=()=>{S.sub.cycle=cyc==="monthly"?"yearly":"monthly";save();render();toast(T("Cycle")+" : "+(S.sub.cycle==="monthly"?T("mensuel"):T("annuel")))};
   const b=$("#planBadge");
   if(b){b.textContent=S.sub?.plan==="free"?T("Gratuit"):"Pro ✓";b.classList.toggle("pro",isPaid())}
 }
@@ -2034,7 +2049,7 @@ function bind(){
   window.addEventListener("online",()=>{flushBackup(true);syncPaidFromServer(false);genRecurrences()});
   document.addEventListener("visibilitychange",()=>{if(document.hidden)flushBackup(true);else{syncPaidFromServer(false);genRecurrences()}});
 
-  const db=$("#demoBar");if(db)db.hidden=paymentsReady();
+  const db=$("#demoBar");if(db)db.hidden=paymentsReady()||betaFree(); /* BÊTA : le bandeau « démo / aucun paiement » reste masqué. */
 
   if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").then(reg=>{

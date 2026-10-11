@@ -7,6 +7,12 @@ window.ENCAISSE_CONFIG = {
      false = le paiement est considéré comme branché (nécessite STRIPE_LIVE + une clé). */
   DEMO_MODE: true,
 
+  /* BÊTA GRATUITE (semaine de lancement) : tout illimité, aucune mention de
+     paiement dans l'interface (voir betaFree() dans app.js). Pour le lancement
+     commercial : remettre BETA_GRATUITE=false — paywall + quota + mentions
+     d'offre réactivés, sans autre modification. */
+  BETA_GRATUITE: true,
+
   /* Pour activer la production : tester d'abord Stripe en mode test, configurer
      D1 + STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET dans Cloudflare, puis seulement
      après validation basculer explicitement DEMO_MODE=false et STRIPE_LIVE=true. */
