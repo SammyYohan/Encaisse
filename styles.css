@@ -407,3 +407,8 @@ input,select,textarea{transition:background-color .45s ease,border-color .45s ea
   .invoice-paper{border:none!important;box-shadow:none!important;padding:12px!important;margin:0!important}
   .inv-table th{background:#f1f5f9!important}
 }
+
+/* Réglage explicite de consentement à la sauvegarde automatique. */
+.check-row{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.45;margin:12px 0;color:var(--ink2)}
+.check-row input{width:18px;min-width:18px;height:18px;margin:1px 0 0;padding:0;accent-color:var(--acc)}
+.check-row span{flex:1}

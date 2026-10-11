@@ -1,7 +1,7 @@
 # Encaisse
 
-> **Un devis en 60 secondes → une facture conforme → encaissé.**
-> PWA de facturation **hors-ligne d'abord** pour la **France · la Belgique · la Suisse · les États-Unis**.
+> **Un devis en 60 secondes → une facture claire → encaissé.**
+> PWA de devis et facturation **hors-ligne d'abord**. Le ciblage international ne signifie pas que les documents sont conformes aux règles de chaque pays.
 > Bilingue **FR / EN**, paiement **Stripe uniquement**, hébergé sur **Cloudflare**.
 
 > 📖 **English?** See [`README.md`](./README.md) — same content.
@@ -10,10 +10,10 @@
 |---|---|
 | **Type** | Application mono-page (PWA), 100 % statique, **sans build ni framework** |
 | **Stack** | HTML / CSS / JS natifs. Seule dépendance : `qr.js` (MIT) |
-| **Stockage** | `localStorage` sur l'appareil de l'utilisateur — pas de compte, pas de base de données |
+| **Stockage** | Données de travail principalement dans `localStorage` ; documents partagés et sauvegardes activées peuvent être stockés dans Cloudflare D1 |
 | **Déploiement** | Cloudflare Pages (offre gratuite) |
 | **i18n** | La chaîne française **est** la clé de traduction (style gettext) |
-| **État** | 🟢 En ligne — front + backend câblés, vrai Checkout Stripe (`DEMO_MODE:false`), `legal.html` complété |
+| **État** | 🧪 Version de travail — front + backend présents, paiements désactivés par défaut, mentions légales à compléter et à faire valider |
 
 ---
 
@@ -37,7 +37,7 @@
 ## 1. Ce que fait l'application
 
 - **Devis et factures** pour un indépendant, créés sur téléphone en moins d'une minute.
-- **PDF adaptés au pays** avec les mentions obligatoires : France (PDF + avertissement PDP),
+- **PDF personnalisables par pays** (sans garantie de conformité fiscale) : France (PDF + avertissement PDP),
   Belgique (PDF + avertissement Peppol-BIS), Suisse (PDF, le QR ouvre le lien
   Stripe — pas un QR SIX bancaire), États-Unis (sales tax d'État/local saisie à la main).
 - **Lien de paiement** (carte Stripe, prélèvement SEPA, ACH, TWINT / virement / espèces constatés à part) +
@@ -50,7 +50,7 @@
 - **Preuves** : photo de chantier rattachée au document, signature sur l'écran
   (« Bon pour accord »), dictée vocale.
 - **Acomptes** : facture d'acompte avec son propre lien, solde déduit automatiquement.
-- **Confidentialité** : tout reste sur l'appareil, aucun traceur.
+- **Confidentialité** : données principalement locales ; les documents partagés et sauvegardes activées peuvent être transmis au backend. Vérifier les flux réels avant toute promesse de confidentialité.
 - **Bilingue FR/EN** avec sélecteur de langue.
 
 ## 2. Le lancer en local
@@ -95,7 +95,7 @@ npx wrangler pages dev . --port 8788   # → http://localhost:8788
 | `functions/` | **Backend (Pages Functions, sans build)** : `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay`, `/api/stripe-webhook`, `/api/backup` + page client serveur `/r/:slug` (+ garde 404 `encaisse-export.json.js`) |
 | `schema.sql`, `wrangler.toml` | Schéma D1 (table `portal`) + config wrangler (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | Manifest PWA + icônes PNG (192, 512, maskable, apple-touch) |
-| `legal.html` | Mentions légales, CGU/CGV, confidentialité (bilingue, complété) |
+| `legal.html` | Brouillon bilingue ; adresse, identifiants fiscaux/immatriculation et règles locales à confirmer |
 | `robots.txt`, `sitemap.xml`, `_headers` | SEO + en-têtes de sécurité Cloudflare |
 | `README.md` / `README.fr.md` | Ce fichier |
 | `VEILLE.md` | Étude concurrentielle (Europe + US) et plan priorisé |
@@ -186,7 +186,7 @@ anglaise dans `i18n.js`. Ne jamais traduire la clé elle-même.
 
 ### 4.6 Hors-ligne & cache
 
-`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v12`).
+`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v29`).
 `config.js`, `i18n.js` et `sw.js`
 sont en **network-first** pour qu'une clé ou une traduction se propage immédiatement.
 **Incrémenter la constante `C` à chaque release.**
@@ -202,13 +202,13 @@ Pas de bibliothèque PDF : la facture est mise en forme pour l'écran et
 
 | Clé | Actuel | Sens |
 |---|---|---|
-| `DEMO_MODE` | `false` | En ligne : débits réels via Checkout Stripe ; bandeau démo masqué, les plans exigent un jeton signé serveur (Stripe = source de vérité) |
-| `STRIPE_LIVE` | `true` | En ligne avec `DEMO_MODE:false` — vraie redirection Checkout |
-| `STRIPE_PUBLIC_KEY` | renseignée | Clé *publishable* — conçue pour être visible par le navigateur |
+| `DEMO_MODE` | `true` | Mode démonstration : aucun paiement réel ; l’activation Pro locale sert uniquement à tester l’interface |
+| `STRIPE_LIVE` | `false` | Désactivé par défaut ; n’activer qu’après tests et configuration des secrets |
+| `STRIPE_PUBLIC_KEY` | `""` | À configurer uniquement après les tests Stripe ; clé *publishable* visible par le navigateur |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Partenaire agréé e-facturation (Europe) — optionnel |
 | `SITE_URL` | `https://encaisse.pages.dev` | Origine publique qui sert l'app — active la vraie page client `/r/:slug` (publiée au partage) |
 
-> ✅ Mode en ligne : « Choisir Pro » redirige vers le vrai Checkout Stripe (prix côté serveur : 9,99 € / 99 €).
+> ⚠️ Les paiements sont désactivés par défaut. Ne passe en mode réel qu'après tests Stripe, vérification des secrets Cloudflare et validation des obligations légales.
 > L'attribution locale d'un plan n'arrive que si les paiements ne sont pas configurés
 > (`paymentsReady()` faux) — ne jamais rebasculer tant que les secrets sont en ligne.
 
@@ -230,7 +230,7 @@ npx wrangler pages deploy . --project-name=encaisse
 
 Wrangler envoie **tout** le dossier : retirez `encaisse-export.json` au préalable.
 
-### Stripe & portail client (mise en place unique)
+### Stripe & portail client (mise en place après tests)
 
 Le backend sont les **Pages Functions** (`functions/`, JS pur — ça se déploie avec
 le site, aucun build). Activation en une fois :
@@ -272,7 +272,7 @@ aucun e-mail serveur pour le moment.
 ✅ Créer la base D1 + binding « DB » + exécuter schema.sql (voir ci-dessus)
 ✅ Mettre STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (wrangler pages secret put)
 □ Tester un vrai checkout (petit montant, puis remboursement) + vérifier le webhook
-✅ legal.html rempli (éditeur, hébergement, e-mail, médiateur)
+✅ mentions légales vérifiées selon le pays réel d’établissement, le statut et les obligations applicables
 □ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
 □ Ajouter le domaine dans Cloudflare (Custom domains) + mettre à jour SITE_URL/robots/sitemap
 □ Vérifier les en-têtes : CSP, HSTS, X-Content-Type-Options, X-Frame-Options
@@ -373,16 +373,16 @@ Ce qu'un repreneur doit savoir le jour J :
 
 | Point | État |
 |---|---|
-| Revenus / clients payants | En ligne (`DEMO_MODE:false`) — aucun client payant pour l'instant ; tester avec un petit checkout + remboursement |
+| Revenus / clients payants | Mode démo par défaut ; aucun paiement réel activé dans cette archive |
 | Backend / base de données | **Existe** : Pages Functions (`functions/`) + tables D1 `portal`/`backup` — les secrets Stripe vivent dans Cloudflare, jamais dans le dépôt |
-| Données personnelles détenues par nous | **Uniquement des copies de documents explicitement partagés** dans D1 (e-mail client + payload du document) ; tout le reste reste sur l'appareil de l'utilisateur |
+| Données personnelles détenues par nous | Copies de documents explicitement partagés et sauvegardes chiffrées activées peuvent être stockées dans D1 ; vérifier les flux et la rétention avant lancement |
 | Comptes tiers à transférer | Cloudflare, Stripe, le registrar de domaine, GitHub |
-| Stripe | Clé publishable committée (inoffensive par conception). **Clés secrètes absentes du dépôt** |
-| Identité légale | `legal.html` complété (développeur indépendant, Libreville, Gabon — e-mail de contact actif) |
+| Stripe | Clé publishable non configurée dans cette archive. **Clés secrètes absentes du dépôt** |
+| Identité légale | `legal.html` provisoire, à compléter (développeur indépendant, Libreville, Gabon — e-mail de contact actif) |
 | Conformité fiscale | Plateforme européenne agréée **pas encore branchée** (§7) |
 | Marque & domaine | En ligne sur `https://encaisse.pages.dev` ; propriété d'`encaisse.app` toujours non vérifiée (mettre à jour SITE_URL/robots/sitemap si revendiqué) |
-| Build / CI | Aucun. Pas de `package.json`, pas de tests en CI |
-| Contrôles automatisés | Scripts exécutés au fil de l'eau pendant le développement (parses, complétude i18n, parcours jsdom) — **non committés** |
+| Build / CI | Aucun build obligatoire ; `package.json` fournit des commandes de vérification locale, sans dépendances applicatives |
+| Contrôles automatisés | `npm run check` : syntaxe JavaScript + smoke checks statiques ; ne remplace pas les tests navigateur/D1/Stripe |
 
 Premiers conseils au nouveau mainteneur : reproduire §2, lire `VEILLE.md`, remplir
 les mentions légales, puis brancher le P0 n° 6 (partenaire agréé e-facturation).
@@ -412,4 +412,4 @@ les mentions légales, puis brancher le P0 n° 6 (partenaire agréé e-facturati
 
 ## Audit technique (10 octobre 2026)
 
-Voir [`AUDIT_TECHNIQUE_FR.md`](AUDIT_TECHNIQUE_FR.md) pour les modifications de sécurité, les risques restant à traiter et la checklist de mise en production. Tests smoke API : `node tests/security-smoke.mjs` (Node.js 20+). Vérification syntaxique : `node --check app.js && node --check i18n.js`.
+Voir [`AUDIT_TECHNIQUE_FR.md`](AUDIT_TECHNIQUE_FR.md) pour les modifications de sécurité, les risques restant à traiter et la checklist de mise en production. Les tests smoke API ne sont pas encore inclus. Vérifier la syntaxe de tous les fichiers JavaScript avant déploiement.

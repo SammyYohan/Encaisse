@@ -1,19 +1,20 @@
-/* Encaisse — paiement réel branché (Stripe live via Pages Functions).
-   Les liens de paiement sont réels ; les prix viennent du serveur.
-   Secrets : uniquement via `wrangler pages secret put` (jamais dans le repo). */
+/* Encaisse — configuration sûre par défaut.
+   Le mode démo évite les paiements réels tant que l'exploitant n'a pas testé
+   le backend, renseigné les secrets Cloudflare et validé les obligations légales.
+   Ne jamais placer de clé Stripe secrète dans ce fichier public. */
 window.ENCAISSE_CONFIG = {
   /* true  = aucun débit réel, bandeau "démo" affiché, aucun plan marqué payé.
      false = le paiement est considéré comme branché (nécessite STRIPE_LIVE + une clé). */
-  DEMO_MODE: false,
+  DEMO_MODE: true,
 
-  /* ✅ Paiement en ligne : D1 + secrets Stripe configurés, legal.html complété.
-     Les functions/ (Pages Functions) sont déjà en place : /api/checkout,
-     /api/sub, /api/portal, /api/pay et la page client /r/:slug. */
-  STRIPE_LIVE: true,
+  /* Pour activer la production : tester d'abord Stripe en mode test, configurer
+     D1 + STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET dans Cloudflare, puis seulement
+     après validation basculer explicitement DEMO_MODE=false et STRIPE_LIVE=true. */
+  STRIPE_LIVE: false,
 
   // Paiements abonnements Europe / Suisse / États-Unis — https://dashboard.stripe.com/apikeys
   // (clé "publishable" : elle est faite pour être visible par le navigateur)
-  STRIPE_PUBLIC_KEY: "pk_live_51Sj1TAIKVfqYIBAFGy4tHJAdRAFZYrvak6QqybK0VILNWkmzBDWS1D3TNnlkplv7Hwc4PB3r9W7XUDz73o3C0Nsg007jh23KYj",
+  STRIPE_PUBLIC_KEY: "",
 
   // Lien de paiement statique optionnel (si tu préfères un Payment Link Stripe
   // à une session Checkout créée par le Worker). Laisser vide sinon.

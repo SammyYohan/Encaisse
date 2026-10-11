@@ -48,14 +48,14 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
       <section class="slide is-active" data-i="0">
         <div class="art a1" aria-hidden="true"><span class="card-mini m1">DEVIS-2026-014<br><b>12 500 € ✓</b></span><span class="card-mini m2">TVA ✓ PDF<br><b>Paid ✓</b></span><span class="coin"><img src="icons/icon.svg" alt="" width="52" height="52"></span></div>
         <h1 data-i18n-html="Tu travailles.<br>Tu dois être <mark>payé.</mark>">Tu travailles.<br>Tu dois être <mark>payé.</mark></h1>
-        <p data-i18n="Devis en 60 secondes sur chantier, même sans réseau. Facture PDF avec les mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.">Devis en 60 secondes sur chantier, même sans réseau. Facture PDF avec les mentions de ton pays. Lien de paiement. Relance guidée. Un seul flux, fini à la perfection.</p>
+        <p data-i18n="Devis en 60 secondes sur chantier, même sans réseau. PDF personnalisable, à vérifier selon les règles de ton pays. Lien de paiement. Relance guidée.">Devis en 60 secondes sur chantier, même sans réseau. PDF personnalisable, à vérifier selon les règles de ton pays. Lien de paiement. Relance guidée.</p>
         <ul class="chips"><li data-i18n="PDF + mentions FR">PDF + mentions FR</li><li data-i18n="PDF + mentions BE">PDF + mentions BE</li><li data-i18n="PDF + mentions CH">PDF + mentions CH</li><li data-i18n="Sales tax US (manuelle)">Sales tax US (manuelle)</li></ul>
         <p class="fine" data-i18n="E-facture certifiée (PDP France, Peppol Belgique, QR SIX) : via plateforme agréée à brancher. Ce document reste un PDF.">E-facture certifiée (PDP France, Peppol Belgique, QR SIX) : via plateforme agréée à brancher. Ce document reste un PDF.</p>
       </section>
       <section class="slide" data-i="1">
         <div class="art a2" aria-hidden="true"><span class="phone-mini"><i></i><i></i><i class="ok"></i></span><span class="paylist">Carte ✓ 120,00 €<br>SEPA ✓ 1 250,00 €<br>Carte ✓ $450.00</span></div>
         <h1 data-i18n-html="Un bouton.<br>Zéro paperasse.">Un bouton.<br>Zéro paperasse.</h1>
-        <p data-i18n="Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tout reste sur ton téléphone.">Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tout reste sur ton téléphone.</p>
+        <p data-i18n="Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tes données restent sur ton appareil, sauf partage ou sauvegarde activée.">Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tes données restent sur ton appareil, sauf partage ou sauvegarde activée.</p>
         <ul class="ticks"><li data-i18n="Photo chantier en preuve">Photo chantier en preuve</li><li data-i18n="Hors-ligne d'abord">Hors-ligne d'abord</li><li data-i18n="Numéros inviolables">Numéros inviolables</li></ul>
       </section>
       <section class="slide" data-i="2">
@@ -199,7 +199,8 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
       </div>
       <div class="card">
         <h3 data-i18n="Sauvegarde en ligne chiffrée">Sauvegarde en ligne chiffrée</h3>
-        <p class="muted" data-i18n="Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire. Seule protection contre perte ou vol du téléphone.">Copie chiffrée de tout l'appareil. Même nous ne pouvons pas la lire. Seule protection contre perte ou vol du téléphone.</p>
+        <p class="muted" data-i18n="La sauvegarde reste désactivée tant que tu ne l'actives pas. Le code de récupération est indispensable pour restaurer tes données.">La sauvegarde reste désactivée tant que tu ne l'actives pas. Le code de récupération est indispensable pour restaurer tes données.</p>
+        <label class="check-row"><input type="checkbox" id="bkAutoToggle"><span data-i18n="Activer la sauvegarde automatique chiffrée (envoi après modification)">Activer la sauvegarde automatique chiffrée (envoi après modification)</span></label>
         <div class="row"><button class="btn small" id="bkNowBtn" type="button" data-i18n="Sauvegarder maintenant">Sauvegarder maintenant</button><button class="btn small ghost" id="bkCodeBtn" type="button" data-i18n="Code de récupération">Code de récupération</button><button class="btn small ghost" id="bkRestoreBtn" type="button" data-i18n="Restaurer">Restaurer</button></div>
         <p class="muted" id="bkState" style="font-size:12px;margin:8px 0 0"></p>
       </div>

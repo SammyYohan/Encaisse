@@ -169,10 +169,12 @@ async function ensurePortal(d,silent){
   }
 }
 
-/* ---------- sauvegarde chiffrée en ligne, zéro-lecture (vague 3 : synchro sans compte) ----------
-   Tout l'état S est chiffré en AES-GCM sur l'appareil AVANT envoi : le serveur ne
-   stocke qu'un blob opaque. Restauration multi-appareils via le code de récupération
-   (= la clé propriétaire). Sans SITE_URL : 100 % local, rien ne part. */
+/* ---------- sauvegarde chiffrée en ligne (synchronisation sans compte) ----------
+   L'état S est chiffré en AES-GCM dans le navigateur avant envoi. Le serveur
+   stocke un blob chiffré et un identifiant dérivé du code de récupération.
+   La sauvegarde automatique est désactivée par défaut ; les partages de documents
+   sont un flux distinct. La sécurité dépend aussi du navigateur et de la gestion
+   du code de récupération : ne pas présenter cela comme une garantie absolue. */
 /* ---------- synchro auto des paiements en ligne ----------
    Le client paie sur SON appareil (/r/:slug -> /api/pay -> webhook ou retour
    ?session_id). L'appareil du pro l'apprend ici, sans geste :
@@ -230,35 +232,44 @@ async function syncPaidFromServer(manual){
 }
 
 const BK_LS="encaisse.backup";
+const BK_KEY_LS="encaisse.backup.key";
 const b64e=a=>{let s="";a.forEach(x=>s+=String.fromCharCode(x));return btoa(s)};
 const b64d=s=>Uint8Array.from(atob(String(s||"")),c=>c.charCodeAt(0));
 function backupSite(){return siteBase()}
-async function backupKey(){try{const k=ownerKey();if(!k||!crypto.subtle)return null;const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("encaisse-backup-v1:"+k));return crypto.subtle.importKey("raw",h,{name:"AES-GCM"},false,["encrypt","decrypt"])}catch(e){return null}}
-async function backupEncrypt(){const k=await backupKey();if(!k||!crypto.getRandomValues)return null;const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},k,new TextEncoder().encode(JSON.stringify(S))));return{iv:b64e(iv),data:b64e(ct)}}
-async function backupDecrypt(p){const k=await backupKey();if(!k||!p||!p.iv||!p.data)return null;try{const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(p.iv)},k,b64d(p.data));return JSON.parse(new TextDecoder().decode(pt))}catch(e){return null}}
+function backupEnabled(){try{return localStorage.getItem("encaisse.backup.enabled")==="1"}catch(e){return false}}
+/* Clé de sauvegarde distincte de la clé portail : elle ne doit JAMAIS être
+   envoyée au serveur, même indirectement via /api/portal. */
+function backupRecoveryKey(){try{let k=localStorage.getItem(BK_KEY_LS);if(!/^[0-9a-f]{64}$/.test(k||"")){const b=crypto.getRandomValues(new Uint8Array(32));k=Array.from(b,x=>x.toString(16).padStart(2,"0")).join("");localStorage.setItem(BK_KEY_LS,k)}return k}catch(e){return ""}}
+async function backupOwnerId(secret){try{if(!crypto.subtle||!/^[0-9a-f]{64}$/.test(secret||""))return "";const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(secret));return Array.from(new Uint8Array(h),x=>x.toString(16).padStart(2,"0")).join("")}catch(e){return ""}}
+async function backupKey(secret){try{const k=secret||backupRecoveryKey();if(!k||!crypto.subtle)return null;const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("encaisse-backup-v1:"+k));return crypto.subtle.importKey("raw",h,{name:"AES-GCM"},false,["encrypt","decrypt"])}catch(e){return null}}
+async function backupEncrypt(){const secret=backupRecoveryKey(),k=await backupKey(secret);if(!k||!crypto.getRandomValues)return null;const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},k,new TextEncoder().encode(JSON.stringify(S))));return{v:2,iv:b64e(iv),data:b64e(ct)}}
+async function backupDecrypt(p,secret){const k=await backupKey(secret);if(!k||!p||!p.iv||!p.data)return null;try{const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(p.iv)},k,b64d(p.data));return JSON.parse(new TextDecoder().decode(pt))}catch(e){return null}}
 let bkBusy=false,bkDirty=false,bkTimer=null;
 function bkState(){try{return JSON.parse(localStorage.getItem(BK_LS)||"{}")}catch(e){return{}}}
 function bkStateSave(s){try{localStorage.setItem(BK_LS,JSON.stringify(s))}catch(e){}}
-function scheduleBackup(){if(!backupSite())return;bkDirty=true;try{clearTimeout(bkTimer)}catch(e){}bkTimer=setTimeout(()=>{flushBackup(true)},45000)}
+function scheduleBackup(){if(!backupEnabled()||!backupSite())return;bkDirty=true;try{clearTimeout(bkTimer)}catch(e){}bkTimer=setTimeout(()=>{flushBackup(true)},45000)}
 async function flushBackup(auto){
-  if(bkBusy)return;if(auto&&!bkDirty)return;
+  if(bkBusy)return false;if(auto&&(!backupEnabled()||!bkDirty))return false;
   const site=backupSite();
-  if(!site){if(!auto)toast(T("Connexion requise pour sauvegarder."));return}
+  if(!site){if(!auto)toast(T("Connexion requise pour sauvegarder."));return false}
   const enc=await backupEncrypt();
-  if(!enc){if(!auto)toast(T("Échec de sauvegarde — réessaie plus tard."));return}
+  if(!enc){if(!auto)toast(T("Échec de sauvegarde — réessaie plus tard."));return false}
   bkBusy=true;
   try{
-    const r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"push",key:ownerKey(),blob:JSON.stringify(enc),rev:Date.now()})});
+    const secret=backupRecoveryKey(),owner=await backupOwnerId(secret);
+    if(!owner)throw new Error("clé_sauvegarde_indisponible");
+    const r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"push",owner:owner,blob:JSON.stringify(enc),rev:Date.now()})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok)throw new Error(j.error||("http_"+r.status));
     bkDirty=false;bkStateSave({rev:j.rev,at:Date.now()});syncBkState();
     if(!auto)toast(T("Sauvegarde envoyée ✓"));
+    bkBusy=false;return true;
   }catch(e){console.warn("Backup :",e);if(!auto)toast(T("Échec de sauvegarde — réessaie plus tard."))}
-  bkBusy=false;
+  bkBusy=false;return false;
 }
-function syncBkState(){const el=$("#bkState");if(!el)return;const s=bkState();el.textContent=s.at?T("Dernière sauvegarde : {d}",{d:new Date(s.at).toLocaleString(locale())}):T("Jamais sauvegardé")}
+function syncBkState(){const el=$("#bkState"),toggle=$("#bkAutoToggle");if(toggle)toggle.checked=backupEnabled();if(!el)return;const s=bkState();el.textContent=s.at?T("Dernière sauvegarde : {d}",{d:new Date(s.at).toLocaleString(locale())}):T("Jamais sauvegardé")}
 function openBackupCode(){
-  const k=ownerKey()||"";
+  const k=backupRecoveryKey()||"";
   const pretty=k.replace(/(.{4})/g,"$1 ").trim();
   openSheet(`<h2>${T("Code de récupération")}</h2><p class="sub">${T("Ne le perds pas : sans lui, pas de restauration.")}</p><div class="form"><div class="wa-preview" id="bkCodeView">${esc(pretty)}</div><div class="row" style="margin-top:10px"><button class="btn primary" id="bkCopy" type="button" style="flex:1">${T("Copier le code")}</button><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div></div>`);
   $("#cancelS").onclick=closeSheet;
@@ -273,18 +284,29 @@ function openBackupRestore(){
     if(!/^[0-9a-f]{64}$/.test(code)){toast(T("Code invalide (64 caractères)."));return}
     const btn=$("#bkGo");btn.disabled=true;
     try{
-      const r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"pull",key:code})});
+      const owner=await backupOwnerId(code);
+      if(!owner){toast(T("Code invalide (64 caractères)."));btn.disabled=false;return}
+      const r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"pull",owner:owner})});
       const j=await r.json().catch(()=>({}));
       if(!r.ok||!j.ok||!j.blob){toast(r.status===404?T("Sauvegarde introuvable pour ce code."):T("Échec de sauvegarde — réessaie plus tard."));btn.disabled=false;return}
-      /* La clé de déchiffrement, c'est le code saisi : on l'adopte comme clé
-         d'appareil (sans elle, le jeton d'abonnement lié ne suivrait pas). */
-      try{localStorage.setItem("encaisse.owner",code)}catch(e){}
-      const data=await backupDecrypt(JSON.parse(j.blob));
+      const packed=JSON.parse(j.blob);
+      /* Les anciennes sauvegardes utilisaient la clé portail, envoyée au serveur.
+         On les lit encore pour migration, puis on crée une clé indépendante et
+         on ré-envoie une sauvegarde chiffrée sans exposer cette clé au serveur. */
+      const legacy=!packed.v;
+      const data=await backupDecrypt(packed,code);
       if(!data||!data.biz||!Array.isArray(data.docs)||!Array.isArray(data.clients)){toast(T("Sauvegarde illisible."));btn.disabled=false;return}
       const when=j.updated_at?new Date(j.updated_at).toLocaleString(locale()):"";
       if(!confirm(T("Écraser cet appareil avec la sauvegarde du {d} ?",{d:when}))){btn.disabled=false;return}
+      if(legacy){try{localStorage.removeItem(BK_KEY_LS)}catch(e){}}
+      try{localStorage.setItem(BK_KEY_LS,code)}catch(e){}
       data.docs.forEach(d=>{d.items=(d.items||[]).map(i=>({lib:normLib(i.lib),q:num(i.q)||1,p:num(i.p)}));d.tva=num(d.tva)});
-      S=data;migrateSeq();migrateMoyens();save();closeSheet();syncSettings();render();toast(T("Restauration terminée ✓"));
+      S=data;migrateSeq();migrateMoyens();save();
+        let migrated=false;
+      if(legacy){try{localStorage.removeItem(BK_KEY_LS)}catch(e){}backupRecoveryKey();migrated=!!(await flushBackup(false));}
+      closeSheet();syncSettings();render();
+      if(legacy&&migrated)openBackupCode();
+      toast(legacy&&!migrated?T("Restauration terminée, mais la migration de sauvegarde a échoué. Conserve ton ancien code."):T("Restauration terminée ✓"));
     }catch(e){toast(T("Connexion requise pour sauvegarder."))}
     btn.disabled=false;
   };
@@ -1980,6 +2002,7 @@ function bind(){
     toast(T("Export FEC téléchargé ✓"));
   };
   const bkNow=$("#bkNowBtn");if(bkNow)bkNow.onclick=()=>{bkDirty=true;flushBackup(false)};
+  const bkAuto=$("#bkAutoToggle");if(bkAuto){bkAuto.checked=backupEnabled();bkAuto.onchange=()=>{try{if(bkAuto.checked){localStorage.setItem("encaisse.backup.enabled","1");bkDirty=true;flushBackup(false);toast(T("Sauvegarde automatique activée."))}else{localStorage.removeItem("encaisse.backup.enabled");if(bkTimer)clearTimeout(bkTimer);bkDirty=false;toast(T("Sauvegarde automatique désactivée."))}}catch(e){bkAuto.checked=false;toast(T("Réglage impossible sur cet appareil."))}}}
   const bkCode=$("#bkCodeBtn");if(bkCode)bkCode.onclick=openBackupCode;
   const bkRes=$("#bkRestoreBtn");if(bkRes)bkRes.onclick=openBackupRestore;
   const impBtn=$("#importBtn"), impFile=$("#importFile");

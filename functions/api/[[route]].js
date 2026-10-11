@@ -5,7 +5,7 @@
      l'origine de retour est celle de la requête, jamais celle du client)
    POST /api/portal    {slug?, hash, key?, doc, biz, cli?, lang} → {slug} page client /r/:slug (D1)
    POST /api/stripe-webhook (Stripe-Signature) → confirme un paiement sans retour navigateur
-   POST /api/backup    {op:"push"|"pull", key, ...} → sauvegarde chiffrée zéro-lecture
+   POST /api/backup    {op:"push"|"pull", owner, ...} → blob de sauvegarde chiffré côté client
    GET  /api/sub       ?session_id=… → vérifie l'achat, émet le jeton d'abonnement
                        X-Sub-Token   → vérifie/rafraîchit le jeton (HMAC-SHA256)
    GET  /api/pay       ?slug=…       → 307 vers Stripe Checkout (encaissement d'une facture)
@@ -13,7 +13,7 @@
    Mise en place (une fois) — voir README §6 :
      npx wrangler d1 create encaisse                    → UUID dans wrangler.toml + binding « DB »
      npx wrangler pages secret put STRIPE_SECRET_KEY
-      npx wrangler pages secret put STRIPE_WEBHOOK_SECRET -> "Signing secret" whsec_... du endpoint webhook Stripe    → secret, jamais dans le repo
+      npx wrangler pages secret put STRIPE_WEBHOOK_SECRET  # secret de signature du webhook, jamais dans le dépôt
      (aucun e-mail serveur : relances via WhatsApp / e-mail applicatif depuis l'appareil)
    Le secret ne quitte jamais le serveur : le front ne reçoit qu'une URL de
    redirection et un jeton signé. */
@@ -506,10 +506,10 @@ async function postStripeWebhook(ctx) {
   return json({ received: true, paid: true });
 }
 
-/* POST /api/backup — sauvegarde chiffrée zéro-lecture (vague 3 : synchro sans compte).
-   L'appareil chiffre en AES-GCM AVANT envoi ; le serveur ne voit qu'un blob opaque
-   (ni Cloudflare ni nous ne pouvons le lire). Auth = preuve de possession comme
-   /api/portal. Last-writer-wins. Table créée seule si besoin (zéro migration manuelle). */
+/* POST /api/backup — sauvegarde chiffrée côté client.
+   Le navigateur chiffre en AES-GCM et n'envoie que SHA-256(code de récupération)
+   comme identifiant de recherche ; la clé de récupération n'est jamais envoyée.
+   Last-writer-wins. Table créée seule si besoin (zéro migration manuelle). */
 async function postBackup(ctx) {
   const { request, env } = ctx;
   if (!env.DB) return json({ error: "portail_non_configure" }, 503);
@@ -520,9 +520,11 @@ async function postBackup(ctx) {
   let b;
   try { b = await request.json(); } catch (e) { return json({ error: "json_invalide" }, 400); }
   if (!b || typeof b !== "object" || Array.isArray(b)) return json({ error: "requete_invalide" }, 400);
-  const key = typeof b.key === "string" && /^[0-9a-f]{64}$/i.test(b.key) ? b.key.toLowerCase() : "";
-  if (!key) return json({ error: "cle_requise" }, 400);
-  const owner = await sha256hex(key);
+  /* Le client envoie uniquement l'empreinte SHA-256 de la clé, jamais la clé.
+     Cette empreinte est identique à l'index historique pour préserver les
+     sauvegardes existantes. Ne jamais accepter l'ancien champ `key` ici. */
+  const owner = typeof b.owner === "string" && /^[0-9a-f]{64}$/i.test(b.owner) ? b.owner.toLowerCase() : "";
+  if (!owner) return json({ error: "identifiant_invalide" }, 400);
   if (b.op === "pull") {
     const row = await env.DB.prepare("SELECT blob, rev, updated_at FROM backup WHERE owner = ?").bind(owner).first().catch(function () { return null; });
     if (!row) return json({ error: "sauvegarde_introuvable" }, 404);

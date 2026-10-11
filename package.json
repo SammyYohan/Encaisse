@@ -1,0 +1,11 @@
+{
+  "name": "encaisse",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PWA de devis et facturation Encaisse",
+  "scripts": {
+    "check:syntax": "node --check app.js && node --check config.js && node --check i18n.js && node --check qr.js && node --check sw.js && node --check worker-relances.js && node --check 'functions/api/[[route]].js' && node --check 'functions/r/[doc].js' && node --check functions/encaisse-export.json.js",
+    "test:smoke": "node tests/security-smoke.mjs",
+    "check": "npm run check:syntax && npm run test:smoke"
+  }
+}

@@ -1,7 +1,7 @@
 # Encaisse
 
-> **Quote in 60 seconds → compliant invoice → paid.**
-> Offline-first invoicing PWA for **France · Belgium · Switzerland · United States**.
+> **Quote in 60 seconds → clear invoice → paid.**
+> Offline-first quote and invoicing PWA. Country targeting does not imply legal or tax compliance in every jurisdiction.
 > Bilingual **FR / EN**, **Stripe-only** payments, hosted on **Cloudflare**.
 
 > 📖 **Français ?** Lisez [`README.fr.md`](./README.fr.md) — même contenu.
@@ -10,10 +10,10 @@
 |---|---|
 | **Type** | Single-page PWA, 100 % static, **no build step, no framework** |
 | **Stack** | Vanilla HTML / CSS / JS. Sole dependency: `qr.js` (MIT) |
-| **Storage** | `localStorage` on the user's device — no account, no server database |
+| **Storage** | Most working data in `localStorage`; shared documents and enabled backups may be stored in Cloudflare D1 |
 | **Deployment** | Cloudflare Pages (free tier) |
 | **i18n** | French source strings are the translation keys (gettext-style) |
-| **Status** | 🟢 Live — front + backend wired, real Stripe Checkout (`DEMO_MODE:false`), `legal.html` completed |
+| **Status** | 🧪 Work in progress — frontend and backend included; live payments disabled by default; legal details still need completion/review |
 
 ---
 
@@ -51,7 +51,7 @@
 - **Proof tools**: job-site photo attached to the document, on-device signature
   ("approved for acceptance"), voice dictation.
 - **Deposits**: deposit invoice with its own payment link, balance auto-deducted.
-- **Privacy**: everything stays on the device. No trackers, no analytics by default.
+- **Privacy**: most working data is local, but shared documents and enabled encrypted backups may be sent to Cloudflare D1. Verify actual data flows and retention before making privacy promises.
 - **Bilingual FR / EN** with an interface-level language switch.
 
 ## 2. Run it locally
@@ -96,7 +96,7 @@ npx wrangler pages dev . --port 8788   # → http://localhost:8788
 | `functions/` | **Backend (Pages Functions, no build)**: `/api/checkout`, `/api/sub`, `/api/portal`, `/api/pay`, `/api/stripe-webhook`, `/api/backup` + server-rendered customer page `/r/:slug` (+ `encaisse-export.json.js` 404 guard) |
 | `schema.sql`, `wrangler.toml` | D1 schema (table `portal`) + wrangler config (binding `DB`) |
 | `manifest.webmanifest`, `icons/` | PWA manifest + PNG icons (192, 512, maskable, apple-touch) |
-| `legal.html` | Legal notice, terms and privacy policy (bilingual, completed) |
+| `legal.html` | Bilingual legal draft; address, tax/registration details and local requirements still need confirmation |
 | `robots.txt`, `sitemap.xml`, `_headers` | SEO + Cloudflare security headers |
 | `README.md` / `README.fr.md` | This file |
 | `VEILLE.md` | Market & competitor research (EU + US) and prioritised plan |
@@ -187,7 +187,7 @@ Do not translate the key. The dictionary must stay complete — check with a
 
 ### 4.6 Offline & caching
 
-`sw.js` caches the whole app (constant `C`, currently `encaisse-v12`).
+`sw.js` caches the whole app (constant `C`, currently `encaisse-v29`).
 `config.js`, `i18n.js` and `sw.js`
 are **network-first** so a key or a translation ships immediately even with a stale
 cache. **Bump the `C` constant on every release.**
@@ -204,13 +204,13 @@ the action bar are hidden when printing.
 
 | Key | Current | Meaning |
 |---|---|---|
-| `DEMO_MODE` | `false` | Live: real charges via Stripe Checkout; demo banner hidden, plans require a server-signed token (Stripe = source of truth) |
-| `STRIPE_LIVE` | `true` | Live together with `DEMO_MODE:false` — real Checkout redirect |
-| `STRIPE_PUBLIC_KEY` | set | *Publishable* key — safe in the browser by design |
+| `DEMO_MODE` | `true` | Demo mode: no real payments; local Pro activation is for interface testing only |
+| `STRIPE_LIVE` | `false` | Disabled by default; enable only after test-mode checks and secret configuration |
+| `STRIPE_PUBLIC_KEY` | `""` | Configure only after Stripe testing; *publishable* key is browser-visible |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Certified e-invoicing partner (EU) — optional |
 | `SITE_URL` | `https://encaisse.pages.dev` | Public origin serving the app — enables the real customer page `/r/:slug` (uploaded on explicit share) |
 
-> ✅ Live mode: "Upgrade" redirects to real Stripe Checkout (server-side `price_data`, no dashboard product needed).
+> ⚠️ Live payments are disabled by default. Enable them only after Stripe test-mode checks, Cloudflare secret configuration, and legal review.
 > Demo-granting only happens when payments aren't configured (`paymentsReady()`
 > false) — never flip back while secrets are live.
 
@@ -369,16 +369,16 @@ What an acquirer should know on day one:
 
 | Item | Status |
 |---|---|
-| Revenue / paying customers | Live (`DEMO_MODE:false`) — no paying customers yet; test with a small checkout + refund |
+| Revenue / paying customers | Demo mode by default; no real payment enabled in this archive |
 | Backend / database | **Exists**: Pages Functions (`functions/`) + D1 tables `portal`/`backup` — Stripe secrets live in Cloudflare, never in the repo |
-| Users' personal data held by us | **Only copies of explicitly shared documents** in D1 (customer e-mail + document payload); everything else stays on the user's device |
+| Users' personal data held by us | Explicitly shared documents and enabled encrypted backups may be stored in D1; verify actual data flows and retention before launch |
 | Third-party accounts needed to transfer | Cloudflare, Stripe, the domain registrar, GitHub |
-| Stripe | Publishable key committed (harmless by design). **Secret key not present** |
-| Legal identity | `legal.html` completed (independent developer, Libreville, Gabon — contact e-mail live) |
+| Stripe | Publishable key not configured in this archive. **Secret key not present** |
+| Legal identity | `legal.html` is a draft: contact address and applicable registration/tax details remain to be completed |
 | Tax / invoicing compliance | Certified EU platform **not yet connected** (see §7) |
 | Trademark & domain | Live at `https://encaisse.pages.dev`; `encaisse.app` ownership still unverified (update SITE_URL/robots/sitemap if claimed) |
-| Build / CI | None. No `package.json`, no tests in CI |
-| Automated checks | Scripts were run ad hoc during development (parse, i18n completeness, jsdom user flow) — **not committed** |
+| Build / CI | No build step required; `package.json` provides local verification commands with no app dependencies |
+| Automated checks | `npm run check`: JS syntax + static smoke checks; does not replace browser/D1/Stripe integration tests |
 
 Suggested first tasks for a new maintainer: reproduce §2, read `VEILLE.md`, fill the
 legal placeholders, then connect P0 item 6 (certified e-invoicing partner).
@@ -409,4 +409,4 @@ legal placeholders, then connect P0 item 6 (certified e-invoicing partner).
 
 ## Technical audit (10 October 2026)
 
-See [`AUDIT_TECHNIQUE_FR.md`](AUDIT_TECHNIQUE_FR.md) for the security changes, remaining risks and production checklist. API smoke tests: `node tests/security-smoke.mjs` (Node.js 20+). Syntax checks: `node --check app.js && node --check i18n.js`.
+See [`AUDIT_TECHNIQUE_FR.md`](AUDIT_TECHNIQUE_FR.md) for the security changes, remaining risks and production checklist. Automated API smoke tests are not included yet. Run syntax checks on every JavaScript file before deploying.
