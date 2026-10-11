@@ -51,6 +51,7 @@
   (« Bon pour accord »), dictée vocale.
 - **Acomptes** : facture d'acompte avec son propre lien, solde déduit automatiquement.
 - **Confidentialité** : données principalement locales ; les documents partagés et sauvegardes activées peuvent être transmis au backend. Vérifier les flux réels avant toute promesse de confidentialité.
+- **Synchronisation multi-appareils** : fusion chiffrée des clients, documents, récurrences et temps suivis à l’aide du code de récupération. Après avoir saisi le même code sur les appareils, la sauvegarde/synchronisation automatique (opt-in) récupère les nouveautés environ toutes les 60 secondes lorsque l’app est ouverte et connectée. Les données restent utilisables hors ligne. Les écritures distantes utilisent une révision compare-and-swap : en cas de course, l’appareil relit, fusionne et réessaie. Pour un même identifiant, la version locale gagne ; ce n’est pas de la coédition temps réel. Les suppressions ne sont pas encore représentées par des marqueurs de suppression : un élément supprimé sur un appareil peut réapparaître s’il existe encore sur un autre appareil.
 - **Bilingue FR/EN** avec sélecteur de langue.
 
 ## 2. Le lancer en local
@@ -186,7 +187,7 @@ anglaise dans `i18n.js`. Ne jamais traduire la clé elle-même.
 
 ### 4.6 Hors-ligne & cache
 
-`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v29`).
+`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v33`).
 `config.js`, `i18n.js` et `sw.js`
 sont en **network-first** pour qu'une clé ou une traduction se propage immédiatement.
 **Incrémenter la constante `C` à chaque release.**
@@ -211,6 +212,8 @@ Pas de bibliothèque PDF : la facture est mise en forme pour l'écran et
 > ⚠️ Les paiements sont désactivés par défaut. Ne passe en mode réel qu'après tests Stripe, vérification des secrets Cloudflare et validation des obligations légales.
 > L'attribution locale d'un plan n'arrive que si les paiements ne sont pas configurés
 > (`paymentsReady()` faux) — ne jamais rebasculer tant que les secrets sont en ligne.
+
+Pour les commandes Windows prêtes à copier-coller, voir [`DEMARRAGE_WINDOWS.md`](./DEMARRAGE_WINDOWS.md). Voir aussi [`SYNCHRONISATION.md`](./SYNCHRONISATION.md) pour le parcours multi-appareils, les limites et les tests.
 
 ## 6. Déploiement
 
@@ -272,7 +275,7 @@ aucun e-mail serveur pour le moment.
 ✅ Créer la base D1 + binding « DB » + exécuter schema.sql (voir ci-dessus)
 ✅ Mettre STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (wrangler pages secret put)
 □ Tester un vrai checkout (petit montant, puis remboursement) + vérifier le webhook
-✅ mentions légales vérifiées selon le pays réel d’établissement, le statut et les obligations applicables
+□ Faire vérifier les mentions légales selon le pays réel d’établissement, le statut et les obligations applicables
 □ Remplir Réglages → Mon activité (adresse, n° fiscal, IBAN) — affiché sur la facture
 □ Ajouter le domaine dans Cloudflare (Custom domains) + mettre à jour SITE_URL/robots/sitemap
 □ Vérifier les en-têtes : CSP, HSTS, X-Content-Type-Options, X-Frame-Options

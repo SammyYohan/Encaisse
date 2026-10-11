@@ -536,10 +536,27 @@ async function postBackup(ctx) {
   if (blob.length > 2000000) return json({ error: "trop_gros" }, 413);
   const rev = Math.max(1, Math.floor(Number(b.rev) || 0) || Date.now());
   const now = Date.now();
-  const r = await env.DB.prepare(
-    "INSERT INTO backup (owner, blob, rev, updated_at) VALUES (?, ?, ?, ?) " +
-    "ON CONFLICT(owner) DO UPDATE SET blob = excluded.blob, rev = excluded.rev, updated_at = excluded.updated_at"
-  ).bind(owner, blob, rev, now).run().catch(function () { return null; });
-  if (!r) return json({ error: "stockage_invalide" }, 500);
+  let r;
+  if (Number.isSafeInteger(b.expectedRev) && b.expectedRev >= 0) {
+    /* Compare-and-swap: new snapshots must be based on the revision they read.
+       INSERT ... SELECT also prevents recreating a missing row with a stale
+       non-zero revision. A 409 tells the client to pull, merge and retry. */
+    r = await env.DB.prepare(
+      "INSERT INTO backup (owner, blob, rev, updated_at) SELECT ?, ?, ?, ? " +
+      "WHERE ? = 0 OR EXISTS (SELECT 1 FROM backup WHERE owner = ? AND rev = ?) " +
+      "ON CONFLICT(owner) DO UPDATE SET blob = excluded.blob, rev = excluded.rev, updated_at = excluded.updated_at " +
+      "WHERE backup.rev = ?"
+    ).bind(owner, blob, rev, now, b.expectedRev, owner, b.expectedRev, b.expectedRev).run().catch(function () { return null; });
+    if (!r) return json({ error: "stockage_invalide" }, 500);
+    if (!r.meta || Number(r.meta.changes) === 0) return json({ error: "conflit_revision", conflict: true }, 409);
+  } else {
+    /* Compatibility for older installed app versions; new versions always
+       provide expectedRev and therefore use compare-and-swap above. */
+    r = await env.DB.prepare(
+      "INSERT INTO backup (owner, blob, rev, updated_at) VALUES (?, ?, ?, ?) " +
+      "ON CONFLICT(owner) DO UPDATE SET blob = excluded.blob, rev = excluded.rev, updated_at = excluded.updated_at"
+    ).bind(owner, blob, rev, now).run().catch(function () { return null; });
+    if (!r) return json({ error: "stockage_invalide" }, 500);
+  }
   return json({ ok: true, rev: rev });
 }

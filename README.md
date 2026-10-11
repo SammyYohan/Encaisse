@@ -1,5 +1,7 @@
 # Encaisse
 
+For Windows copy-paste commands and multi-device sync limitations, see [`DEMARRAGE_WINDOWS.md`](./DEMARRAGE_WINDOWS.md) and [`SYNCHRONISATION.md`](./SYNCHRONISATION.md).
+
 > **Quote in 60 seconds → clear invoice → paid.**
 > Offline-first quote and invoicing PWA. Country targeting does not imply legal or tax compliance in every jurisdiction.
 > Bilingual **FR / EN**, **Stripe-only** payments, hosted on **Cloudflare**.
@@ -52,6 +54,7 @@
   ("approved for acceptance"), voice dictation.
 - **Deposits**: deposit invoice with its own payment link, balance auto-deducted.
 - **Privacy**: most working data is local, but shared documents and enabled encrypted backups may be sent to Cloudflare D1. Verify actual data flows and retention before making privacy promises.
+- **Multi-device sync**: encrypted merge of clients, documents, recurring items and tracked time using the recovery code. After entering the same code on each device, opt-in automatic backup/sync checks for updates roughly every 60 seconds while the app is open and online. Data remains available offline. If the same record is edited concurrently, the local version wins; this is not real-time collaborative editing.
 - **Bilingual FR / EN** with an interface-level language switch.
 
 ## 2. Run it locally

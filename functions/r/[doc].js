@@ -26,7 +26,7 @@ const L = {
     off: "Le portail client n'est pas encore activé sur ce site.",
     err: "Erreur serveur — réessaie plus tard.",
     with: "Édité avec Encaisse", vat: "N° TVA", manual: "Autres moyens acceptés : {m}",
-    m: { stripe_cb: "Carte bancaire", sepa: "Prélèvement SEPA", twint: "TWINT", ach: "Prélèvement ACH", virement: "Virement", especes: "Espèces" }
+    m: { stripe_cb: "Carte bancaire", sepa: "Prélèvement SEPA", twint: "TWINT", ach: "Prélèvement ACH", virement: "Virement", especes: "Espèces", cheque: "Chèque" }
   },
   en: {
     devis: "Quote", facture: "Invoice", avoir: "Credit note",
@@ -46,7 +46,7 @@ const L = {
     off: "The customer portal is not enabled on this site yet.",
     err: "Server error — please try again later.",
     with: "Generated with Encaisse", vat: "VAT no.", manual: "Other accepted methods: {m}",
-    m: { stripe_cb: "Card", sepa: "SEPA", twint: "TWINT", ach: "ACH", virement: "Bank transfer", especes: "Cash" }
+    m: { stripe_cb: "Card", sepa: "SEPA", twint: "TWINT", ach: "ACH", virement: "Bank transfer", especes: "Cash", cheque: "Check" }
   }
 };
 
@@ -171,11 +171,24 @@ function render(slug, row, p, opts) {
   const mStripe = mList.filter(isStripeM).map(k => Lx.m[k] || k).join(", ");
   const mManual = mList.filter(k => !isStripeM(k)).map(k => Lx.m[k] || k).join(", ");
 
-  const payBtn = (!paid && d.type === "facture" && tt.net >= 50)
-    ? `<a class="pay" href="/api/pay?slug=${esc(slug)}">${tpl(Lx.pay, { a: money(tt.net, biz.devise, lang) })}</a>
-       <p class="note">${tpl(Lx.stripe, { m: mStripe || "Stripe" })}</p>`
-      + (mManual ? `<p class="note">${tpl(Lx.manual, { m: mManual })}</p>` : "")
-    : "";
+  const hasStripe = Boolean(env && env.STRIPE_SECRET_KEY);
+  let payBtn = "";
+  if (!paid && d.type === "facture" && tt.net >= 50) {
+    if (hasStripe) {
+      payBtn = `<a class="pay" href="/api/pay?slug=${esc(slug)}">${tpl(Lx.pay, { a: money(tt.net, biz.devise, lang) })}</a>
+         <p class="note">${tpl(Lx.stripe, { m: mStripe || "Stripe" })}</p>`
+        + (mManual ? `<p class="note">${tpl(Lx.manual, { m: mManual })}</p>` : "");
+    } else {
+      payBtn = `<div class="pay-offline" style="margin-top:16px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;text-align:center">
+        <b style="display:block;font-size:14px;color:#0f172a;margin-bottom:6px">${lang === "en" ? "Payment instructions" : "Règlement de la facture"}</b>
+        ${biz.iban ? `
+        <div style="font-size:12px;color:#475467;margin-bottom:4px">${lang === "en" ? "Bank transfer to IBAN:" : "Effectuez votre virement sur le compte :"}</div>
+        <code style="display:inline-block;padding:6px 12px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:.04em;margin-bottom:8px;user-select:all">${esc(biz.iban)}</code>
+        ` : ""}
+        <div style="font-size:12px;color:#64748b">${tpl(Lx.manual, { m: mManual || (lang === "en" ? "Bank transfer / Check / Cash" : "Virement bancaire / Chèque / Espèces") })}</div>
+      </div>`;
+    }
+  }
 
   const avNote = isAvoir
     ? `<p class="note">${tpl(Lx.avTxt, { n: d.avoirSourceNum || d.numero || "" })}</p>`

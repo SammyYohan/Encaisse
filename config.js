@@ -1,38 +1,35 @@
-/* Encaisse — configuration sûre par défaut.
-   Le mode démo évite les paiements réels tant que l'exploitant n'a pas testé
-   le backend, renseigné les secrets Cloudflare et validé les obligations légales.
-   Ne jamais placer de clé Stripe secrète dans ce fichier public. */
+/* Encaisse — Configuration de l application.
+   Ce fichier pilote le comportement public de l application.
+   Ne jamais placer de cle Stripe secrete dans ce fichier public. */
 window.ENCAISSE_CONFIG = {
-  /* true  = aucun débit réel, bandeau "démo" affiché, aucun plan marqué payé.
-     false = le paiement est considéré comme branché (nécessite STRIPE_LIVE + une clé). */
+  /* true  = garde-fou anti-debit involontaire.
+     false = autorise les debits reels (necessite STRIPE_LIVE=true + secrets Cloudflare). */
   DEMO_MODE: true,
 
-  /* BÊTA GRATUITE (semaine de lancement) : tout illimité, aucune mention de
-     paiement dans l'interface (voir betaFree() dans app.js). Pour le lancement
-     commercial : remettre BETA_GRATUITE=false — paywall + quota + mentions
-     d'offre réactivés, sans autre modification. */
+  /* MODE BÊTA / AUTONOME GRATUIT :
+     true  = acces complet illimite : devis, factures, exports, suivi du temps
+             sans quota, sans paywall et sans aucune dependance a Stripe.
+             Ideal pour tester avec des professionnels et valider le produit.
+     false = active le paywall et le quota mensuel une fois Stripe branche. */
   BETA_GRATUITE: true,
 
-  /* Pour activer la production : tester d'abord Stripe en mode test, configurer
-     D1 + STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET dans Cloudflare, puis seulement
-     après validation basculer explicitement DEMO_MODE=false et STRIPE_LIVE=true. */
+  /* Pour basculer en production avec paiements Stripe :
+     1. Configurer D1 + STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET dans Cloudflare Pages.
+     2. Mettre STRIPE_PUBLIC_KEY ci-dessous (cle commencant par pk_live_ ou pk_test_).
+     3. Basculer DEMO_MODE: false, STRIPE_LIVE: true, BETA_GRATUITE: false. */
   STRIPE_LIVE: false,
 
-  // Paiements abonnements Europe / Suisse / États-Unis — https://dashboard.stripe.com/apikeys
-  // (clé "publishable" : elle est faite pour être visible par le navigateur)
+  // Cle Stripe publishable publique pour le navigateur (ex: pk_live_... ou pk_test_...)
   STRIPE_PUBLIC_KEY: "",
 
-  // Lien de paiement statique optionnel (si tu préfères un Payment Link Stripe
-  // à une session Checkout créée par le Worker). Laisser vide sinon.
+  // Lien Payment Link Stripe statique optionnel (laisser vide pour checkout dynamique)
   STRIPE_PAYMENT_LINK: "",
 
-  // Facturation conforme (optionnel V2 — l'app reste utilisable sans)
-  PDP_API_KEY: "",               // France : PDP partenaire (Factur-X)
-  PEPPOL_AP_USER: "",            // Belgique : point d'accès Peppol
+  // Facturation conforme (optionnel V2)
+  PDP_API_KEY: "",
+  PEPPOL_AP_USER: "",
   PEPPOL_AP_PASS: "",
 
-  // Domaine public qui sert l'app (défaut : ton .pages.dev ; un jour ton domaine
-  // custom) : sert au lien client /r/:slug ET à la publication du portail
-  // (POST /api/portal sur cette origine).
+  // Domaine public de l application (Pages.dev ou domaine personnalise)
   SITE_URL: "https://encaisse.pages.dev"
 };

@@ -36,7 +36,7 @@ const PAYS={
   FR:{label:"🇫🇷 France",nom:{fr:"France",en:"France"},devise:"€",tva:20,archive:"10 ans",prefix:"FR",
     rule:{fr:"Facturation électronique : réception obligatoire depuis le 01/09/2026, émission TPE/PME depuis le 01/09/2027 via une plateforme agréée (PDP). Formats Factur-X / UBL / CII (EN 16931). Mentions : raison sociale, adresse, SIRET, n° TVA intracom., date d'échéance. Ce document reste un PDF : la transmission certifiée exige une PDP branchée.",
           en:"E-invoicing: receiving mandatory since 1 Sep 2026, SMEs must issue via a registered platform (PDP) from 1 Sep 2027. Formats Factur-X / UBL / CII (EN 16931). Required: legal name, address, SIRET, EU VAT number, due date. This document is a PDF: certified transmission needs a connected PDP."},
-    moyens:["stripe_cb","sepa","virement","especes"]},
+    moyens:["virement","stripe_cb","cheque","especes","sepa"]},
   BE:{label:"🇧🇪 Belgique",nom:{fr:"Belgique",en:"Belgium"},devise:"€",tva:21,archive:"10 ans",prefix:"BE",
     rule:{fr:"Peppol-BIS obligatoire en B2B depuis le 01/01/2026 (réception ET émission). Un PDF envoyé par e-mail n'est pas une e-facture. Amendes 1 500 – 5 000 €. Ce document reste un PDF : inutilisable seul entre assujettis sans point d'accès Peppol. Mentions : raison sociale, adresse, TVA BE, date d'échéance.",
           en:"Peppol-BIS mandatory for B2B since 1 Jan 2026 (receiving AND issuing). A PDF sent by e-mail is not a valid e-invoice. Fines €1,500–€5,000. This document is a PDF: not enough alone between VAT-registered parties without a Peppol access point. Required: legal name, address, BE VAT number, due date."},
@@ -53,14 +53,15 @@ const PAYS={
 
 /* ---------- moyens de paiement : Stripe uniquement (+ virement/espèces manuels) ---------- */
 const MOYENS={
-  stripe_cb:{fr:"Carte bancaire (Stripe)",en:"Card (Stripe)"},
-  sepa:{fr:"Prélèvement SEPA (Stripe)",en:"SEPA Direct Debit (Stripe)"},
+  stripe_cb:{fr:"Carte bancaire",en:"Card"},
+  sepa:{fr:"Prélèvement SEPA",en:"SEPA Direct Debit"},
   twint:{fr:"TWINT",en:"TWINT"},
-  ach:{fr:"Prélèvement ACH (Stripe)",en:"ACH Direct Debit (Stripe)"},
+  ach:{fr:"Prélèvement ACH",en:"ACH Direct Debit"},
   virement:{fr:"Virement bancaire",en:"Bank transfer"},
-  especes:{fr:"Espèces",en:"Cash"}
+  especes:{fr:"Espèces",en:"Cash"},
+  cheque:{fr:"Chèque",en:"Check"}
 };
-const ALL_MOYENS=["stripe_cb","sepa","twint","ach","virement","especes"];
+const ALL_MOYENS=["stripe_cb","sepa","twint","ach","virement","especes","cheque"];
 const mLabel=k=>loc(MOYENS[k]||{fr:k,en:k});
 /* Table de MIGRATION uniquement (jamais affichée à l'utilisateur) :
    les anciens intitulés de moyens de paiement stockés dans localStorage
@@ -249,17 +250,56 @@ function bkState(){try{return JSON.parse(localStorage.getItem(BK_LS)||"{}")}catc
 function bkStateSave(s){try{localStorage.setItem(BK_LS,JSON.stringify(s))}catch(e){}}
 function scheduleBackup(){if(!backupEnabled()||!backupSite())return;bkDirty=true;try{clearTimeout(bkTimer)}catch(e){}bkTimer=setTimeout(()=>{flushBackup(true)},45000)}
 async function flushBackup(auto){
-  if(bkBusy)return false;if(auto&&(!backupEnabled()||!bkDirty))return false;
+  if(bkBusy)return false;
+  if(auto&&(!backupEnabled()||!bkDirty))return false;
   const site=backupSite();
   if(!site){if(!auto)toast(T("Connexion requise pour sauvegarder."));return false}
-  const enc=await backupEncrypt();
-  if(!enc){if(!auto)toast(T("Échec de sauvegarde — réessaie plus tard."));return false}
+  const secret=backupRecoveryKey();
+  if(!secret){if(!auto)toast(T("Échec de sauvegarde — réessaie plus tard."));return false}
   bkBusy=true;
   try{
-    const secret=backupRecoveryKey(),owner=await backupOwnerId(secret);
+    const owner=await backupOwnerId(secret);
     if(!owner)throw new Error("clé_sauvegarde_indisponible");
-    const r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"push",owner:owner,blob:JSON.stringify(enc),rev:Date.now()})});
-    const j=await r.json().catch(()=>({}));
+
+    /* Pull before push: never blindly replace a snapshot written by another
+       device. The API also checks expectedRev to detect races between this
+       read and the write. */
+    let expectedRev=Number(bkState().rev)||0;
+    const pull=async()=>{
+      const r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"pull",owner})});
+      if(r.status===404)return{missing:true,rev:0};
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok||!j.blob)throw new Error(j.error||("http_"+r.status));
+      const remote=await backupDecrypt(JSON.parse(j.blob),secret);
+      if(!remote||!remote.biz||!Array.isArray(remote.docs)||!Array.isArray(remote.clients))throw new Error("sauvegarde_illisible");
+      return{remote,rev:Number(j.rev)||0};
+    };
+    let latest=await pull();
+    if(latest.remote){
+      S=mergeSyncedState(S,latest.remote);
+      migrateSeq();migrateMoyens();
+      try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){throw new Error("stockage_local_indisponible")}
+      expectedRev=latest.rev;
+    }else expectedRev=0;
+
+    let enc=await backupEncrypt();
+    if(!enc)throw new Error("chiffrement_indisponible");
+    let r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"push",owner,blob:JSON.stringify(enc),rev:Date.now(),expectedRev})});
+    let j=await r.json().catch(()=>({}));
+    /* If another device wrote between pull and push, pull/merge/retry once. */
+    if(r.status===409){
+      latest=await pull();
+      if(latest.remote){
+        S=mergeSyncedState(S,latest.remote);
+        migrateSeq();migrateMoyens();
+        try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){throw new Error("stockage_local_indisponible")}
+        expectedRev=latest.rev;
+        enc=await backupEncrypt();
+        if(!enc)throw new Error("chiffrement_indisponible");
+        r=await fetch(site+"/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"push",owner,blob:JSON.stringify(enc),rev:Date.now(),expectedRev})});
+        j=await r.json().catch(()=>({}));
+      }
+    }
     if(!r.ok||!j.ok)throw new Error(j.error||("http_"+r.status));
     bkDirty=false;bkStateSave({rev:j.rev,at:Date.now()});syncBkState();
     if(!auto)toast(T("Sauvegarde envoyée ✓"));
@@ -275,6 +315,96 @@ function openBackupCode(){
   $("#cancelS").onclick=closeSheet;
   const cp=$("#bkCopy");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(k);toast(T("Code copié ✓"))}catch{toast(T("Copie manuelle"))}};
 }
+/* Synchronisation multi-appareils : fusion par identifiant, sans écraser les
+   enregistrements distincts. En cas de conflit sur le même ID, la copie locale
+   est conservée ; la synchro n'est pas un système de coédition temps réel. */
+function mergeById(localRows,remoteRows,keyFn){
+  const out=[],seen=new Set();
+  for(const row of [...(Array.isArray(localRows)?localRows:[]),...(Array.isArray(remoteRows)?remoteRows:[])]){
+    if(!row||typeof row!=='object')continue;
+    const key=String(keyFn(row)||'');
+    if(!key){out.push(row);continue}
+    if(seen.has(key))continue;
+    seen.add(key);out.push(row);
+  }
+  return out;
+}
+function mergeSyncedState(local,remote){
+  const merged={...remote,...local};
+  merged.biz={...(remote.biz||{}),...(local.biz||{})};
+  if(!merged.biz.nom&&remote.biz?.nom)merged.biz=remote.biz;
+  merged.sub={...(remote.sub||{}),...(local.sub||{})};
+  merged.clients=mergeById(local.clients,remote.clients,x=>x.id||x.email||x.tel||x.nom);
+  merged.docs=mergeById(local.docs,remote.docs,x=>x.id||x.numero);
+  merged.rec=mergeById(local.rec,remote.rec,x=>x.id||((x.clientId||x.lib||x.date)?String(x.clientId||'')+'|'+String(x.lib||'')+'|'+String(x.date||''):JSON.stringify(x)));
+  merged.time=mergeById(local.time,remote.time,x=>x.id||((x.start||x.clientId)?String(x.start||'')+'|'+String(x.clientId||''):JSON.stringify(x)));
+  merged.seq={};
+  for(const type of ['DEV','FAC','AVT']){
+    merged.seq[type]={};
+    const years=new Set([...Object.keys(local.seq?.[type]||{}),...Object.keys(remote.seq?.[type]||{})]);
+    for(const year of years)merged.seq[type][year]=Math.max(Number(local.seq?.[type]?.[year])||0,Number(remote.seq?.[type]?.[year])||0);
+  }
+  return merged;
+}
+let bkSyncBusy=false,bkSyncLast=0;
+async function syncBackupFromServer(manual){
+  if(bkSyncBusy||(!manual&&!backupEnabled())||!navigator.onLine)return false;
+  const site=backupSite(),code=backupRecoveryKey();if(!site||!code)return false;
+  bkSyncBusy=true;bkSyncLast=Date.now();
+  try{
+    const owner=await backupOwnerId(code);
+    const r=await fetch(site+'/api/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'pull',owner})});
+    if(r.status===404)return false;
+    const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok||!j.blob)return false;
+    const remote=await backupDecrypt(JSON.parse(j.blob),code);
+    if(!remote||!remote.biz||!Array.isArray(remote.docs)||!Array.isArray(remote.clients))return false;
+    const before=JSON.stringify(S),merged=mergeSyncedState(S,remote),after=JSON.stringify(merged);
+    if(before===after)return false;
+    S=merged;migrateSeq();migrateMoyens();
+    try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){return false}
+    bkDirty=true;
+    if(manual){render();toast(T('Synchronisation terminée ✓'))}
+    else scheduleBackup();
+    return true;
+  }catch(e){console.warn('Synchro auto :',e);return false}
+  finally{bkSyncBusy=false}
+}
+function startAutoSync(){
+  if(window.__encaisseAutoSyncStarted)return;window.__encaisseAutoSyncStarted=true;
+  const tick=()=>{if(backupEnabled()&&navigator.onLine&&Date.now()-bkSyncLast>45000)syncBackupFromServer(false)};
+  window.setInterval(tick,60000);
+  window.addEventListener('online',()=>{tick()});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+}
+
+function openBackupSync(){
+  const site=backupSite();if(!site){toast(T('Connexion requise pour sauvegarder.'));return}
+  openSheet(`<h2>${T('Synchroniser les appareils')}</h2><p class="sub">${T('Entre le code de récupération de ton autre appareil. Les éléments distincts seront réunis ; si un même document a été modifié sur les deux appareils, cette version locale sera conservée.')}</p><div class="form"><label>${T('Code de récupération')}<input id="bkSyncCode" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="a1b2…" maxlength="80"></label><div class="row"><button class="btn primary" id="bkSyncGo" type="button" style="flex:1">${T('Synchroniser')}</button><button class="btn ghost" id="cancelS" type="button">${T('Annuler')}</button></div></div>`);
+  $('#cancelS').onclick=closeSheet;
+  $('#bkSyncGo').onclick=async()=>{
+    const code=String($('#bkSyncCode').value||'').toLowerCase().replace(/[^0-9a-f]/g,'');
+    if(!/^[0-9a-f]{64}$/.test(code)){toast(T('Code invalide (64 caractères).'));return}
+    const btn=$('#bkSyncGo');btn.disabled=true;
+    try{
+      const owner=await backupOwnerId(code);
+      const r=await fetch(site+'/api/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'pull',owner})});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok||!j.blob){toast(r.status===404?T('Sauvegarde introuvable pour ce code.'):T('Échec de sauvegarde — réessaie plus tard.'));btn.disabled=false;return}
+      const remote=await backupDecrypt(JSON.parse(j.blob),code);
+      if(!remote||!remote.biz||!Array.isArray(remote.docs)||!Array.isArray(remote.clients)){toast(T('Sauvegarde illisible.'));btn.disabled=false;return}
+      const before=(S.docs||[]).length+(S.clients||[]).length;
+      S=mergeSyncedState(S,remote);migrateSeq();migrateMoyens();
+      try{localStorage.setItem(BK_KEY_LS,code)}catch(e){}
+      save();
+      const uploaded=await flushBackup(false);
+      closeSheet();syncSettings();render();
+      toast(uploaded?T('Synchronisation terminée ✓'):T('Fusion locale terminée ; envoi à réessayer en ligne.'));
+      const state=bkState();bkStateSave({...state,syncAt:Date.now(),syncDeviceCount:before});syncBkState();
+    }catch(e){console.warn('Synchronisation :',e);toast(T('Échec de sauvegarde — réessaie plus tard.'))}
+    btn.disabled=false;
+  };
+}
+
 function openBackupRestore(){
   const site=backupSite();if(!site){toast(T("Connexion requise pour sauvegarder."));return}
   openSheet(`<h2>${T("Restaurer")}</h2><p class="sub">${T("Colle ton code de récupération :")}</p><div class="form"><label>${T("Code de récupération")}<input id="bkCode" autocomplete="off" placeholder="a1b2…" maxlength="80"></label><div class="row"><button class="btn primary" id="bkGo" type="button" style="flex:1">${T("Restaurer")}</button><button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button></div></div>`);
@@ -598,8 +728,8 @@ function docStatus(d){
   if(d.type==="avoir")return d.statut==="paye"?["s-paye",T("Remboursée ✓")]:["s-envoye",T("Avoir émis")];
   if(d.statut==="paye")return["s-paye",T("Payée ✓")];
   if(d.type==="devis"){
-    if(d.statut==="converti")return["s-paye",T("Converti en facture ✓")];
-    if(d.signature)return["s-envoye",T("Signé ✓ Bon pour accord")];
+    if(d.statut==="converti")return["s-converti",T("Converti en facture ✓")];
+    if(d.signature)return["s-signe",T("Signé ✓ Bon pour accord")];
     return d.statut==="envoye"?["s-envoye",T("Devis envoyé")]:["s-brouillon",T("Brouillon")];
   }
   const st=relanceStage(d);if(st)return st;
@@ -754,7 +884,12 @@ function renderClis(){
 /* BÊTA GRATUITE (semaine de lancement) : betaFree() neutralise le système
    commercial (quota, paywall, prix, mentions d'offre) sans le supprimer.
    Lancement commercial = BETA_GRATUITE:false dans config.js, rien d'autre. */
-function betaFree(){return !!((window.ENCAISSE_CONFIG||{}).BETA_GRATUITE)}
+function betaFree(){
+  const cfg = window.ENCAISSE_CONFIG || {};
+  if (cfg.BETA_GRATUITE !== false) return true;
+  if (!paymentsReady()) return true;
+  return false;
+}
 function isPaid(){
   const s=S.sub;
   if(!(s&&(s.plan==="solo"||s.plan==="pro")))return false;
@@ -833,11 +968,11 @@ function renderPlanCard(){
   /* BÊTA GRATUITE : carte neutre — ni prix, ni compteur, ni bouton d'offre.
      La version commerciale ci-dessous est inchangée. */
   if(betaFree()){
-    el.innerHTML=`<h3>✨ ${T("Accès complet")}</h3>
-    <div class="doc-meta"><span>${T("Plan actuel")}</span><b>${T("Bêta")}</b></div>
-    <small class="muted">${T("Devis, factures et avoirs illimités pendant le lancement.")}</small>`;
+    el.innerHTML=`<h3>✨ ${T("Accès complet Pro")}</h3>
+    <div class="doc-meta"><span>${T("Version")}</span><b>${T("Offerte & Illimitée")}</b></div>
+    <small class="muted">${T("Devis, factures, exports comptables et gestion clients illimités.")}</small>`;
     const b=$("#planBadge");
-    if(b){b.textContent=T("Bêta");b.classList.remove("pro")}
+    if(b){b.textContent=T("Pro");b.classList.add("pro")}
     return;
   }
   const cyc=S.sub?.cycle||"monthly";
@@ -900,7 +1035,7 @@ function openNew(prefillClient){
   <div class="grid3"><label>${taxLbl()} %<input id="fTva" inputmode="decimal" value="${PAYS[S.biz.pays]?.tva??20}"></label><label>${T("Unité")}<input id="fUnit" maxlength="12" value="${esc(sLabel(sec().unit))}" placeholder="${T("h, pce…")}"></label><label>${T("Échéance")}<input id="fEche" type="date" value="${addDays(todayISO(),15)}"></label></div>
   <div class="total"><span>${T("Total TTC estimé")}</span><b id="fTot">0</b></div>
   <div class="row"><button class="btn primary" id="saveDoc" type="button" style="flex:1">${T("Créer le devis ✓")}</button><button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button></div>
-  <small class="muted">${T("Numérotation inviolable")} ${esc(loc(PAYS[S.biz.pays]?.nom))} · ${T("preuve horodatée")} · ${T("archivage")} ${PAYS[S.biz.pays]?.archive||"10 ans"}. <em>${T("Démo : rendu à valider par ton comptable tant que la plateforme d'e-invoicing n'est pas branchée.")}</em>${S.biz.pays==="BE"?" "+T("⚠️ B2B : Peppol-BIS obligatoire depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis."):""}${S.biz.pays==="FR"?" "+T("⚠️ Entre assujettis : transmission via PDP agréée requise (réception obligatoire depuis le 01/09/2026)."):""}</small></div>`);
+  <small class="muted">${T("Numérotation inviolable")} ${esc(loc(PAYS[S.biz.pays]?.nom))} · ${T("preuve horodatée")} · ${T("archivage")} ${PAYS[S.biz.pays]?.archive||"10 ans"}. <em>${T("Numérotation chronologique continue · Archivage légal {a}",{a:loc(PAYS[S.biz.pays]?.archive)||"10 ans"})}</em>${S.biz.pays==="BE"?" "+T("⚠️ B2B : Peppol-BIS obligatoire depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis."):""}${S.biz.pays==="FR"?" "+T("⚠️ Entre assujettis : transmission via PDP agréée requise (réception obligatoire depuis le 01/09/2026)."):""}</small></div>`);
 
   wireDocForm({mode:"new"});
   /* Client inline : cree sans quitter la feuille (le formulaire doc garde
@@ -1186,13 +1321,12 @@ function openTimeBill(id){
   $("#cancelS").onclick=closeSheet;
   let ttype="devis";
   $("#tt").onclick=e=>{const b=e.target.closest("button");if(!b)return;$$("#tt button").forEach(x=>x.classList.remove("is-on"));b.classList.add("is-on");ttype=b.dataset.t;$("#tGo").textContent=ttype==="devis"?T("Créer le devis ✓"):T("Créer la facture ✓")};
-  $("#tPrice").oninput=()=>{$("#tTot").textContent=fmt(toCents($("#tPrice").value),S.biz.devise)};
+  $("#tPrice").oninput=()=>{const h=toCents($("#tPrice").value);const tot=Math.round(h*(mins/60));$("#tTot").textContent=fmt(tot,S.biz.devise)};
   $("#tGo").onclick=()=>{
     const hourly=toCents($("#tPrice").value);
     if(!(hourly>0)){toast(T("Mets au moins un prix"));return}
     if(!canCreate(ttype)){closeSheet();openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}
-    const hrs=Math.round(mins/60*100)/100;
-    const total=Math.round(hourly*hrs);
+    const total=Math.round(hourly*(mins/60)); /* durée exacte × tarif horaire, identique à l'aperçu */
     const lib=entries.map(e=>e.label).filter(Boolean).slice(0,3).join(", ")||T("Article");
     const nid=uid(),num_=nextNum(ttype);
     const eche=$("#tEche").value||addDays(todayISO(),15);
@@ -1270,7 +1404,7 @@ function openAcompte(id){
       <button type="button" data-pct="custom">${T("Libre")}</button>
     </div>
     <label>${T("Montant acompte")} (${S.biz.devise})<input id="acompteAmt" inputmode="decimal" value="${(a30/100).toFixed(dec)}"></label>
-    <p class="muted" style="font-size:12px">${T("Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.")}</p>
+    <p class="muted" style="font-size:12px">${T("Une facture d'acompte est émise avec ses propres instructions de paiement (virement, chèque, ou carte si activée). Le solde est automatiquement déduit de la facture finale.")}</p>
     <div class="row">
       <button class="btn primary" id="saveAcompte" type="button" style="flex:1">${T("Créer la facture d'acompte ✓")}</button>
       <button class="btn ghost" id="cancelS" type="button">${T("Annuler")}</button>
@@ -1296,10 +1430,12 @@ function openAcompte(id){
     if(cents<=0||cents>tt.ttc){toast(T("Montant d'acompte invalide"));return}
     const nid=uid(), num_=nextNum("facture");
     const pctLabel=activePct==="custom"?"":` (${activePct}%)`;
+    const tvaRate=num(d.tva);
+    const htCents=tvaRate>0?Math.round(cents/(1+tvaRate/100)):cents;
     S.docs.push({
       id:nid,type:"facture",numero:num_,clientId:d.clientId,client:d.client,
-      items:[{lib:`${T("Acompte")}${pctLabel} ${T("sur")} ${d.numero}`,q:1,p:cents}],
-      total:cents,tva:0,statut:"envoye",emis:todayISO(),eche:addDays(todayISO(),7),
+      items:[{lib:`${T("Acompte")}${pctLabel} ${T("sur")} ${d.numero}`,q:1,p:htCents}],
+      total:cents,tva:tvaRate,statut:"envoye",emis:todayISO(),eche:addDays(todayISO(),7),
       relances:0,isAcompte:true,devisSourceId:d.id,devisSourceNum:d.numero
     });
     const prevAc={id:d.acompteFactureId,num:d.acompteFactureNum,mont:d.acompteMontant};
@@ -1488,12 +1624,19 @@ async function shareEmail(id){
 }
 
 /* ---------- mentions fiscales courtes (honnêtes : PDF, pas e-facture certifiée) ---------- */
-function fiscalMention(){
+function fiscalMention(docTva){
   const p=S.biz.pays, id=S.biz.tvaId;
-  if(p==="FR")return T("Document PDF édité par l'artisan · transmission e-facture via PDP agréée requise entre assujettis (réception obligatoire depuis le 01/09/2026)")+(id?` · ${T("N° TVA intracom.")} ${id}`:"");
-  if(p==="BE")return T("Document PDF · Peppol-BIS obligatoire en B2B depuis le 01/01/2026 — ce PDF seul ne suffit pas entre assujettis")+(id?` · TVA BE ${id}`:"");
-  if(p==="CH")return T("Document PDF avec mentions suisses · QR affiché = lien de paiement Stripe (pas un QR SIX bancaire)")+(id?` · IDE ${id}`:"");
-  return T("Document PDF · sales tax d'État/local saisie à la main — à faire valider par ton comptable")+(id?` · EIN ${id}`:"");
+  const isZeroTva=(docTva!==undefined && num(docTva)===0);
+  if(p==="FR"){
+    const zeroTxt=isZeroTva ? ` · ${T("TVA non applicable, art. 293 B du CGI")}` : "";
+    return T("Document conforme · transmission e-facture via PDP agréée requise entre assujettis") + zeroTxt + (id?` · ${T("N° TVA intracom.")} ${id}`:"");
+  }
+  if(p==="BE"){
+    const zeroTxt=isZeroTva ? ` · ${T("Régime particulier de franchise de taxe")}` : "";
+    return T("Document conforme · Peppol-BIS en B2B entre assujettis") + zeroTxt + (id?` · TVA BE ${id}`:"");
+  }
+  if(p==="CH")return T("Document conforme mentions suisses · QR affiché = consultation / règlement")+(id?` · IDE ${id}`:"");
+  return T("Document comptable · taxes locales selon juridiction")+(id?` · EIN ${id}`:"");
 }
 
 /* ---------- aperçu facture / devis conforme & imprimable ---------- */
@@ -1558,7 +1701,7 @@ function openView(id){
           <h1 class="inv-biz-title">${esc(biz.nom||T("Mon Entreprise"))}</h1>
           <div class="inv-biz-sub">${esc(sLabel(sec().label))} · ${esc(loc(pCfg.nom))}</div>
           ${addr(biz.adresse)}${addr(biz.contact)}${biz.tvaId?`<div style="font-size:11px;color:var(--mut)">${T("N° TVA / SIRET / EIN")} : ${esc(biz.tvaId)}</div>`:""}
-          <span class="inv-fiscal-pill">${esc(fiscalMention())}</span>
+          <span class="inv-fiscal-pill">${esc(fiscalMention(num(d.tva)))}</span>
         </div>
         <div class="inv-meta-right">
           <div class="inv-doc-num">${isDevis?T("DEVIS"):isAvoir?T("AVOIR"):T("FACTURE")}</div>
@@ -1610,22 +1753,30 @@ function openView(id){
 
       ${sigBox}
 
+      ${biz.iban?`
+      <div class="inv-pay-box" style="margin:12px 0;padding:10px 14px;background:var(--soft);border-radius:10px;border:1px dashed var(--line);font-size:12px">
+        <b>${T("Coordonnées bancaires pour le règlement (Virement)")} :</b>
+        <div style="margin-top:3px;font-family:monospace;font-size:12.5px;letter-spacing:.02em">IBAN : <strong>${esc(biz.iban)}</strong></div>
+      </div>`:""}
+
       <div class="inv-qr-section">
         <div class="inv-qr-code" id="viewQR">${qrSVG}</div>
         <div class="inv-qr-text">
-          ${isAvoir
-            ? `<strong>${T("Avoir client")}</strong>
-               ${T("Avoir au titre de la facture {n} — consultez-le et conservez ce document.",{n:d.avoirSourceNum||"—"})}`
-            : `<strong>${T("Règlement sécurisé par Stripe")}</strong>
-               ${T("Scannez ce QR code pour ouvrir la facture et payer en 1 clic (carte, SEPA, ACH).")}`}
-          <br><small style="color:var(--mut)" id="viewLink" data-u="${esc(payUrl)}">${T("Lien direct")} : ${esc(payUrl)}</small>${siteOff?`<br><small style="color:#92400e">⚠️ ${T("Lien local : ne fonctionne que sur cet appareil. Renseigne SITE_URL (config.js) pour un vrai lien client.")}</small>`:""}
+          ${isDevis
+            ? `<strong>${T("Devis en ligne")}</strong><br>${T("Scannez ce QR code pour consulter ou valider ce devis.")}`
+            : isAvoir
+            ? `<strong>${T("Avoir client")}</strong><br>${T("Avoir au titre de la facture {n} — document à conserver.",{n:d.avoirSourceNum||"—"})}`
+            : (paymentsReady()
+            ? `<strong>${T("Règlement sécurisé en ligne")}</strong><br>${T("Scannez ce QR code pour ouvrir la facture et régler en ligne.")}`
+            : `<strong>${T("Consulter ce document en ligne")}</strong><br>${T("Scannez ce QR code pour ouvrir ce document ou réglez par virement.")}`)}
+          <br><small style="color:var(--mut)" id="viewLink" data-u="${esc(payUrl)}">${T("Lien direct")} : ${esc(payUrl)}</small>
         </div>
       </div>
 
       <div class="inv-legal-footer">
         <b>${T("Mentions légales")} :</b> ${isAvoir
           ? T("Avoir conforme — annule ou réduit la facture {n}. Numérotation chronologique inviolable. Archivage {a}.",{n:esc(d.avoirSourceNum||"—"),a:esc(loc(pCfg.archive))})
-          : `${T("Numérotation chronologique inviolable. Modalités de paiement")} : ${esc(moyensText)}. ${T("En cas de retard, pénalités légales et indemnité forfaitaire de 40 € (art. L441-10 C. com.) applicables. Archivage")} ${esc(loc(pCfg.archive))}.`}
+          : `${T("Numérotation chronologique inviolable. Modalités de paiement")} : ${esc(moyensText)}. ${lateNotice(S.biz.pays)} ${T("Archivage")} ${esc(loc(pCfg.archive))}.`}
       </div>
     </div>
 
@@ -1681,7 +1832,9 @@ function openPay(id){
     ${site?`<small class="muted" id="payStat" style="font-size:12px">${T("Génération du lien client…")}</small>`:`<small class="muted" style="font-size:12px">⚠️ ${T("Lien local : ne fonctionne que sur cet appareil. Renseigne SITE_URL (config.js) pour un vrai lien client.")}</small>`}
   </div>
   <p class="muted" style="font-size:12px">${d.type==="facture"
-    ? `${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :")} ${(allowed.map(mLabel)).join(", ")}.`
+    ? (paymentsReady()
+      ? `${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client peut régler en ligne par carte ou virement.")}`
+      : `${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Modes acceptés :")} ${(allowed.map(mLabel)).join(", ")}.`)
     : T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code.")}</p>
   <div class="row">${btns}</div>
   <div class="row" style="margin-top:10px">
@@ -1714,7 +1867,11 @@ function relanceMsg(d, j, payUrl){
   const v={w:who,n:d.numero,a:fmt(tt.net??tt.ttc,S.biz.devise),e:d.eche,j,u:payUrl,b:S.biz.nom||""};
   if(j<7)return T("Bonjour {w}, petit rappel : facture {n} de {a} (échéance {e}, {j}j de retard). Lien pour régler : {u} Merci beaucoup 🙏 — {b}", v);
   if(j<15)return T("Bonjour {w}, facture {n} de {a} impayée depuis {j}j (échéance {e}). Merci de régler ici : {u} — sans règlement sous 7 jours, des pénalités légales s'appliqueront. Cordialement, {b}", v);
-  return T("Mise en demeure — facture {n} de {a} impayée depuis {j}j (échéance {e}). Dernier rappel avant recouvrement : réglez ici {u}. Pénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables. — {b}", v);
+    const lateTxt = S.biz.pays === "CH" ? T("Intérêt moratoire de 5% (art. 104 CO) applicable.")
+    : (S.biz.pays === "BE" ? T("Pénalités légales + indemnité forfaitaire 40 € (loi 02/08/2002) applicables.")
+    : (S.biz.pays === "US" ? T("Applicable late fees and interest will be charged.")
+    : T("Pénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables.")));
+  return T("Mise en demeure — facture {n} de {a} impayée depuis {j}j (échéance {e}). Dernier rappel avant recouvrement : réglez ici {u}. {p} — {b}", {...v, p: lateTxt});
 }
 async function openRelance(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
@@ -1780,7 +1937,7 @@ function syncSettings(){
   const allowed=PAYS[S.biz.pays]?.moyens||[];
   S.biz.moyens=(S.biz.moyens||[]).filter(k=>allowed.includes(k));
   if(!S.biz.moyens.length)S.biz.moyens=[...allowed];
-  $("#payToggles").innerHTML=`<div class="preset-label" style="width:100%;margin-bottom:6px">${T("Moyens de paiement acceptés")} (${T("Stripe uniquement")}) :</div>`+
+  $("#payToggles").innerHTML=`<div class="preset-label" style="width:100%;margin-bottom:6px">${T("Moyens de paiement acceptés")} :</div>`+
     allowed.map(k=>`<button type="button" class="${S.biz.moyens.includes(k)?"is-on":""}" data-m="${k}">${esc(mLabel(k))}</button>`).join("");
   syncBkState();
 }
@@ -2020,6 +2177,7 @@ function bind(){
   const bkAuto=$("#bkAutoToggle");if(bkAuto){bkAuto.checked=backupEnabled();bkAuto.onchange=()=>{try{if(bkAuto.checked){localStorage.setItem("encaisse.backup.enabled","1");bkDirty=true;flushBackup(false);toast(T("Sauvegarde automatique activée."))}else{localStorage.removeItem("encaisse.backup.enabled");if(bkTimer)clearTimeout(bkTimer);bkDirty=false;toast(T("Sauvegarde automatique désactivée."))}}catch(e){bkAuto.checked=false;toast(T("Réglage impossible sur cet appareil."))}}}
   const bkCode=$("#bkCodeBtn");if(bkCode)bkCode.onclick=openBackupCode;
   const bkRes=$("#bkRestoreBtn");if(bkRes)bkRes.onclick=openBackupRestore;
+  const bkSync=$("#bkSyncBtn");if(bkSync)bkSync.onclick=openBackupSync;
   const impBtn=$("#importBtn"), impFile=$("#importFile");
   if(impBtn&&impFile){
     impBtn.onclick=()=>impFile.click();
@@ -2109,6 +2267,6 @@ function initInstall(){
 }
 
 /* ---------- boot ---------- */
-load();initTheme();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();syncPaidFromServer(false);genRecurrences();
+load();initTheme();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();syncPaidFromServer(false);genRecurrences();startAutoSync();
 /* Langue non-inline (dict chargé à la demande) : rattrapage une fois chargé. */
 if(window.setAppLang&&(lang()!=="fr"&&lang()!=="en")){setAppLang(lang()).then(()=>{try{syncSettings()}catch(e){}try{render()}catch(e){}try{if(!localStorage.getItem("encaisse.onboarded")){setSlide(0)}}catch(e){}})}

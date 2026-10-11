@@ -102,12 +102,12 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
   <header class="top">
     <div class="brand small"><span class="logo"><img src="icons/icon.svg" alt="Encaisse" width="30" height="30"></span><span>Encaisse</span></div>
     <div class="top-right">
-      <span class="plan-badge" id="planBadge">Gratuit</span>
+      <span class="plan-badge" id="planBadge">Pro</span>
       <span class="pill-pays" id="pillPays">🇫🇷 France</span>
       <span class="dot-net" id="dotNet" title="statut réseau"><i></i><em>Hors-ligne OK</em></span>
     </div>
   </header>
-  <div class="demo-bar" id="demoBar" hidden data-i18n="🧪 Mode démonstration — aucun paiement réel, liens et boutons simulés.">🧪 Mode démonstration — aucun paiement réel, liens et boutons simulés.</div>
+  <div class="demo-bar" id="demoBar" hidden style="display:none!important"></div>
 
   <div class="install-bar" id="installBar" hidden>
     <b data-i18n="📲 Installe Encaisse sur ton écran d'accueil">📲 Installe Encaisse sur ton écran d'accueil</b>
@@ -127,7 +127,7 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
           <button class="kpi-card alert" type="button" data-kpi="late"><span data-i18n="En retard &gt;7j">En retard &gt;7j</span><strong id="kpiLate">0</strong><em id="kpiLateN">0 factures</em></button>
           <button class="kpi-card ok" type="button" data-kpi="paid"><span data-i18n="Encaissé ce mois">Encaissé ce mois</span><strong id="kpiPaid">0</strong><em id="kpiPaidN">0 factures</em></button>
         </div>
-        <div class="cashbar"><div class="cashbar-top"><span data-i18n="Prévision 30 jours">Prévision 30 jours</span><b id="cashPct">0%</b></div><div class="track"><i id="cashFill"></i></div><small id="cashHint">Crée ta première facture pour activer la prévision.</small></div>
+        <div class="cashbar"><div class="cashbar-top"><span data-i18n="Échéances à 30 jours">Échéances à 30 jours</span><b id="cashPct">0%</b></div><div class="track"><i id="cashFill"></i></div><small id="cashHint">Crée ta première facture pour activer la prévision.</small></div>
       </div>
       <div class="sec-head"><h2 data-i18n="À relancer en priorité">À relancer en priorité</h2><button class="link" data-goto="docs" type="button" data-i18n="Tout voir">Tout voir</button></div>
       <div class="list" id="lateList"></div>
@@ -204,8 +204,8 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
         <h3 data-i18n="Sauvegarde en ligne chiffrée">Sauvegarde en ligne chiffrée</h3>
         <p class="muted" data-i18n="La sauvegarde reste désactivée tant que tu ne l'actives pas. Le code de récupération est indispensable pour restaurer tes données.">La sauvegarde reste désactivée tant que tu ne l'actives pas. Le code de récupération est indispensable pour restaurer tes données.</p>
         <label class="check-row"><input type="checkbox" id="bkAutoToggle"><span data-i18n="Activer la sauvegarde automatique chiffrée (envoi après modification)">Activer la sauvegarde automatique chiffrée (envoi après modification)</span></label>
-        <div class="row"><button class="btn small" id="bkNowBtn" type="button" data-i18n="Sauvegarder maintenant">Sauvegarder maintenant</button><button class="btn small ghost" id="bkCodeBtn" type="button" data-i18n="Code de récupération">Code de récupération</button><button class="btn small ghost" id="bkRestoreBtn" type="button" data-i18n="Restaurer">Restaurer</button></div>
-        <p class="muted" id="bkState" style="font-size:12px;margin:8px 0 0"></p>
+        <div class="row"><button class="btn small" id="bkNowBtn" type="button" data-i18n="Sauvegarder maintenant">Sauvegarder maintenant</button><button class="btn small ghost" id="bkCodeBtn" type="button" data-i18n="Code de récupération">Code de récupération</button><button class="btn small ghost" id="bkRestoreBtn" type="button" data-i18n="Restaurer">Restaurer</button><button class="btn small ghost" id="bkSyncBtn" type="button" data-i18n="Synchroniser les appareils">Synchroniser les appareils</button></div>
+        <p class="muted" data-i18n="Pour utiliser Encaisse sur plusieurs appareils, synchronise-les avec le même code. Les données restent utilisables hors ligne.">Pour utiliser Encaisse sur plusieurs appareils, synchronise-les avec le même code. Les données restent utilisables hors ligne.</p><p class="muted" id="bkState" style="font-size:12px;margin:8px 0 0"></p>
       </div>
       <div class="card">
         <h3 data-i18n="Légal">Légal</h3>
