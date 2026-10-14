@@ -298,12 +298,18 @@ async function postPortal(ctx) {
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN owner TEXT").run().catch(function () {});
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_count INTEGER DEFAULT 0").run().catch(function () {});
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_at INTEGER").run().catch(function () {});
-    const prev = await env.DB.prepare("SELECT owner FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
+    const prev = await env.DB.prepare("SELECT payload, hash, owner FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
     if (prev && prev.owner && prev.owner !== owner) return json({ error: "acces_refuse" }, 403);
-    await env.DB.prepare(
-      "INSERT INTO portal (slug, payload, hash, owner, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) " +
-      "ON CONFLICT(slug) DO UPDATE SET payload = excluded.payload, hash = excluded.hash, updated_at = excluded.updated_at, owner = COALESCE(portal.owner, excluded.owner)"
-    ).bind(slug, payload, hash, owner || null, now, now).run();
+    /* Lignes legacy sans owner (owner NULL) : premier écrivain gagne, puis
+       l'owner est verrouillé via COALESCE ci-dessous (possession = slug 96 bits). */
+    /* Évite les réécritures inutiles : si le payload est identique, le hash
+       client + la comparaison serveur confirment qu'il n'y a rien à écrire. */
+    if (!(prev && prev.payload === payload)) {
+      await env.DB.prepare(
+        "INSERT INTO portal (slug, payload, hash, owner, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) " +
+        "ON CONFLICT(slug) DO UPDATE SET payload = excluded.payload, hash = excluded.hash, updated_at = excluded.updated_at, owner = COALESCE(portal.owner, excluded.owner)"
+      ).bind(slug, payload, hash, owner || null, now, now).run();
+    }
     /* L'appareil reste la source de vérité : s'il déclare la facture payée
        (encaissement cash/virement constaté à la main), le serveur aligne
        paid_at pour que le lien client et /api/pay suivent — jamais de double
@@ -339,7 +345,9 @@ async function getSub(ctx) {
   const oh = url.searchParams.get("oh") || request.headers.get("X-Sub-Oh") || "";
   const sid = url.searchParams.get("session_id");
   if (sid) return subFromSession(env, sid, oh);
-  const token = request.headers.get("X-Sub-Token") || url.searchParams.get("token");
+  const token = request.headers.get("X-Sub-Token");
+  /* Le jeton ne transite que par en-tête : en query il finirait dans les
+     logs Cloudflare, l'historique navigateur et les Referer. */
   if (!token) return json({ error: "jeton_requis" }, 400);
   const p = await verifyToken(env, token);
   if (!p || !p.sid) return json({ error: "jeton_invalide" }, 401);
@@ -427,7 +435,7 @@ async function getPay(ctx) {
     line_items: [{
       quantity: 1,
       price_data: {
-        currency: CUR[(p.biz || {}).devise] || "EUR",
+        currency: (CUR[(p.biz || {}).devise] || "EUR").toLowerCase(),
         unit_amount: amount,
         product_data: {
           name: (d.numero || "Facture") + ((p.biz || {}).nom ? " · " + p.biz.nom : ""),
@@ -441,28 +449,38 @@ async function getPay(ctx) {
     metadata: { slug: slug }
   });
   if (r.status >= 400 || !r.body.url) return json({ error: (r.body && r.body.error && r.body.error.message) || "stripe_erreur" }, 502);
-  return Response.redirect(r.body.url, 303);
+  /* GET à effet de bord (crée une session Stripe) : ne jamais mettre en cache,
+     sinon un préfetch / un <img> rejouerait l'encaissement. */
+  return new Response(null, { status: 303, headers: { Location: r.body.url, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" } });
 }
 
 /* Devises ISO (minuscules) pour comparer avec Stripe : CUR[] du fichier est en majuscules. */
 const STRIPE_CUR = { "€": "eur", CHF: "chf", $: "usd" };
 
 /* Vérifie l'en-tête Stripe-Signature ("t=...,v1=...") : HMAC-SHA256 du secret
-   webhook sur "timestamp.corps_brut", fraîcheur ±300 s, comparaison constante. */
+   webhook sur "timestamp.corps_brut", fraîcheur ±300 s, comparaison constante.
+   Stripe peut envoyer plusieurs signatures v1 (rotation de clé) : on accepte
+   si L'UNE d'elles correspond (insensible à la casse hex). */
 async function verifyStripeSig(raw, header, secret) {
   const h = String(header || "");
-  const mt = /t=(\d+)/.exec(h), mv = /v1=([0-9a-f]+)/.exec(h);
-  if (!mt || !mv || !raw) return false;
-  const t = Number(mt[1]), v1 = mv[1];
+  const mt = /t=(\d+)/.exec(h);
+  if (!mt || !raw) return false;
+  const t = Number(mt[1]);
   if (!t || Math.abs(Date.now() / 1000 - t) > 300) return false;
   try {
     const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
     const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(t + "." + raw));
     const hex = Array.from(new Uint8Array(mac), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
-    if (hex.length !== v1.length) return false;
-    let diff = 0;
-    for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ v1.charCodeAt(i);
-    return diff === 0;
+    const re = /v1=([0-9a-fA-F]+)/g;
+    let m, ok = false;
+    while ((m = re.exec(h)) !== null) {
+      const v1 = m[1].toLowerCase();
+      if (v1.length !== hex.length) continue;
+      let diff = 0;
+      for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ v1.charCodeAt(i);
+      if (diff === 0) { ok = true; break; }
+    }
+    return ok;
   } catch (e) { return false; }
 }
 

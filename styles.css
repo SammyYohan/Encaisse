@@ -414,7 +414,7 @@ input,select,textarea{transition:background-color .45s ease,border-color .45s ea
   body{background:#fff!important;color:#000!important}
   .stage{padding:0!important;display:block!important;min-height:auto!important}
   .phone{width:100%!important;max-width:none!important;border:none!important;box-shadow:none!important;border-radius:0!important;background:#fff!important;min-height:auto!important}
-  .top,.tabs,.fab,.demo-bar,.install-bar,.onb,#toast,.scrim,.doc-actions,.chip-btn,.act-list,.sheet::before,.sheet>h2,.sheet>.sub,.sheet>.row:last-child,.doc-view-actions{display:none!important}
+  .top,.tabs,.fab,.demo-bar,.install-bar,.onb,#toast,.scrim,.doc-actions,.chip-btn,.act-list,.sheet::before,.sheet>h2,.sheet>.sub,.sheet>.doc-view-actions,.sheet>.row.sheet-actions{display:none!important}
   .sheet{position:static!important;box-shadow:none!important;padding:0!important;max-height:none!important;border-radius:0!important;background:#fff!important;animation:none!important}
   .invoice-paper{border:none!important;box-shadow:none!important;padding:12px!important;margin:0!important}
   .inv-table th{background:#f1f5f9!important}

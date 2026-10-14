@@ -146,7 +146,7 @@ function headers() {
   };
 }
 
-function render(slug, row, p, opts) {
+function render(slug, row, p, opts, env) {
   const lang = p.lang === "en" ? "en" : "fr";
   const Lx = L[lang];
   const d = p.doc || {};
@@ -311,5 +311,5 @@ export async function onRequest(ctx) {
 
   const p = pp0;
   const canceled = url.searchParams.get("canceled") === "1";
-  return new Response(render(slug, row, p, { justPaid: justPaid, canceled: canceled }), { headers: headers() });
+  return new Response(render(slug, row, p, { justPaid: justPaid, canceled: canceled }, env), { headers: headers() });
 }

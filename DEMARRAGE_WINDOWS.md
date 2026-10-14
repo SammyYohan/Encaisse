@@ -1,10 +1,10 @@
 # Démarrer et déployer Encaisse depuis Windows
 
-Ce guide ne demande pas d'écrire du code. Les commandes se lancent dans PowerShell, depuis le dossier `Encaisse-main` extrait du ZIP.
+Ce guide ne demande pas d'écrire du code. Les commandes se lancent dans PowerShell, depuis le dossier `Encaisse` extrait du ZIP.
 
 ## 1. Vérifier le projet
 
-Installe Node.js LTS si `node --version` et `npm --version` ne répondent pas. Ouvre PowerShell dans `Encaisse-main`, puis exécute :
+Installe Node.js LTS si `node --version` et `npm --version` ne répondent pas. Ouvre PowerShell dans `Encaisse`, puis exécute :
 
 ```powershell
 node --version

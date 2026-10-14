@@ -74,7 +74,8 @@ const todayISO=()=>new Date().toISOString().slice(0,10);
 const addDays=(iso,n)=>{const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
 const daysLate=iso=>Math.floor((Date.now()-new Date(iso+"T12:00:00").getTime())/864e5);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const toCents=v=>Math.round(Number(String(v).replace(/[\s\u00a0\u202f']/g,"").replace(",", "."))*100)||0;
+const toCents=v=>Math.round(Number(String(v??"").replace(/[\s\u00a0\u202f']/g,"").replace(/CHF/gi,"").replace(/[\u20AC$\u00A3]/g,"").replace(",", "."))*100)||0;
+const parseQty=v=>Number(String(v??"").replace(/[\s\u00a0\u202f']/g,"").replace(",", "."))||0;
 const num=v=>Math.max(0,Number(v)||0);
 const IC={quote:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h4"/>',invoice:'<path d="M5 4h14v17l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 9h6M9 13h6"/>',undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',card:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/>',share:'<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v7h14v-7"/>',bell:'<path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',sign:'<path d="M4 20h16M5 16l9-9 3 3-9 9H5z"/>',repeat:'<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',print:'<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',chat:'<path d="M4 5h16v11H9l-5 4z"/>',phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A15 15 0 0 1 4 5a1 1 0 0 1 1-1z"/>',eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'};
 /* Icônes d'interface (trait 1.8, héritent la couleur du texte) : remplacent les emojis. */
@@ -108,7 +109,7 @@ function makeQR(text){
    - Sinon : ?r=ID — ne fonctionne que DANS LE MÊME navigateur (test local). */
 /* Base d'origine du backend (SITE_URL configuré) ou relatif ("") : une seule
    source pour portail, relances, abonnement et sauvegarde. */
-function siteBase(){return String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"")}
+function siteBase(){try{const h=window.location&&window.location.hostname;if(h==="localhost"||h==="127.0.0.1"||h==="[::1]"||h==="")return ""}catch(e){}return String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"")}
 
 function getDocUrl(docId){
   const id=encodeURIComponent(docId);
@@ -571,6 +572,15 @@ function migrateSeq(){
     else if(!v||typeof v!=="object"){S.seq[k]={}}}
   if(!S.seq)S.seq={DEV:{},FAC:{},AVT:{}};
 }
+function rebuildSeqFromDocs(){
+  if(!S.seq||typeof S.seq!=="object")S.seq={DEV:{},FAC:{},AVT:{}};
+  for(const k of ["DEV","FAC","AVT"]){if(!S.seq[k]||typeof S.seq[k]!=="object")S.seq[k]={}}
+  for(const d of (S.docs||[])){
+    if(!d)continue;
+    const m=/^(DEV|FAC|AVT)-(\d{4})-(\d+)$/.exec(d.numero||"");
+    if(m){const k=m[1],y=m[2],v=parseInt(m[3],10);if(v>0)S.seq[k][y]=Math.max(S.seq[k][y]||0,v)}
+  }
+}
 function migrateMoyens(){
   if(!PAYS[S.biz.pays])S.biz.pays="FR";
   if(!CUR[S.biz.devise])S.biz.devise=PAYS[S.biz.pays].devise;
@@ -589,15 +599,17 @@ function nextNum(type){
 }
 /* Annule un nextNum + push dont le save() a échoué (stockage plein) :
    sinon un second tap crée un doublon et brûle un numéro jamais persisté. */
-function undoCreate(type){
-  S.docs.pop();
+function undoCreate(type,id){
+  if(id){const ix=S.docs.findIndex(x=>x&&x.id===id);if(ix>=0)S.docs.splice(ix,1)}
+  else S.docs.pop();
   const y=String(new Date().getFullYear());
   const k=type==="devis"?"DEV":type==="avoir"?"AVT":"FAC";
   if(S.seq&&S.seq[k]&&S.seq[k][y]>0)S.seq[k][y]--;
 }
 function totals(doc){
-  const ht=doc.items.reduce((a,l)=>a+l.q*l.p,0);
-  const tva=Math.round(ht*num(doc.tva)/100);
+  const items=Array.isArray(doc&&doc.items)?doc.items:[];
+  const ht=items.reduce((a,l)=>a+(num(l&&l.q)||0)*(num(l&&l.p)||0),0);
+  const tva=Math.round(ht*num(doc&&doc.tva)/100);
   const ttc=ht+tva;
   const acompte=num(doc.acompteDeduction);
   const net=Math.max(0,ttc-acompte);
@@ -647,14 +659,14 @@ function initOnb(){
   const langSel=$("#onbLangSel");
   if(langSel){
     const list=window.ENCAISSE_LANG_LIST||{fr:"Français",en:"English"};
-    langSel.innerHTML=Object.keys(list).map(k=>`<option value="${k}"${k===lang()?" selected":""}>${list[k]}</option>`).join("");
-    langSel.onchange=()=>{setAppLang(langSel.value).then(()=>{setSlide(oi);onbPresetPreview()})};
+    langSel.innerHTML=Object.keys(list).map(k=>`<option value="${esc(k)}"${k===lang()?" selected":""}>${esc(list[k])}</option>`).join("");
+    langSel.onchange=()=>{const fn=(typeof window.setAppLang==="function")?window.setAppLang:((c)=>Promise.resolve(c));fn(langSel.value).then(()=>{setSlide(oi);onbPresetPreview()}).catch(()=>{})};
   }
   const upd=()=>{onbPresetPreview()};
   upd();
   const sxSel=$("#onbSecteur");if(sxSel)sxSel.onchange=upd;
   $("#onbNext").onclick=()=>{ if(oi<NS-1){setSlide(oi+1);return} finishOnb(); };
-  $("#onbSkip").onclick=finishOnb;
+  $("#onbSkip").onclick=()=>{if(oi<NS-1){setSlide(NS-1);return}finishOnb()};
   const bizField=$("#onbBiz");if(bizField)bizField.addEventListener("input",e=>e.target.classList.remove("err"));
   /* pastilles de progression cliquables (le swipe existe aussi) */
   $$("#onbDots i").forEach((dot,i)=>{dot.onclick=()=>setSlide(i)});
@@ -696,7 +708,7 @@ function finishOnb(){
   localStorage.setItem(LS_ON,"1");
   $("#onb").hidden=true;
   document.querySelector("#app")?.classList.remove("onb-on");
-  applyI18n();syncSettings();render();
+  if(typeof window.applyI18n==="function"){try{window.applyI18n()}catch(e){}}syncSettings();render();
   try{updateInstallBar()}catch{}
   toast(betaFree()?T("Compte créé ✓ accès complet : devis et factures illimités"):T("Compte créé ✓ {n} factures gratuites par mois · devis illimités",{n:FREE_MONTHLY}));
 }
@@ -775,7 +787,7 @@ function cardHTML(d){
   const acompteDedBadge=d.acompteDeduction?`<span class="sig-signed-badge" style="background:#fef3c7;color:#92400e">-${T("Acompte déduit")}</span>`:"";
   return `<article class="doc" data-id="${d.id}">
   <div class="doc-top"><div><b>${d.type==="devis"?ic("quote"):d.type==="avoir"?ic("undo"):ic("invoice")} ${esc(d.numero)}</b> ${sigBadge} ${isAcompteBadge} ${acompteDedBadge}<br><small>${esc(d.client)} · ${T("émise")} ${esc(d.emis)} · ${d.type==="avoir"?`${T("Facture d'origine")} ${esc(d.avoirSourceNum||"—")}`:`${T("échéance")} ${esc(d.eche)}`}${d.demo?` · <em>${T("exemple")}</em>`:""}</small></div><span class="status ${cls}">${esc(lab)}</span></div>
-  <div class="doc-meta"><span>${T("{n} ligne(s)",{n:d.items.length})}${d.photo?" · 📷":""} · ${taxLbl()} ${num(d.tva)}%</span><span class="doc-amt">${amtOf(d)}</span></div>
+  <div class="doc-meta"><span>${T("{n} ligne(s)",{n:Array.isArray(d.items)?d.items.length:0})}${d.photo?" · 📷":""} · ${taxLbl()} ${num(d.tva)}%</span><span class="doc-amt">${amtOf(d)}</span></div>
   <div class="doc-actions">${actionsHTML(d)}</div></article>`;
 }
 
@@ -827,7 +839,7 @@ function openDocActions(id){
   if(d.avoirNums&&d.avoirNums.length)h+=`<p class="sub" style="margin:4px 0 0">${ic("undo")} ${T("Avoirs émis")} : ${esc(d.avoirNums.join(", "))}</p>`;
   if(!conv){if(wa)h+=B("shareWa",ic("chat")+" WhatsApp");if(mail)h+=B("shareMail",`${ic("mail")} ${T("E-mail")}`)}
   if(!isAvoir)h+=B("dup",`↻ ${T("Refaire")}`);
-  if(isDevis||!paid)h+=B("del",`${ic("trash")} ${T("Supprimer")}`,"danger");
+  if(isDevis)h+=B("del",`${ic("trash")} ${T("Supprimer")}`,"danger");
   h+=`</div><div class="row"><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div>`;
   openSheet(h);
   $("#cancelS").onclick=closeSheet;
@@ -877,7 +889,7 @@ function renderClis(){
     const mail=(c.email||"").trim();
     const name=cliName(c);
     const waBtn=cleanTel?`<a class="chip-btn wa" style="text-decoration:none" href="https://wa.me/${cleanTel}" target="_blank" rel="noopener">${ic("chat")} WhatsApp</a>`:"";
-    const mailBtn=mail?`<a class="chip-btn" style="text-decoration:none" href="mailto:${esc(mail)}">${ic("mail")} ${T("E-mail")}</a>`:"";
+    const mailBtn=mail?`<a class="chip-btn" style="text-decoration:none" href="mailto:${encodeURIComponent(mail)}">${ic("mail")} ${T("E-mail")}</a>`:"";
     const callBtn=rawTel?`<a class="chip-btn" style="text-decoration:none" href="tel:${esc(rawTel)}">${ic("phone")} ${T("Appeler")}</a>`:"";
     const first=esc((name.split("—")[0]||name).trim().split(" ")[0]);
     return `<article class="doc" data-cfiche="${c.id}"><div class="doc-top"><div><b>${ic("user")} ${esc(name)}</b><br><small>${esc(c.tel||c.email||"—")} ${dueBy[c.id]?`· ${T("doit")} <b style="color:var(--red)">${fmt(dueBy[c.id],S.biz.devise)}</b>`:`· ${T("à jour ✓")}`}</small></div><span class="status ${dueBy[c.id]?"s-retard":"s-paye"}">${dueBy[c.id]?T("À suivre"):"OK"}</span></div><div class="doc-actions"><button class="chip-btn go" data-cnew="${c.id}" type="button">+ ${T("Devis pour")} ${first}</button>${waBtn}${mailBtn}${callBtn}<button class="chip-btn" data-cedit="${c.id}" type="button">✎ ${T("Modifier")}</button><button class="chip-btn" data-cdel="${c.id}" type="button">${T("Retirer")}</button></div></article>`;
@@ -1065,7 +1077,7 @@ function wireDocForm(opt){
   const addL=(lib="",q=1,p="")=>{
     const d=document.createElement("div");
     d.className="line";
-    d.innerHTML=`<input placeholder="${esc(sLabel(sec().ex))}" value="${esc(lib)}" aria-label="${T("Libellé")}"><input placeholder="${T("Qté")}" inputmode="numeric" value="${q}" aria-label="${T("Quantité")}"><input placeholder="${T("Prix")}" inputmode="decimal" value="${p}" aria-label="${T("Prix unitaire")}"><button type="button" aria-label="${T("Retirer")}">×</button>`;
+    d.innerHTML=`<input placeholder="${esc(sLabel(sec().ex))}" value="${esc(lib)}" aria-label="${T("Libellé")}"><input placeholder="${T("Qté")}" inputmode="decimal" value="${esc(q)}" aria-label="${T("Quantité")}"><input placeholder="${T("Prix")}" inputmode="decimal" value="${esc(p)}" aria-label="${T("Prix unitaire")}"><button type="button" aria-label="${T("Retirer")}">×</button>`;
     d.querySelector("button").onclick=()=>{d.remove();calc()};
     d.querySelectorAll("input").forEach(i=>i.oninput=calc);
     linesEl.appendChild(d);
@@ -1074,17 +1086,17 @@ function wireDocForm(opt){
     let ht=0;
     $$(".line",linesEl).forEach(l=>{
       const q=l.children[1].value, p=l.children[2].value;
-      ht+=(Number(q)||0)*toCents(p);
+      ht+=parseQty(q)*toCents(p);
     });
     const tvaP=Number($("#fTva").value)||0;
     const ttc=ht+Math.round(ht*tvaP/100);
     $("#fTot").textContent=fmt(ttc,S.biz.devise);
   };
-  const readLines=()=>$$(".line",linesEl).map(l=>({
-    lib:l.children[0].value.trim()||T("Article"),
-    q:Math.max(1,Number(l.children[1].value)||1),
-    p:toCents(l.children[2].value)
-  })).filter(l=>l.p>0);
+  const readLines=()=>$$(".line",linesEl).map(l=>{
+    const rawLib=l.children[0].value.trim();
+    const qn=parseQty(l.children[1].value);
+    return{lib:rawLib||T("Article"),rawLib:rawLib,q:qn>0?qn:1,p:toCents(l.children[2].value)};
+  }).filter(l=>l.p>0||l.rawLib!=="").map(l=>({lib:l.lib,q:l.q,p:l.p}));
 
   $$(".preset-chip").forEach(btn=>{
     btn.onclick=()=>{
@@ -1109,7 +1121,7 @@ function wireDocForm(opt){
   $("#fPhoto").onchange=async e=>{
     const f=e.target.files&&e.target.files[0];if(!f)return;
     try{photoData=await compressPhoto(f);
-      $("#photoPrev").innerHTML=`<div class="photo-prev"><img src="${photoData}" alt=""><button class="chip-btn go" id="lineFromPhoto" type="button">＋ ${T("Créer la ligne de cette photo")}</button></div>`;
+      $("#photoPrev").innerHTML=`<div class="photo-prev"><img src="${esc(photoData)}" alt=""><button class="chip-btn go" id="lineFromPhoto" type="button">＋ ${T("Créer la ligne de cette photo")}</button></div>`;
       $("#lineFromPhoto").onclick=()=>{addL(T("Voir photo jointe"),1,"");calc();toast(T("Ligne créée — mets le prix"))};
       toast(T("Photo jointe ✓"));
     }catch{toast(T("Photo illisible, réessaie"))}
@@ -1153,7 +1165,7 @@ function wireDocForm(opt){
       items,total:items.reduce((a,l)=>a+l.q*l.p,0),tva,unite,usState:usState||"",statut:"envoye",emis:todayISO(),eche,
       relances:0,photo:photoData});
     haptic([20,40]);
-    if(!save()){undoCreate(ntype);return}closeSheet();render();
+    if(!save()){undoCreate(ntype,id);return}closeSheet();render();
     toast(`${ntype==="devis"?T("Devis"):T("Facture")} ${numero} ${T("créée ✓")}`);
   };
 }
@@ -1259,7 +1271,7 @@ function openFicheClient(id){
   <div class="row" style="margin-bottom:10px">
     <button class="btn small primary" id="fNewDoc" type="button">+ ${T("Devis")}</button>
     ${tel?`<a class="btn small wa" style="text-decoration:none" href="https://wa.me/${tel}" target="_blank" rel="noopener">${ic("chat")} WhatsApp</a>`:""}
-    ${mail?`<a class="btn small" style="text-decoration:none" href="mailto:${esc(mail)}">${ic("mail")} ${T("E-mail")}</a>`:""}
+    ${mail?`<a class="btn small" style="text-decoration:none" href="mailto:${encodeURIComponent(mail)}">${ic("mail")} ${T("E-mail")}</a>`:""}
     <button class="btn small ghost" id="fEdit" type="button">✎ ${T("Modifier")}</button>
     <button class="btn small ghost" id="fDel" type="button">${T("Supprimer")}</button>
   </div>
@@ -1469,14 +1481,14 @@ function openAvoir(id){
     const nid=uid(), num_=nextNum("avoir");
     S.docs.push({
       id:nid,type:"avoir",numero:num_,clientId:d.clientId,client:d.client,
-      items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",
+      items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",usState:d.usState||"",
       statut:"envoye",emis:todayISO(),eche:todayISO(),relances:0,photo:d.photo||null,
       avoirSourceId:d.id,avoirSourceNum:d.numero
     });
     const prevAvoirNums=d.avoirNums;
     d.avoirNums=(d.avoirNums||[]).concat(num_);
     haptic([20,40]);
-    if(!save()){undoCreate("avoir");d.avoirNums=prevAvoirNums;return}
+    if(!save()){undoCreate("avoir",nid);d.avoirNums=prevAvoirNums;return}
     render();closeSheet();
     toast(`${T("Avoir")} ${num_} ${T("créée ✓")}`);
     openView(nid);
@@ -1556,7 +1568,7 @@ function genRecurrences(){
   const today=todayISO();
   const due=S.rec.filter(r=>r&&r.active&&r.next&&r.next<=today);
   if(!due.length)return 0;
-  const pushed=[],advanced=[];
+  const pushed=[],advanced=[],newIds=[];
   for(const r of due){
     /* Quota gratuit : une recurrence bloquee attend le prochain reveil. */
     if(!canCreate("facture"))continue;
@@ -1568,11 +1580,11 @@ function genRecurrences(){
     S.docs.push({id:nid,type:"facture",numero:num_,clientId:r.clientId,client:cliName(cli),
       items,total:items.reduce((a,l)=>a+(num(l.q)||0)*(num(l.p)||0),0),tva:num(r.tva),unite:r.unite||"",usState:r.usState||"",
       statut:"envoye",emis:today,eche,relances:0,photo:null,recurId:r.id});
-    pushed.push(r);advanced.push([r,r.next]);
+    pushed.push(r);advanced.push([r,r.next]);newIds.push(nid);
     r.next=addInterval(r.next,r.freq);
   }
   if(!pushed.length)return 0;
-  if(!save()){pushed.forEach(()=>undoCreate("facture"));advanced.forEach(([r,nx])=>{r.next=nx});return 0}
+  if(!save()){newIds.forEach(id=>undoCreate("facture",id));advanced.forEach(([r,nx])=>{r.next=nx});return 0}
   render();
   toast(T("Factures récurrentes : {n} créée(s) ✓",{n:pushed.length}));
   haptic([20,40]);
@@ -1651,6 +1663,104 @@ function lateNotice(p){
     :p==="US"?T("Applicable late fees and interest will be charged.")
     :T("Pénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables.");
 }
+/* ---------- export Factur-X (XML CII, profil BASIC) ----------
+   Étape 1 de l'e-facturation SANS plateforme : génère le XML structuré
+   (Cross-Industry Invoice) correspondant à une facture ou un avoir.
+   HONNÊTE : ce fichier seul n'est PAS un Factur-X conforme — la conformité
+   exige un PDF/A-3 avec XML embarqué + transmission via plateforme agréée
+   (Chorus Pro, Tiime, etc.). Usage : à transmettre au comptable ou à déposer
+   sur une plateforme avec le PDF. Devis exclus (hors périmètre Factur-X).
+   Montants en centimes arrondis par ligne, comme totals(). À faire valider. */
+const FX_CUR={"€":"EUR","CHF":"CHF","$":"USD"};
+const FX_PAYS={FR:"FR",BE:"BE",CH:"CH",US:"US"};
+function fxEsc(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;")}
+function fxAmt(c){return (Math.round(Number(c)||0)/100).toFixed(2)}
+function fxDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));return m?m[1]+m[2]+m[3]:todayISO().replace(/-/g,"")}
+function fxLib(l){const v=l&&l.lib;if(typeof v==="string")return v;if(v&&typeof v==="object")return String(v.fr??v.en??"");return ""}
+function fxExemptReason(pays){
+  return pays==="BE"?"Régime particulier de franchise de taxe"
+    :pays==="CH"?"Exonéré de TVA"
+    :pays==="US"?"No tax applied"
+    :"TVA non applicable, art. 293 B du CGI";
+}
+function facturXXML(d,biz,buyer){
+  if(!d||d.type==="devis"||!Array.isArray(d.items)||!d.items.length)return null;
+  const isAvoir=d.type==="avoir";
+  const cur=FX_CUR[biz.devise]||"EUR";
+  const pays=biz.pays||"FR";
+  const rate=num(d.tva);
+  const lines=d.items.map((l,i)=>{
+    const q=num(l&&l.q), p=num(l&&l.p);
+    return{lib:fxLib(l).slice(0,200)||"Article",q:q,p:p,total:Math.round(q*p)};
+  });
+  const htC=lines.reduce((a,l)=>a+l.total,0);
+  const taxC=Math.round(htC*rate/100);
+  const ttcC=htC+taxC;
+  const accC=Math.max(0,Math.round(num(d.acompteDeduction)));
+  const netC=Math.max(0,ttcC-accC);
+  const cat=rate>0?"S":"E";
+  const num_=String(d.numero||"").slice(0,40);
+  const linesXML=lines.map((l,i)=>`    <ram:IncludedSupplyChainTradeLineItem>
+      <ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument>
+      <ram:SpecifiedTradeProduct><ram:Name>${fxEsc(l.lib)}</ram:Name></ram:SpecifiedTradeProduct>
+      <ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(l.p)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement>
+      <ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="C62">${Math.round(l.q*1000)/1000}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery>
+      <ram:SpecifiedLineTradeSettlement>
+        <ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${cat}</ram:CategoryCode><ram:RateApplicablePercent>${rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax>
+        <ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(l.total)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation>
+      </ram:SpecifiedLineTradeSettlement>
+    </ram:IncludedSupplyChainTradeLineItem>`).join("\n");
+  const sellerAddr=biz.adresse?`        <ram:PostalTradeAddress><ram:LineOne>${fxEsc(biz.adresse.slice(0,256))}</ram:LineOne><ram:CountryID>${FX_PAYS[pays]||"FR"}</ram:CountryID></ram:PostalTradeAddress>\n`:"";
+  const sellerTax=biz.tvaId?`        <ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${fxEsc(biz.tvaId.replace(/[\s.]/g,"").slice(0,30))}</ram:ID></ram:SpecifiedTaxRegistration>\n`:"";
+  const payMeans=biz.iban?`      <ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>30</ram:TypeCode><ram:PayeePartyCreditorFinancialAccount><ram:IBANID>${fxEsc(biz.iban.replace(/[\s.]/g,"").slice(0,34))}</ram:IBANID></ram:PayeePartyCreditorFinancialAccount></ram:SpecifiedTradeSettlementPaymentMeans>\n`:"";
+  const exempt=rate>0?"":`        <ram:ExemptionReason>${fxEsc(fxExemptReason(pays))}</ram:ExemptionReason>\n`;
+  const note=accC>0?`    <ram:IncludedNote><ram:Content>${fxEsc("Acompte déjà réglé : "+(accC/100).toFixed(2)+" "+cur+" — net à payer "+fxAmt(netC)+" "+cur)}</ram:Content></ram:IncludedNote>\n`:"";
+  const prepaid=accC>0?`        <ram:TotalPrepaidAmount>${fxAmt(accC)}</ram:TotalPrepaidAmount>\n`:"";
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:uncefact:data:standard:UnqualifiedDataType:100">
+  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:factur-x.eu:1p0:basic</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocument><ram:ID>${fxEsc(num_)}</ram:ID><ram:TypeCode>${isAvoir?"381":"380"}</ram:TypeCode><ram:IssueDateTime><udt:DateTimeString format="102">${fxDate(d.emis)}</udt:DateTimeString></ram:IssueDateTime>
+${note}  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+    <ram:ApplicableHeaderTradeAgreement>
+      <ram:SellerTradeParty><ram:Name>${fxEsc((biz.nom||"").slice(0,200))}</ram:Name>
+${sellerAddr}${sellerTax}      </ram:SellerTradeParty>
+      <ram:BuyerTradeParty><ram:Name>${fxEsc((buyer||"").slice(0,200))}</ram:Name></ram:BuyerTradeParty>
+    </ram:ApplicableHeaderTradeAgreement>
+    <ram:ApplicableHeaderTradeDelivery></ram:ApplicableHeaderTradeDelivery>
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>${cur}</ram:InvoiceCurrencyCode>
+${payMeans}      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>${fxAmt(taxC)}</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+${exempt}        <ram:BasisAmount>${fxAmt(htC)}</ram:BasisAmount>
+        <ram:CategoryCode>${cat}</ram:CategoryCode>
+        <ram:RateApplicablePercent>${rate}</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount>${fxAmt(htC)}</ram:LineTotalAmount>
+        <ram:ChargeTotalAmount>0.00</ram:ChargeTotalAmount>
+        <ram:AllowanceTotalAmount>0.00</ram:AllowanceTotalAmount>
+        <ram:TaxBasisTotalAmount>${fxAmt(htC)}</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount currencyID="${cur}">${fxAmt(taxC)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>${fxAmt(ttcC)}</ram:GrandTotalAmount>
+${prepaid}        <ram:DuePayableAmount>${fxAmt(netC)}</ram:DuePayableAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+${linesXML}
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>`;
+}
+function downloadFacturX(id){
+  const d=S.docs.find(x=>x.id===id);if(!d)return;
+  if(d.type==="devis"){toast(T("Factur-X : devis exclus — factures et avoirs uniquement."));return}
+  const xml=facturXXML(d,S.biz,d.client);
+  if(!xml){toast(T("Mets au moins un prix"));return}
+  const blob=new Blob([xml],{type:"application/xml;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="FACTURX-"+(d.numero||d.id)+".xml";document.body.appendChild(a);a.click();
+  setTimeout(()=>{try{URL.revokeObjectURL(a.href)}catch(e){}a.remove()},4000);
+  toast(T("XML Factur-X téléchargé ✓"));
+}
 function openView(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const tt=totals(d);
@@ -1658,7 +1768,7 @@ function openView(id){
   const isDevis=d.type==="devis", isAvoir=d.type==="avoir";
   const neg=isAvoir?"− ":""; /* avoir : montants en négatif (crédit) */
   const taxTitle=(S.biz.pays==="US"&&d.usState)?"Sales tax "+d.usState+" ("+num(d.tva)+"%)":taxLbl()+" ("+num(d.tva)+"%)";
-  const rows=d.items.map(l=>`
+  const rows=(Array.isArray(d.items)?d.items:[]).map(l=>`
     <tr>
       <td><b>${esc(itemLib(l))}</b></td>
       <td style="text-align:center">${num(l.q)}${d.unite?" "+esc(d.unite):""}</td>
@@ -1694,7 +1804,7 @@ function openView(id){
   const html=`
     <div class="doc-view-actions" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div class="row">
-        <button class="btn small primary" onclick="window.print()" type="button">${ic("print")} ${T("Imprimer / PDF")}</button>
+        <button class="btn small primary" data-print="1" type="button">${ic("print")} ${T("Imprimer / PDF")}</button>
         <button class="btn small wa" data-act="shareWa" data-id="${d.id}" type="button">${ic("chat")} WhatsApp</button>
         <button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">${ic("mail")} ${T("E-mail")}</button>
       </div>
@@ -1799,12 +1909,12 @@ function openView(id){
         ${d.statut==="converti"?"":`<button class="btn primary small" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button>`}
       `:isAvoir?`
         ${d.statut!=="paye"
-          ? `<button class="btn primary small" data-act="refund" data-id="${d.id}" type="button">${T("Marquer remboursée ✓")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">${ic("mail")} ${T("E-mail")}</button>`
-          : `<span class="status s-paye">${T("Avoir remboursé ✓")}</span>`}
+          ? `<button class="btn primary small" data-act="refund" data-id="${d.id}" type="button">${T("Marquer remboursée ✓")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="facturx" data-id="${d.id}" type="button">Factur-X (XML)</button><button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">${ic("mail")} ${T("E-mail")}</button>`
+          : `<span class="status s-paye">${T("Avoir remboursé ✓")}</span><button class="btn small" data-act="facturx" data-id="${d.id}" type="button">Factur-X (XML)</button>`}
       `:`
         ${d.statut!=="paye"
-          ? `<button class="btn primary small" data-act="pay" data-id="${d.id}" type="button">${T("Lien de paiement")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="paid" data-id="${d.id}" type="button">${T("Marquer payée ✓")}</button>`
-          : `<span class="status s-paye">${T("Facture payée ✓")}</span><button class="btn small" data-act="avoir" data-id="${d.id}" type="button">${ic("undo")} ${T("Émettre un avoir")}</button>`}
+          ? `<button class="btn primary small" data-act="pay" data-id="${d.id}" type="button">${T("Lien de paiement")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="facturx" data-id="${d.id}" type="button">Factur-X (XML)</button><button class="btn small" data-act="paid" data-id="${d.id}" type="button">${T("Marquer payée ✓")}</button>`
+          : `<span class="status s-paye">${T("Facture payée ✓")}</span><button class="btn small" data-act="facturx" data-id="${d.id}" type="button">Factur-X (XML)</button><button class="btn small" data-act="avoir" data-id="${d.id}" type="button">${ic("undo")} ${T("Émettre un avoir")}</button>`}
       `}
       <button class="btn ghost small" id="cancelS2" type="button">${T("Fermer")}</button>
     </div>
@@ -1901,7 +2011,7 @@ async function openRelance(id){
   const actions=[
     `<button class="btn ghost" id="copyM" type="button">${T("Copier")}</button>`,
     tel?`<a class="btn wa" style="text-decoration:none;text-align:center" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent(msg)}" id="sendW">${ic("chat")} WhatsApp →</a>`:"",
-    mail?`<a class="btn" style="text-decoration:none;text-align:center" href="mailto:${esc(mail)}?subject=${encodeURIComponent(d.numero)}&body=${encodeURIComponent(msg)}" id="sendE">${ic("mail")} ${T("E-mail →")}</a>`:""
+    mail?`<a class="btn" style="text-decoration:none;text-align:center" href="mailto:${encodeURIComponent(mail)}?subject=${encodeURIComponent(d.numero)}&body=${encodeURIComponent(msg)}" id="sendE">${ic("mail")} ${T("E-mail →")}</a>`:""
   ].join("");
   openSheet(`<h2>${T("Relance")} ${ton}</h2>
   <p class="sub">${esc(d.numero)} · ${j} ${T("jour(s) de retard")} · ${T("déjà")} ${num(d.relances)} ${T("relance(s)")}</p>
@@ -1937,7 +2047,7 @@ function syncSettings(){
   $("#paysSel").value=S.biz.pays;
   $("#devSel").value=S.biz.devise;
   $("#secSel").value=S.biz.secteur||"artisan";
-  if($("#langSel")){const ls=$("#langSel"),list=window.ENCAISSE_LANG_LIST||{fr:"Français",en:"English"};ls.innerHTML=Object.keys(list).map(k=>`<option value="${k}">${list[k]}</option>`).join("");ls.value=lang()}
+  if($("#langSel")){const ls=$("#langSel"),list=window.ENCAISSE_LANG_LIST||{fr:"Français",en:"English"};ls.innerHTML=Object.keys(list).map(k=>`<option value="${esc(k)}">${esc(list[k])}</option>`).join("");ls.value=lang()}
   const ts=$("#themeSel");if(ts)ts.value=S.theme||"auto";
   document.querySelector('input[name="biz"]').value=S.biz.nom||"";
   const set=(n,v)=>{const el=document.querySelector(`[name="${n}"]`);if(el)el.value=v||""};
@@ -2013,6 +2123,7 @@ async function refreshSub(){
 /* ---------- events ---------- */
 function bind(){
   document.addEventListener("click",e=>{
+    const pr=e.target.closest("[data-print]");if(pr){try{window.print()}catch(_){}return}
     const sub=e.target.closest("[data-sub]");if(sub){activatePlan(sub.dataset.sub);return}
     const g=e.target.closest("[data-goto]");if(g){goto(g.dataset.goto);return}
     if(e.target.closest("[data-new]")){openNew();return}
@@ -2039,11 +2150,12 @@ function bind(){
     if(act==="acompte")openAcompte(id);
     if(act==="avoir")openAvoir(id);
     if(act==="recur")openRecur(id);
+    if(act==="facturx")downloadFacturX(id);
     if(act==="shareWa")shareWhatsApp(id);
     if(act==="shareMail")shareEmail(id);
     if(act==="paid"){if(d&&confirm(T("Confirmer encaissement de {n} ?",{n:d.numero}))){const ps=d.statut,pl=d.payeLe;d.statut="paye";d.payeLe=todayISO();haptic([30,60]);if(!save()){d.statut=ps;d.payeLe=pl;return}render();ensurePortal(d,true);closeSheet();toast(T("Encaissé 🎉"))}}
     if(act==="refund"){if(d&&confirm(T("Confirmer le remboursement de {n} ?",{n:d.numero}))){const ps=d.statut,pl=d.payeLe;d.statut="paye";d.payeLe=todayISO();haptic([30,60]);if(!save()){d.statut=ps;d.payeLe=pl;return}render();ensurePortal(d,true);closeSheet();toast(T("Avoir remboursé ✓"))}}
-    if(act==="del"){if(d&&confirm(T("Supprimer {n} ? Le compteur reste inviolable.",{n:d.numero}))){S.docs=S.docs.filter(x=>x.id!==id);save();render();closeSheet()}}
+    if(act==="del"){if(!d) return; if(d.type!=="devis"){toast(T("Une facture émise ne se supprime pas : émet un avoir."));closeSheet();return} if(confirm(T("Supprimer {n} ? Le compteur reste inviolable.",{n:d.numero}))){S.docs=S.docs.filter(x=>x.id!==id);save();render();closeSheet()}}
     if(act==="convert"&&d){
       if(d.statut==="converti"){toast(T("Devis déjà converti"));closeSheet();return}
       if(!canCreate("facture")){openPaywall(T("Tu as atteint tes {n} factures gratuites ce mois-ci. Le devis reste gratuit — passe au payant pour continuer à facturer.",{n:FREE_MONTHLY}));return}
@@ -2055,23 +2167,23 @@ function bind(){
       if(num(d.acompteMontant)>0&&!acompteDed)toast(T("Acompte impayé — non déduit"));
       S.docs.push({
         id:nid,type:"facture",numero:num_,clientId:d.clientId,client:d.client,
-        items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",
+        items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",usState:d.usState||"",
         statut:"envoye",emis:todayISO(),eche:addDays(todayISO(),15),
         relances:0,photo:d.photo||null,signature:d.signature||null,signedAt:d.signedAt||null,
         acompteDeduction:acompteDed,devisSourceId:d.id,devisSourceNum:d.numero
       });
       const prevConverti=d.statut;
       d.statut="converti";haptic([30,60]);
-      if(!save()){undoCreate("facture");d.statut=prevConverti;return}closeSheet();render();
+      if(!save()){undoCreate("facture",nid);d.statut=prevConverti;return}closeSheet();render();
       toast(`${T("Facture")} ${num_} ${T("créée ✓")}${acompteDed?" ("+T("acompte déduit")+")":""}`);
     }
     if(act==="dup"&&d){
       if(!canCreate(d.type)){openPaywall(T("Limite gratuite du mois atteinte — passe au payant pour refaire ce document."));return}
       const nid=uid(), num_=nextNum(d.type);
       S.docs.push({id:nid,type:d.type,numero:num_,clientId:d.clientId,client:d.client,
-        items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",
+        items:JSON.parse(JSON.stringify(d.items)),total:d.total,tva:num(d.tva),unite:d.unite||"",usState:d.usState||"",
         statut:"envoye",emis:todayISO(),eche:addDays(todayISO(),15),relances:0,photo:null});
-      if(!save()){undoCreate(d.type);return}render();closeSheet();toast(`${d.type==="devis"?T("Devis"):T("Facture")} ${num_} ${T("dupliquée ✓")}`);
+      if(!save()){undoCreate(d.type,nid);return}render();closeSheet();toast(`${d.type==="devis"?T("Devis"):T("Facture")} ${num_} ${T("dupliquée ✓")}`);
     }
   });
 
@@ -2109,7 +2221,7 @@ function bind(){
     S.biz.iban=String(f.get("iban")||"").slice(0,40);
     const wl=String(f.get("lang")||"fr");
     const wantLang=(window.ENCAISSE_LANG_LIST&&window.ENCAISSE_LANG_LIST[wl])?wl:"fr";
-    if(wantLang!==lang()){setAppLang(wantLang).then(()=>{syncSettings();render()})}
+    if(wantLang!==lang()&&typeof window.setAppLang==="function"){window.setAppLang(wantLang).then(()=>{syncSettings();render()}).catch(()=>{})}
     save();syncSettings();render();
     toast(T("Activité enregistrée ✓"));
   };
@@ -2144,7 +2256,7 @@ function bind(){
   if(csvBtn)csvBtn.onclick=()=>{
     const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
     const rows=[["numero","type","client","emis","echeance","statut","ht_centimes","tva_centimes","ttc_centimes","acompte_centimes","net_centimes","devise"].join(";")];
-    S.docs.filter(d=>!d.demo).forEach(d=>{const t=totals(d);rows.push([d.numero,d.type,d.client,d.emis,d.eche,d.statut,t.ht,t.tva,t.ttc,t.acompte,t.net,S.biz.devise].map(q).join(";"))});
+    S.docs.filter(d=>d&&!d.demo).forEach(d=>{try{const t=totals(d);rows.push([d.numero,d.type,d.client,d.emis,d.eche,d.statut,t.ht,t.tva,t.ttc,t.acompte,t.net,S.biz.devise].map(q).join(";"))}catch(e){}});
     const blob=new Blob(["\ufeff"+rows.join("\n")],{type:"text/csv;charset=utf-8"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`encaisse-compta-${todayISO().slice(0,7)}.csv`;document.body.appendChild(a);a.click();
     setTimeout(()=>{try{URL.revokeObjectURL(a.href)}catch{}a.remove()},4000);
@@ -2161,7 +2273,7 @@ function bind(){
     const eur=c=>((Number(c)||0)/100).toFixed(2).replace(".",",");
     const isoDev={ "€":"EUR",CHF:"CHF",$:"USD" }[S.biz.devise]||"EUR";
     const rows=[];
-    S.docs.filter(d=>!d.demo&&(d.type==="facture"||d.type==="avoir")).forEach(d=>{
+    S.docs.filter(d=>d&&!d.demo&&(d.type==="facture"||d.type==="avoir")).forEach(d=>{try{
       const t=totals(d), dt=ymd(d.emis), au=isNaN(Date.parse(d.emis))?"":dt;
       const cli=clean(cliName(S.clients.find(c=>c.id===d.clientId)||{nom:d.client}));
       const jc="VE", jl="Ventes", piece=clean(d.numero), aux=clean(d.clientId||"");
@@ -2177,7 +2289,7 @@ function bind(){
         rows.push(L("707000","Ventes de prestations","","",0,t.ht));
         if(t.tva>0)rows.push(L("445710",tvaTx,"","",0,t.tva));
       }
-    });
+      }catch(e){}});
     if(!rows.length){toast(T("Aucune facture à exporter."));return}
     const blob=new Blob(["\ufeff"+rows.join("\n")],{type:"text/plain;charset=utf-8"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`ENCAISSE-FEC-${todayISO().slice(0,4)}.txt`;document.body.appendChild(a);a.click();
@@ -2200,11 +2312,33 @@ function bind(){
           const data=JSON.parse(ev.target.result);
           if(!data.biz||!Array.isArray(data.docs)||!Array.isArray(data.clients)){toast(T("Fichier JSON invalide"));return}
           S={...S,...data,biz:{...S.biz,...data.biz},sub:{...S.sub,...(data.sub||{})}};
-          S.docs=data.docs.map(d=>({...d,tva:num(d.tva),items:(d.items||[]).map(i=>({lib:normLib(i.lib),q:num(i.q)||1,p:num(i.p)}))}));
-          S.clients=data.clients.map(c=>({id:String(c.id||uid()),nom:String(c.nom||T("Client")),tel:String(c.tel||""),email:String(c.email||""),adresse:String(c.adresse||""),tvaId:String(c.tvaId||"")}));
+          const cleanBlob=(v)=>{if(typeof v!=="string"||v.length>500000)return null;if(v.indexOf("data:image/")!==0)return null;return v};
+          const seenNum=new Set();
+          S.docs=data.docs.map(d=>{
+            const type=(d.type==="facture"||d.type==="avoir")?"facture":"devis";
+            const t2=(d.type==="avoir")?"avoir":type;
+            let numero=String(d.numero||"");
+            if(!/^(DEV|FAC|AVT)-\d{4}-\d{4}$/.test(numero)||seenNum.has(numero)){
+              const y=String(new Date().getFullYear());
+              const k=t2==="devis"?"DEV":t2==="avoir"?"AVT":"FAC";
+              S.seq=S.seq||{DEV:{},FAC:{},AVT:{}};S.seq[k]=S.seq[k]||{};
+              S.seq[k][y]=(S.seq[k][y]||0)+1;
+              numero=k+"-"+y+"-"+String(S.seq[k][y]).padStart(4,"0");
+            }
+            seenNum.add(numero);
+            const portal=(d.portal&&/^[0-9a-f]{24}$/.test(d.portal.slug||""))?{slug:d.portal.slug,hash:String(d.portal.hash||"").slice(0,40)}:undefined;
+            return{...d,id:String(d.id||uid()),type:t2,numero:numero,client:String(d.client||T("Client")),clientId:String(d.clientId||""),
+              tva:num(d.tva),items:(Array.isArray(d.items)?d.items:[]).map(i=>({lib:normLib(i&&i.lib),q:num(i&&i.q)||1,p:num(i&&i.p)})),
+              total:0,statut:d.statut==="paye"?"paye":(d.statut==="converti"?"converti":"envoye"),
+              emis:/^\d{4}-\d{2}-\d{2}$/.test(d.emis||"")?d.emis:todayISO(),eche:/^\d{4}-\d{2}-\d{2}$/.test(d.eche||"")?d.eche:todayISO(),
+              usState:String(d.usState||""),unite:String(d.unite||"").slice(0,12),
+              photo:cleanBlob(d.photo),signature:cleanBlob(d.signature),portal:portal};
+          });
+          S.docs.forEach(d=>{try{d.total=(d.items||[]).reduce((a,l)=>a+(num(l.q)||0)*(num(l.p)||0),0)}catch(e){d.total=0}});
+          S.clients=data.clients.map(c=>({id:String(c.id||uid()),nom:String(c.nom||T("Client")).slice(0,60),tel:String(c.tel||"").slice(0,40),email:String(c.email||"").slice(0,120),adresse:String(c.adresse||"").slice(0,90),tvaId:String(c.tvaId||"").slice(0,40)}));
           S.rec=Array.isArray(data.rec)?data.rec:[];
           S.time=Array.isArray(data.time)?data.time:[];
-          migrateSeq();migrateMoyens();
+          migrateSeq();rebuildSeqFromDocs();migrateMoyens();
           save();syncSettings();render();toast(T("Sauvegarde importée ✓"));
         }catch{toast(T("Erreur de lecture du fichier JSON"))}
       };
@@ -2278,6 +2412,6 @@ function initInstall(){
 }
 
 /* ---------- boot ---------- */
-load();initTheme();applyI18n();initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();syncPaidFromServer(false);genRecurrences();startAutoSync();
+load();initTheme();if(typeof window.applyI18n==="function"){try{window.applyI18n()}catch(e){}}initOnb();bind();syncSettings();render();checkClientPortalRoute();handleCheckoutReturn();refreshSub();initInstall();syncPaidFromServer(false);genRecurrences();startAutoSync();
 /* Langue non-inline (dict chargé à la demande) : rattrapage une fois chargé. */
-if(window.setAppLang&&(lang()!=="fr"&&lang()!=="en")){setAppLang(lang()).then(()=>{try{syncSettings()}catch(e){}try{render()}catch(e){}try{if(!localStorage.getItem("encaisse.onboarded")){setSlide(0)}}catch(e){}})}
+if(typeof window.setAppLang==="function"&&(lang()!=="fr"&&lang()!=="en")){window.setAppLang(lang()).then(()=>{try{syncSettings()}catch(e){}try{render()}catch(e){}try{if(!localStorage.getItem("encaisse.onboarded")){setSlide(0)}}catch(e){}}).catch(()=>{})}

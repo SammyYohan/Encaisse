@@ -2,15 +2,23 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (p) => readFile(new URL(`../${p}`, import.meta.url), "utf8");
-const [config, app, api, legal, headers] = await Promise.all([
+const [config, app, api, legal, headers, clientPage, worker] = await Promise.all([
   read("config.js"), read("app.js"), read("functions/api/[[route]].js"),
-  read("legal.html"), read("_headers")
+  read("legal.html"), read("_headers"), read("functions/r/[doc].js"),
+  read("worker-relances.js")
 ]);
 
 assert.match(config, /DEMO_MODE:\s*true/, "Payments must default to demo mode.");
 assert.match(config, /STRIPE_LIVE:\s*false/, "Live Stripe must be disabled by default.");
-assert.doesNotMatch(config, /sk_live_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+/,
+assert.match(config, /BETA_GRATUITE:\s*true/, "Beta flag must stay enabled until commercial launch.");
+assert.doesNotMatch(config + api + clientPage + worker, /sk_live_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+/,
   "Never commit Stripe secret keys or webhook signing secrets.");
+assert.doesNotMatch(api, /searchParams\.get\("token"\)/,
+  "Subscription token must travel by header only, never in query string.");
+assert.match(api, /toLowerCase\(\)/,
+  "Stripe currency codes must be lowercase.");
+assert.match(clientPage, /render\(slug, row, p, \{[^}]*\}, env\)/,
+  "Customer page must receive env explicitly (no ambient global).");
 assert.match(app, /body:JSON\.stringify\(\{op:"push",owner,blob:/,
   "Backup push should send the derived owner identifier, not the recovery key.");
 assert.match(app, /body:JSON\.stringify\(\{op:"pull",owner\}\)/,

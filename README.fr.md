@@ -68,7 +68,7 @@ python -m http.server 8080
 ```
 
 Au premier chargement, l'onboarding (pays → métier → nom de l'entreprise) crée
-des données de démonstration.
+un compte vierge (aucune donnée de démonstration).
 
 > ⚠️ **Éviter le port `8000`.** Le CLI OpenCode sonde
 > `http://127.0.0.1:8000/health` toutes les 30 s ; si ton serveur de dev occupe
@@ -150,7 +150,7 @@ Autres clés : `encaisse.onboarded`, `encaisse.lang`, `encaisse.owner` (clé d'a
 |---|---|---|
 | Devis | **illimités** | illimités |
 | Avoirs | **illimités** | illimités |
-| Factures / mois | **5** (`FREE_MONTHLY`) | illimitées |
+| Factures / mois | **5** (`FREE_MONTHLY`, suspendu pendant `BETA_GRATUITE:true`) | illimitées |
 | Mensuel | 0 | 9,99 € |
 | Annuel (2 mois offerts) | 0 | 99 € |
 
@@ -189,7 +189,7 @@ anglaise dans `i18n.js`. Ne jamais traduire la clé elle-même.
 
 ### 4.6 Hors-ligne & cache
 
-`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v33`).
+`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v35`).
 `config.js`, `i18n.js` et `sw.js`
 sont en **network-first** pour qu'une clé ou une traduction se propage immédiatement.
 **Incrémenter la constante `C` à chaque release.**
@@ -333,6 +333,9 @@ est **hors-ligne + preuve de chantier + relances guidées** — ce positionnemen
    montants négatifs dans l'aperçu/le portail/l'impression, suivi du
    remboursement, jamais plafonnés sur l'offre gratuite.
 6. 🔴 **Partenaire agréé (PDP / Peppol)** avant toute annonce de conformité en Europe.
+   Étape 1 (sans plateforme) faite : export **Factur-X XML (CII BASIC)** par document
+   depuis l'aperçu — fichier structuré uniquement, pas un Factur-X conforme
+   (conformité = PDF/A-3 avec XML embarqué + transmission via plateforme agréée).
 
 ### 🟠 P1
 
@@ -355,7 +358,7 @@ d'utilisateurs.
 - Toute saisie utilisateur passe par `esc()` avant insertion HTML, les montants par
   `num()` ; aucun `innerHTML` ne reçoit de donnée brute — la règle vaut aussi
   côté serveur dans `functions/` (le rendu du portail ré-échappe les données D1).
-- `_headers` livre une **CSP** (allow-list Stripe), HSTS, `X-Frame-Options: DENY`,
+- `_headers` livre une **CSP** (self uniquement, checkout en redirection haut niveau), HSTS, `X-Frame-Options: DENY`,
   `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` ;
   les réponses `/r/:slug` ajoutent leur propre CSP stricte, `no-store` et `noindex`.
 - **Pas de mot de passe, pas de compte.** Les données ne vivent toujours que

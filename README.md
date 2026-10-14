@@ -71,7 +71,7 @@ python -m http.server 8080
 ```
 
 Open `http://localhost:3000`. On first load you get the onboarding flow
-(country → trade → business name) which seeds demo data.
+(country → trade → business name) which creates a pristine account (no demo seeding).
 
 > ⚠️ **Avoid port `8000`.** The OpenCode CLI health-probes
 > `http://127.0.0.1:8000/health` every 30 s; if your dev server owns that port
@@ -153,7 +153,7 @@ Other keys: `encaisse.onboarded` (onboarding completed), `encaisse.lang`, `encai
 |---|---|---|
 | Quotes | **unlimited** | unlimited |
 | Credit notes (avoirs) | **unlimited** | unlimited |
-| Invoices / month | **5** (`FREE_MONTHLY`) | unlimited |
+| Invoices / month | **5** (`FREE_MONTHLY`, suspended while `BETA_GRATUITE:true`) | unlimited |
 | Monthly | 0 | 9,99 € |
 | Yearly (2 months free) | 0 | 99 € |
 
@@ -192,7 +192,7 @@ Do not translate the key. The dictionary must stay complete — check with a
 
 ### 4.6 Offline & caching
 
-`sw.js` caches the whole app (constant `C`, currently `encaisse-v29`).
+`sw.js` caches the whole app (constant `C`, currently `encaisse-v35`).
 `config.js`, `i18n.js` and `sw.js`
 are **network-first** so a key or a translation ships immediately even with a stale
 cache. **Bump the `C` constant on every release.**
@@ -278,7 +278,7 @@ no-browser-return path). Reminders go out via WhatsApp / app e-mail (1 click,
 ✅ Create D1 database + binding "DB" + run schema.sql (see above)
 ✅ Put STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (wrangler pages secret put — already live)
 □ Test a real checkout (small amount, then refund) + verify webhook delivery
-✅ legal.html filled (publisher, hosting, e-mail, ombudsman)
+□ legal.html filled (publisher, hosting, e-mail, ombudsman) — currently a draft with placeholders
 □ Fill Réglages → My business (address, VAT number, IBAN) — printed on invoices
 □ Add the custom domain in Cloudflare (Workers & Pages → Custom domains) + update SITE_URL/robots/sitemap
 □ Verify headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options
@@ -331,6 +331,9 @@ unlimited invoicing. The only defensible wedge is
    negative amounts in preview/portal/print, refund tracking, never gated on
    the free plan.
 6. 🔴 **Certified e-invoicing partner (PDP / Peppol)** before any "compliant" claim in the EU.
+   Step 1 (no platform) is done: per-document **Factur-X XML (CII BASIC)** export
+   from the invoice preview — structured file only, not a compliant Factur-X
+   (compliance needs PDF/A-3 embedding + transmission via an approved platform).
 
 ### 🟠 P1
 
@@ -352,7 +355,7 @@ D1 5 GB and 5 M reads/day — ample for the first thousands of users.
 - All user input is escaped through `esc()` before being inserted as HTML;
   amounts go through `num()`; no `innerHTML` receives raw user data — the same
   rule applies server-side in `functions/` (portal rendering re-escapes D1 data).
-- `_headers` ships a **CSP** (Stripe allow-list), HSTS, `X-Frame-Options: DENY`, `X-Frame-Options: DENY`,
+- `_headers` ships a **CSP** (self-only, checkout is a top-level redirect), HSTS, `X-Frame-Options: DENY`,
   `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`;
   `/r/:slug` responses add their own strict CSP, `no-store` and `noindex`.
 - **No password, no account.** The app's data still lives only in the customer's
@@ -412,6 +415,6 @@ legal placeholders, then connect P0 item 6 (certified e-invoicing partner).
   FCFA/CAD currencies: the scope is **FR · BE · CH · US, Stripe only**.
 
 
-## Technical audit (10 October 2026)
+## Technical audit (11 October 2026)
 
 See [`AUDIT_TECHNIQUE_FR.md`](AUDIT_TECHNIQUE_FR.md) for the security changes, remaining risks and production checklist. Automated API smoke tests are not included yet. Run syntax checks on every JavaScript file before deploying.

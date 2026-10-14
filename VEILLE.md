@@ -87,11 +87,11 @@ Ce sont des différenciateurs réels, vérifiés chez les acteurs ci-dessus :
 | **Avoirs (credit notes)** | Série `AVT`, jamais plafonnés |
 | **Envoi d'e-mail serveur** | Retiré pour le moment (`mailto:`/WhatsApp) |
 | **Plateforme agréée (PDP / Peppol)** | 🔴 Toujours manquante — interdit toute annonce « conforme » Europe (Indy, Tiime, Shine, Qonto, Pennylane, Sellsy, Henrri… sont agréés) |
-| **Factures récurrentes** | Manquant (Zoho, Invoice Ninja, FreshBooks, Wave… l'ont) |
+| **Factures récurrentes** | ✅ Fait (hebdo/mensuel, `S.rec` + `genRecurrences()`) |
 
 ### 🟠 P1 — différentiation tarifaire
 - **Suivi du temps** et **notes de frais** (FreshBooks, Zoho, Invoice Ninja, HoneyBook).
-- **Export comptable FEC / CSV** et main courante pour le cabinet (Pennylane, Evoliz, Qoblex).
+- **Export comptable FEC / CSV** ✅ fait (exports CSV + FEC simplifié) et main courante pour le cabinet (Pennylane, Evoliz, Qoblex).
 - **Sales tax engine** aux US : nous ne faisons que le taux saisi à la main — *identique à FreshBooks et Wave*, mais Invoicemonk (15 $/mois) vend justement ça.
 - **Multi-devises par document** et clients internationaux.
 - **Portail client** complet (historique, téléchargements, solde).
@@ -121,11 +121,11 @@ Multi-utilisateurs, rapprochement bancaire, CRM, API, modèles de devis, invento
 
 ### Ce qu'on AJOUTE (par ordre de valeur)
 1. ✅ **Avoirs** — fait (série `AVT`, jamais plafonnés).
-2. **Factures récurrentes** (hebdo/mensuel) — standard, forte valeur perçue.
+2. ✅ **Factures récurrentes** — fait (hebdo/mensuel, `S.rec` + `genRecurrences()`).
 3. **Relance automatique par e-mail** (Worker cron + fournisseur à choisir).
 4. ✅ **Portail client serveur** — fait (`/r/:slug` D1, partage explicite).
 5. ✅ **Checkout Stripe** — fait (montants `price_data` serveur).
-6. **Export FEC / CSV** pour le comptable.
+6. ✅ **Export FEC / CSV** — fait (CSV + FEC simplifié à faire valider par le comptable).
 7. **Partenaire PDP/Peppol** (ou renvoi vers une PA agréée gratuite : Indy/Tiime/Shine) — c'est le seul chemin crédible vers « conforme » en Europe.
 8. **Sales tax rate lookup** aux US (API gratuite ou table par État).
 

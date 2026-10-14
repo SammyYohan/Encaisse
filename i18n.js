@@ -475,6 +475,21 @@
     "Compte créé ✓ accès complet : devis et factures illimités": "Account created ✓ full access: unlimited quotes and invoices",
     "Dis-moi où tu factures : tout s'adapte automatiquement. Devis et factures illimités.": "Tell me where you invoice: everything adapts automatically. Unlimited quotes and invoices.",
     "PDF avec mentions du pays. E-facture certifiée (FR PDP dès 09/2027, BE Peppol-BIS obligatoire) via plateforme agréée à brancher.": "PDF with your country's details. Certified e-invoicing (FR PDP from 09/2027, BE Peppol-BIS mandatory) via a certified platform to connect.",
+    "Devis en 60 secondes sur chantier, même sans réseau. PDF personnalisable, à vérifier selon les règles de ton pays. Lien de paiement. Relance guidée.": "60-second quote on site, even offline. Customisable PDF, check your country's rules. Payment link. Guided reminders.",
+    "Échéances à 30 jours": "30-day outlook",
+    "Activer la sauvegarde automatique chiffrée (envoi après modification)": "Enable automatic encrypted backup (sent after each change)",
+    "Accès complet Pro": "Full Pro access",
+    "Version": "Plan",
+    "Offerte & Illimitée": "Free & Unlimited",
+    "Devis, factures, exports comptables et gestion clients illimités.": "Unlimited quotes, invoices, accounting exports and client management.",
+    "Restauration terminée, mais la migration de sauvegarde a échoué. Conserve ton ancien code.": "Restore done, but backup migration failed. Keep your old code.",
+    "Une facture émise ne se supprime pas : émet un avoir.": "An issued invoice cannot be deleted: issue a credit note instead.",
+    "Ex : FR + 11 chiffres": "E.g. FR + 11 digits",
+    "Ex : FR76 …": "E.g. FR76 …",
+    "nom@exemple.fr · +33 …": "name@example.com · +33 …",
+    "Factur-X (XML)": "Factur-X (XML)",
+    "XML Factur-X téléchargé ✓": "Factur-X XML downloaded ✓",
+    "Factur-X : devis exclus — factures et avoirs uniquement.": "Factur-X: quotes excluded — invoices and credit notes only.",
   };
 
   /* 24 langues officielles de l'UE (nom natif = libellé affiché, norme Switch) :

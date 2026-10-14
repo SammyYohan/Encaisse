@@ -21,9 +21,15 @@ function totals(d) {
   const items = Array.isArray(d.items) ? d.items : [];
   const ht = items.reduce((a, l) => a + (Number(l.q) || 0) * (Number(l.p) || 0), 0);
   const tva = Math.round(ht * (Number(d.tva) || 0) / 100);
-  return { ttc: ht + tva };
+  const ttc = ht + tva;
+  const acompte = Math.max(0, Number(d.acompteDeduction) || 0);
+  return { ht: ht, tva: tva, ttc: ttc, acompte: acompte, net: Math.max(0, ttc - acompte) };
 }
-const daysLate = (iso) => Math.floor((Date.now() - new Date(iso + "T12:00:00").getTime()) / 864e5);
+const daysLate = (iso) => {
+  const t = new Date(String(iso || "") + "T12:00:00").getTime();
+  if (!isFinite(t)) return NaN;
+  return Math.floor((Date.now() - t) / 864e5);
+};
 const stageOf = (j) => STAGES.find((s) => j >= s.min && j <= s.max) || null;
 
 export default {
@@ -64,6 +70,7 @@ async function runReminders(env) {
     const d = (p && p.doc) || {};
     if (d.type !== "facture" || !d.eche) continue;
     const j = daysLate(d.eche);
+    if (!isFinite(j)) { out.errors++; continue; }
     const st = stageOf(j);
     if (!st) continue;
     if (row.remind_at && now - row.remind_at < 72 * 3600e3) continue;
@@ -72,7 +79,7 @@ async function runReminders(env) {
       slug: row.slug,
       numero: d.numero || "",
       client: d.client || "",
-      montant_centimes: totals(d).ttc,
+      montant_centimes: totals(d).net,
       devise: ((p.biz || {}).devise) || "€",
       echeance: d.eche,
       jours_retard: j,
