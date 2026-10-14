@@ -11,38 +11,51 @@
 <link rel="icon" href="icons/icon-192.png">
 <script>try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"{}");if(__s&&(__s.theme==="light"||__s.theme==="dark"||__s.theme==="auto"))__t=__s.theme}catch(e){}if(__t==="auto"){try{__t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){__t="light"}}document.documentElement.dataset.theme=__t}catch(e){}</script>
 <style>
-  :root{--ink:#0f172a;--mut:#64748b;--acc:#10b981;--line:#e2e8f0;--bg:#f8fafc}
+/* Polices auto-hébergées (SIL OFL) : aucune requête tierce, disponibles hors-ligne. */
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/bricolage-grotesque-latin-ext-600-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/bricolage-grotesque-latin-ext-700-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/bricolage-grotesque-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/instrument-sans-latin-ext-400-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/instrument-sans-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/instrument-sans-latin-ext-500-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/instrument-sans-latin-500-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/instrument-sans-latin-ext-600-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/instrument-sans-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  :root{--ink:#10201A;--mut:#56625B;--acc:#0B7A55;--line:#E3E6DF;--bg:#F6F7F4}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  header{position:sticky;top:0;background:#0f172a;color:#fff;z-index:5}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{position:sticky;top:0;background:#10201A;color:#fff;z-index:5}
   .wrap{max-width:760px;margin:0 auto;padding:0 20px}
   header .wrap{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;min-height:60px;padding-top:calc(8px + env(safe-area-inset-top,0px));padding-bottom:8px}
   .brand{display:flex;align-items:center;gap:9px;font-weight:900;text-decoration:none;color:#fff}
-  .logo{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#fff;border:1px solid var(--line);overflow:hidden}
+  .logo{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;overflow:hidden}
   .logo img{width:100%;height:100%;display:block}
   nav{display:flex;flex-wrap:wrap;gap:6px}
-  nav a,nav button{font:600 13px system-ui;color:#cbd5e1;background:#ffffff14;border:1px solid #ffffff2e;border-radius:99px;padding:6px 12px;text-decoration:none;cursor:pointer}
+  nav a,nav button{font:600 13px "Instrument Sans",system-ui,sans-serif;min-height:36px;color:#B9C7BF;background:#ffffff14;border:1px solid #ffffff2e;border-radius:99px;padding:6px 12px;text-decoration:none;cursor:pointer}
   nav a:hover,nav button:hover{background:#ffffff26;color:#fff}
   .is-on{background:#fff!important;color:#0f172a!important;border-color:#fff!important}
   main{padding:34px 0 calc(70px + env(safe-area-inset-bottom,0px))}
-  section{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:18px}
-  h1{font-size:26px;margin:0 0 6px}
+  section{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:18px}
+  h1,h2,h3,.brand{font-family:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;letter-spacing:-.015em}
+  h1{font-size:28px;margin:0 0 6px}
   h2{font-size:20px;margin:26px 0 8px}
   h3{font-size:16px;margin:20px 0 6px}
   h1 small{display:block;font-size:13px;color:var(--mut);font-weight:500}
-  p,li{color:#334155;font-size:15px}
+  p,li{color:#34443C;font-size:15px}
   .cta{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0}
-  .cta a{font:700 14px system-ui;background:var(--acc);color:#fff;border-radius:10px;padding:10px 16px;text-decoration:none}
+  .cta a{font:600 14px "Instrument Sans",system-ui,sans-serif;background:var(--acc);color:#fff;border-radius:12px;min-height:44px;display:inline-flex;align-items:center;padding:0 18px;text-decoration:none}
   .cta a.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-  .todo{background:#fffbeb;border:1px dashed #f59e0b;border-radius:10px;padding:10px 14px;font-size:14px;color:#92400e}
+  .todo{background:#FBE3D6;border:1px dashed #C2410C;border-radius:12px;padding:10px 14px;font-size:14px;color:#8A3410}
   footer{color:var(--mut);font-size:13px;text-align:center;padding:20px}
   html .en{display:none}
   html[data-lang="en"] .fr{display:none}
   html[data-lang="en"] .en{display:block}
-  html[data-theme="dark"]{--ink:#e9eff9;--mut:#8ea1bb;--line:#22304d;--bg:#070d1d;color-scheme:dark}
+  html[data-theme="dark"]{--ink:#E8F0EA;--mut:#93A79B;--line:#25392F;--bg:#0A130F;color-scheme:dark}
   html[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
-  html[data-theme="dark"] section{background:#131f38;border-color:var(--line)}
-  html[data-theme="dark"] p,html[data-theme="dark"] li{color:#c2cddd}
+  html[data-theme="dark"] section{background:#13211A;border-color:var(--line)}
+  html[data-theme="dark"] p,html[data-theme="dark"] li{color:#C3D1C8}
+  html[data-theme="dark"] .todo{background:#3A2214;color:#FFB38A;border-color:#8A3410}
   html[data-theme="dark"] .todo{background:#2a2103;border-color:#f59e0b;color:#fde68a}
   html[data-theme="dark"] .cta a.ghost{background:#131f38;color:var(--ink);border-color:var(--line)}
 </style>

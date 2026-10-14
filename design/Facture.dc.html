@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Encaisse — Facture</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+body{margin:0}
+.t{font-family:"Instrument Sans",system-ui,sans-serif;color:#10201A}
+.n{font-family:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:700}
+.b{border:0;font:inherit;font-weight:600;font-size:15px;cursor:pointer;border-radius:14px;min-height:48px;padding:0 18px}
+.p{display:inline-block;font-size:12px;font-weight:600;border-radius:99px;padding:4px 10px;white-space:nowrap}
+.c{background:#fff;border:1px solid #E3E6DF;border-radius:18px}
+.m{color:#56625B;font-size:13px}
+</style>
+</helmet>
+<div class="t" style="position:relative;box-sizing:border-box;width:390px;height:844px;background:#F6F7F4;padding:20px 16px 0;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;min-height:48px">
+<button class="b" style="background:none;padding:0 6px;min-height:44px;display:flex;align-items:center;gap:6px;color:#10201A"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Fermer</button>
+<button class="b" style="background:#fff;border:1px solid #E3E6DF;min-height:44px">Imprimer / PDF</button>
+</div>
+<div class="c" style="margin-top:10px;padding:18px;border-radius:16px">
+<div style="display:flex;justify-content:space-between;gap:12px">
+<div><div class="n" style="font-size:18px">Atelier Dupont</div><div class="m" style="font-size:12px;line-height:1.45">[Adresse de l'activité]<br>SIRET [à compléter]</div></div>
+<div style="text-align:right"><div style="font-size:11px;font-weight:600;letter-spacing:.1em;color:#56625B">FACTURE</div><div class="n" style="font-size:16px">FAC-2026-0042</div><div class="m" style="font-size:12px;line-height:1.45">Émise le 01/09/2026<br>Échéance 02/10/2026</div></div>
+</div>
+<div style="margin-top:14px;padding:10px 12px;background:#F6F7F4;border-radius:12px"><div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:#56625B">FACTURÉ À</div><div style="font-weight:600;font-size:14px">Awa Konaté</div></div>
+<div style="margin-top:12px;font-size:13px">
+<div style="display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:9px 0;border-bottom:1px solid #E3E6DF"><b>Pose carrelage</b><b class="n" style="font-size:14px">540,00 €</b><span class="m" style="font-size:12px">12 h × 45,00 €</span></div>
+<div style="display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:9px 0;border-bottom:1px solid #E3E6DF"><b>Fournitures</b><b class="n" style="font-size:14px">168,33 €</b><span class="m" style="font-size:12px">1 × 168,33 €</span></div>
+</div>
+<div style="margin:10px 0 0 auto;width:210px;font-size:13px;display:grid;gap:4px">
+<div style="display:flex;justify-content:space-between" class="m"><span>Total HT</span><span>708,33 €</span></div>
+<div style="display:flex;justify-content:space-between" class="m"><span>TVA 20 %</span><span>141,67 €</span></div>
+<div style="display:flex;justify-content:space-between;border-top:2px solid #10201A;padding-top:6px;margin-top:2px"><b>Total TTC</b><b class="n" style="font-size:18px">850,00 €</b></div>
+</div>
+<div style="display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px dashed #C9CFC6">
+<svg width="76" height="76" viewBox="0 0 21 21" role="img" aria-label="QR code vers le lien de paiement" shape-rendering="crispEdges" style="flex:none"><path fill="#10201A" fill-rule="evenodd" d="M0 0h7v7H0zM1 1v5h5V1zM14 0h7v7h-7zM15 1v5h5V1zM0 14h7v7H0zM1 15v5h5v-5zM2 2h3v3H2zM16 2h3v3h-3zM2 16h3v3H2zM9 0h2v2H9zM9 4h3v2H9zM12 9h2v2h-2zM8 8h3v2H8zM15 9h3v2h-3zM9 12h2v3H9zM13 13h3v2h-3zM17 12h2v2h-2zM12 17h3v2h-3zM17 16h3v3h-3zM9 18h2v3H9zM19 9h2v2h-2z"/></svg>
+<div><b style="font-size:14px">Payer en ligne</b><div class="m" style="font-size:12px;line-height:1.4">Scanne le code ou ouvre le lien de paiement.</div></div>
+</div>
+<div class="m" style="font-size:11px;line-height:1.4;margin-top:12px">Mentions légales à vérifier selon ton pays.</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;padding:12px 16px 24px;background:#fff;border-top:1px solid #E3E6DF;display:flex;gap:10px">
+<button class="b" style="flex:1;background:#fff;border:1px solid #C9CFC6">Marquer payée</button>
+<button class="b" style="flex:1.3;background:#0B7A55;color:#fff">Envoyer le lien</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic{renderVals(){return {}}}
+</script>
+</body>
+</html>

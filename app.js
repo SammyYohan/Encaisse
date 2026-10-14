@@ -76,6 +76,9 @@ const daysLate=iso=>Math.floor((Date.now()-new Date(iso+"T12:00:00").getTime())/
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const toCents=v=>Math.round(Number(String(v).replace(/[\s\u00a0\u202f']/g,"").replace(",", "."))*100)||0;
 const num=v=>Math.max(0,Number(v)||0);
+const IC={quote:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h4"/>',invoice:'<path d="M5 4h14v17l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 9h6M9 13h6"/>',undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',card:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/>',share:'<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v7h14v-7"/>',bell:'<path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',sign:'<path d="M4 20h16M5 16l9-9 3 3-9 9H5z"/>',repeat:'<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',print:'<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',chat:'<path d="M4 5h16v11H9l-5 4z"/>',phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A15 15 0 0 1 4 5a1 1 0 0 1 1-1z"/>',eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'};
+/* Icônes d'interface (trait 1.8, héritent la couleur du texte) : remplacent les emojis. */
+const ic=n=>`<svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||""}</svg>`;
 const CUR={"€":"EUR","CHF":"CHF","$":"USD"};
 /* Formats natifs par langue (nombres, dates, dictée) : l'anglais US reste en-US. */
 const BCP47={fr:"fr-FR",en:"en-US",bg:"bg-BG",es:"es-ES",cs:"cs-CZ",da:"da-DK",de:"de-DE",et:"et-EE",el:"el-GR",ga:"ga-IE",hr:"hr-HR",it:"it-IT",lv:"lv-LV",lt:"lt-LT",hu:"hu-HU",mt:"mt-MT",nl:"nl-NL",pl:"pl-PL",pt:"pt-PT",ro:"ro-RO",sk:"sk-SK",sl:"sl-SI",fi:"fi-FI",sv:"sv-SE"};
@@ -705,7 +708,7 @@ function goto(v){
   $$(".tabs button").forEach(b=>{const on=b.dataset.goto===v;b.classList.toggle("is-on",on);b.setAttribute("aria-selected",on?"true":"false")});
   $$(".view").forEach(x=>x.classList.toggle("is-active",x.dataset.view===v));
   /* le FAB « Nouveau » n'a pas de sens sur Réglages : on le masque */
-  const fab=$("#fab");if(fab)fab.classList.toggle("off",v==="reglages");
+  const fab=$("#fab");if(fab)fab.classList.remove("off");
   $("#views").scrollTop=0;
   /* restaure la position de défilement de la vue précédente plutôt que de
      toujours remonter : revenir à l'accueil retrouve sa place */
@@ -746,7 +749,7 @@ function render(){
   $("#kpiDue").textContent=fmt(sum(due),dev);$("#kpiDueN").textContent=T("{n} facture(s)",{n:due.length});
   $("#kpiLate").textContent=fmt(sum(late),dev);$("#kpiLateN").textContent=T("{n} facture(s)",{n:late.length});
   $("#kpiPaid").textContent=fmt(sum(paidThisMonth),dev);$("#kpiPaidN").textContent=T("{n} facture(s)",{n:paidThisMonth.length});
-  $("#helloLine").textContent=`${T("Bonjour 👋")} · ${S.biz.nom||T("Voici ton cash")}`;
+  $("#helloLine").textContent=`${T("Bonjour 👋").replace(/\s*\u{1F44B}/u,"")} · ${S.biz.nom||T("Voici ton cash")}`;
 
   const soon=due.filter(d=>daysLate(d.eche)>=-30);
   const totalDue=sum(due), dueSoon=sum(soon);
@@ -771,7 +774,7 @@ function cardHTML(d){
   const isAcompteBadge=d.isAcompte?`<span class="sig-signed-badge" style="background:#e0f2fe;color:#0369a1">${T("Acompte")}</span>`:"";
   const acompteDedBadge=d.acompteDeduction?`<span class="sig-signed-badge" style="background:#fef3c7;color:#92400e">-${T("Acompte déduit")}</span>`:"";
   return `<article class="doc" data-id="${d.id}">
-  <div class="doc-top"><div><b>${d.type==="devis"?"🧾":d.type==="avoir"?"↩️":"💰"} ${esc(d.numero)}</b> ${sigBadge} ${isAcompteBadge} ${acompteDedBadge}<br><small>${esc(d.client)} · ${T("émise")} ${esc(d.emis)} · ${d.type==="avoir"?`${T("Facture d'origine")} ${esc(d.avoirSourceNum||"—")}`:`${T("échéance")} ${esc(d.eche)}`}${d.demo?` · <em>${T("exemple")}</em>`:""}</small></div><span class="status ${cls}">${esc(lab)}</span></div>
+  <div class="doc-top"><div><b>${d.type==="devis"?ic("quote"):d.type==="avoir"?ic("undo"):ic("invoice")} ${esc(d.numero)}</b> ${sigBadge} ${isAcompteBadge} ${acompteDedBadge}<br><small>${esc(d.client)} · ${T("émise")} ${esc(d.emis)} · ${d.type==="avoir"?`${T("Facture d'origine")} ${esc(d.avoirSourceNum||"—")}`:`${T("échéance")} ${esc(d.eche)}`}${d.demo?` · <em>${T("exemple")}</em>`:""}</small></div><span class="status ${cls}">${esc(lab)}</span></div>
   <div class="doc-meta"><span>${T("{n} ligne(s)",{n:d.items.length})}${d.photo?" · 📷":""} · ${taxLbl()} ${num(d.tva)}%</span><span class="doc-amt">${amtOf(d)}</span></div>
   <div class="doc-actions">${actionsHTML(d)}</div></article>`;
 }
@@ -783,14 +786,14 @@ function moreBtn(d){return `<button class="chip-btn more" data-act="more" data-i
 function actionsHTML(d){
   if(d.type==="devis"){
     if(d.statut==="converti")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn go" data-act="dup" data-id="${d.id}" type="button">↻ ${T("Refaire")}</button>${moreBtn(d)}`;
-    return `<button class="chip-btn go" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button><button class="chip-btn" data-act="pay" data-id="${d.id}" type="button">📤 ${T("Partager")}</button><button class="chip-btn" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button>${moreBtn(d)}`;
+    return `<button class="chip-btn go" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button><button class="chip-btn" data-act="pay" data-id="${d.id}" type="button">${ic("share")} ${T("Partager")}</button><button class="chip-btn" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button>${moreBtn(d)}`;
   }
   if(d.type==="avoir"){
-    if(d.statut==="paye")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn" data-act="pay" data-id="${d.id}" type="button">📤 ${T("Partager")}</button>${moreBtn(d)}`;
-    return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn go" data-act="refund" data-id="${d.id}" type="button">✓ ${T("Marquer remboursée ✓")}</button>${moreBtn(d)}`;
+    if(d.statut==="paye")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn" data-act="pay" data-id="${d.id}" type="button">${ic("share")} ${T("Partager")}</button>${moreBtn(d)}`;
+    return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Aperçu / Imprimer")}</button><button class="chip-btn go" data-act="refund" data-id="${d.id}" type="button">${T("Marquer remboursée ✓")}</button>${moreBtn(d)}`;
   }
   if(d.statut==="paye")return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button">${T("Reçu / Imprimer")}</button><button class="chip-btn go" data-act="dup" data-id="${d.id}" type="button">↻ ${T("Refaire")}</button>${moreBtn(d)}`;
-  return `<button class="chip-btn pay" data-act="pay" data-id="${d.id}" type="button">💳 ${T("Lien paiement")}</button><button class="chip-btn go" data-act="paid" data-id="${d.id}" type="button">✓ ${T("Marquer payée ✓")}</button><button class="chip-btn" data-act="relance" data-id="${d.id}" type="button">🔔 ${T("Relancer")}</button>${moreBtn(d)}`;
+  return `<button class="chip-btn pay" data-act="pay" data-id="${d.id}" type="button">${ic("card")} ${T("Lien paiement")}</button><button class="chip-btn go" data-act="paid" data-id="${d.id}" type="button">${T("Marquer payée ✓")}</button><button class="chip-btn" data-act="relance" data-id="${d.id}" type="button">${ic("bell")} ${T("Relancer")}</button>${moreBtn(d)}`;
 }
 /* Toutes les actions d'un document, dans une feuille (cible tactile pleine largeur). */
 function openDocActions(id){
@@ -799,32 +802,32 @@ function openDocActions(id){
   const B=(act,label,cls="")=>`<button class="btn${cls?" "+cls:""}" data-act="${act}" data-id="${d.id}" type="button">${label}</button>`;
   const c=cliOf(d), wa=(c.tel||"").replace(/[^0-9]/g,""), mail=(c.email||"").trim();
   let h=`<h2>${T("Actions")} · ${esc(d.numero)}</h2><p class="sub">${esc(d.client)} · ${amtOf(d)}</p><div class="act-list">`;
-  h+=B("view",`👁 ${T("Aperçu / Imprimer")}`);
+  h+=B("view",`${ic("eye")} ${T("Aperçu / Imprimer")}`);
   if(!paid&&!conv){
     if(isDevis){
-      if(!d.signature)h+=B("sign",`✍️ ${T("Faire signer")}`);
+      if(!d.signature)h+=B("sign",`${ic("sign")} ${T("Faire signer")}`);
       if(!d.acompteFactureId)h+=B("acompte",`⚡ ${T("Acompte")}`);
       h+=B("convert",`→ ${T("Facturer")}`,"primary");
-      h+=B("pay",`📤 ${T("Partager")}`);
+      h+=B("pay",`${ic("share")} ${T("Partager")}`);
     }else if(isAvoir){
-      h+=B("pay",`📤 ${T("Partager")}`,"primary");
-      h+=B("refund",`✓ ${T("Marquer remboursée ✓")}`);
+      h+=B("pay",`${ic("share")} ${T("Partager")}`,"primary");
+      h+=B("refund",`${T("Marquer remboursée ✓")}`);
       h+=B("edit",`✎ ${T("Modifier")}`);
     }else{
-      h+=B("pay",`💳 ${T("Lien paiement")}`,"primary");
-      h+=B("relance",`🔔 ${T("Relancer")}`);
-      h+=B("paid",`✓ ${T("Marquer payée ✓")}`,"primary");
+      h+=B("pay",`${ic("card")} ${T("Lien paiement")}`,"primary");
+      h+=B("relance",`${ic("bell")} ${T("Relancer")}`);
+      h+=B("paid",`${T("Marquer payée ✓")}`,"primary");
       h+=B("edit",`✎ ${T("Modifier")}`);
     }
   }
   /* L'avoir est le correctif LÉGAL d'une facture : accessible même après
      paiement (remboursement) et hors plafond gratuit. */
-  h+=B("recur",`🔁 ${T("Rendre récurrent")}`);
-  if(d.type==="facture")h+=B("avoir",`↩️ ${T("Émettre un avoir")}`);
-  if(d.avoirNums&&d.avoirNums.length)h+=`<p class="sub" style="margin:4px 0 0">↩️ ${T("Avoirs émis")} : ${esc(d.avoirNums.join(", "))}</p>`;
-  if(!conv){if(wa)h+=B("shareWa","💬 WhatsApp");if(mail)h+=B("shareMail",`✉️ ${T("E-mail")}`)}
+  h+=B("recur",`${ic("repeat")} ${T("Rendre récurrent")}`);
+  if(d.type==="facture")h+=B("avoir",`${ic("undo")} ${T("Émettre un avoir")}`);
+  if(d.avoirNums&&d.avoirNums.length)h+=`<p class="sub" style="margin:4px 0 0">${ic("undo")} ${T("Avoirs émis")} : ${esc(d.avoirNums.join(", "))}</p>`;
+  if(!conv){if(wa)h+=B("shareWa",ic("chat")+" WhatsApp");if(mail)h+=B("shareMail",`${ic("mail")} ${T("E-mail")}`)}
   if(!isAvoir)h+=B("dup",`↻ ${T("Refaire")}`);
-  if(isDevis||!paid)h+=B("del",`🗑 ${T("Supprimer")}`,"danger");
+  if(isDevis||!paid)h+=B("del",`${ic("trash")} ${T("Supprimer")}`,"danger");
   h+=`</div><div class="row"><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div>`;
   openSheet(h);
   $("#cancelS").onclick=closeSheet;
@@ -873,12 +876,12 @@ function renderClis(){
     const cleanTel=(c.tel||"").replace(/[^0-9]/g,"");
     const mail=(c.email||"").trim();
     const name=cliName(c);
-    const waBtn=cleanTel?`<a class="chip-btn wa" style="text-decoration:none" href="https://wa.me/${cleanTel}" target="_blank" rel="noopener">💬 WhatsApp</a>`:"";
-    const mailBtn=mail?`<a class="chip-btn" style="text-decoration:none;background:#f8fafc" href="mailto:${esc(mail)}">✉️ ${T("E-mail")}</a>`:"";
-    const callBtn=rawTel?`<a class="chip-btn" style="text-decoration:none;background:#f8fafc" href="tel:${esc(rawTel)}">📞 ${T("Appeler")}</a>`:"";
+    const waBtn=cleanTel?`<a class="chip-btn wa" style="text-decoration:none" href="https://wa.me/${cleanTel}" target="_blank" rel="noopener">${ic("chat")} WhatsApp</a>`:"";
+    const mailBtn=mail?`<a class="chip-btn" style="text-decoration:none" href="mailto:${esc(mail)}">${ic("mail")} ${T("E-mail")}</a>`:"";
+    const callBtn=rawTel?`<a class="chip-btn" style="text-decoration:none" href="tel:${esc(rawTel)}">${ic("phone")} ${T("Appeler")}</a>`:"";
     const first=esc((name.split("—")[0]||name).trim().split(" ")[0]);
-    return `<article class="doc" data-cfiche="${c.id}"><div class="doc-top"><div><b>☺ ${esc(name)}</b><br><small>${esc(c.tel||c.email||"—")} ${dueBy[c.id]?`· ${T("doit")} <b style="color:var(--red)">${fmt(dueBy[c.id],S.biz.devise)}</b>`:`· ${T("à jour ✓")}`}</small></div><span class="status ${dueBy[c.id]?"s-retard":"s-paye"}">${dueBy[c.id]?T("À suivre"):"OK"}</span></div><div class="doc-actions"><button class="chip-btn go" data-cnew="${c.id}" type="button">+ ${T("Devis pour")} ${first}</button>${waBtn}${mailBtn}${callBtn}<button class="chip-btn" data-cedit="${c.id}" type="button">✎ ${T("Modifier")}</button><button class="chip-btn" data-cdel="${c.id}" type="button">${T("Retirer")}</button></div></article>`;
-  }).join(""):`<div class="empty">☺️ ${T("Ajoute ton premier client pour facturer en 1 clic.")}<br><button class="btn primary small" data-addcli="1" type="button">${T("+ Client")}</button></div>`;
+    return `<article class="doc" data-cfiche="${c.id}"><div class="doc-top"><div><b>${ic("user")} ${esc(name)}</b><br><small>${esc(c.tel||c.email||"—")} ${dueBy[c.id]?`· ${T("doit")} <b style="color:var(--red)">${fmt(dueBy[c.id],S.biz.devise)}</b>`:`· ${T("à jour ✓")}`}</small></div><span class="status ${dueBy[c.id]?"s-retard":"s-paye"}">${dueBy[c.id]?T("À suivre"):"OK"}</span></div><div class="doc-actions"><button class="chip-btn go" data-cnew="${c.id}" type="button">+ ${T("Devis pour")} ${first}</button>${waBtn}${mailBtn}${callBtn}<button class="chip-btn" data-cedit="${c.id}" type="button">✎ ${T("Modifier")}</button><button class="chip-btn" data-cdel="${c.id}" type="button">${T("Retirer")}</button></div></article>`;
+  }).join(""):`<div class="empty">${ic("user")} ${T("Ajoute ton premier client pour facturer en 1 clic.")}<br><button class="btn primary small" data-addcli="1" type="button">${T("+ Client")}</button></div>`;
 }
 /* ---------- abonnement ---------- */
 /* BÊTA GRATUITE (semaine de lancement) : betaFree() neutralise le système
@@ -968,7 +971,7 @@ function renderPlanCard(){
   /* BÊTA GRATUITE : carte neutre — ni prix, ni compteur, ni bouton d'offre.
      La version commerciale ci-dessous est inchangée. */
   if(betaFree()){
-    el.innerHTML=`<h3>✨ ${T("Accès complet Pro")}</h3>
+    el.innerHTML=`<h3>${T("Accès complet Pro")}</h3>
     <div class="doc-meta"><span>${T("Version")}</span><b>${T("Offerte & Illimitée")}</b></div>
     <small class="muted">${T("Devis, factures, exports comptables et gestion clients illimités.")}</small>`;
     const b=$("#planBadge");
@@ -981,7 +984,7 @@ function renderPlanCard(){
   const badge=S.sub?.plan==="free"
     ? `${T("Gratuit")} · ${Math.min(nMonth,FREE_MONTHLY)}/${FREE_MONTHLY} ${T("factures/mois")}`
     : "Pro ✓";
-  el.innerHTML=`<h3>💳 Pro · ${fmtSub(SUB.m)}/${T("mois")} · ${fmtSub(SUB.a)}/${T("an")}</h3>
+  el.innerHTML=`<h3>${ic("card")} Pro · ${fmtSub(SUB.m)}/${T("mois")} · ${fmtSub(SUB.a)}/${T("an")}</h3>
   <div class="doc-meta"><span>${T("Plan actuel")}</span><b>${badge}</b></div>
   ${S.sub?.plan==="free"
     ? `<div class="free-progress" aria-label="${T("Progression")}"><i style="width:${Math.min(100,nMonth/FREE_MONTHLY*100)}%"></i></div><small class="muted">${Math.max(0,FREE_MONTHLY-nMonth)} ${T("facture(s) gratuite(s) restante(s) ce mois-ci · devis illimités · ensuite Pro")} ${prix}. <em>${T("Exemples non comptés.")}</em></small>`
@@ -1013,7 +1016,7 @@ function openNew(prefillClient){
   const cliOpts=S.clients.map(c=>`<option value="${c.id}" ${c.id===prefillClient?"selected":""}>${esc(cliName(c))}</option>`).join("")||`<option value="">— ${T("crée d'abord un client")} —</option>`;
 
   openSheet(`<h2>${T("Nouveau document")}</h2><p class="sub">${T("Devis → facture → paiement → relance. 60 secondes, même hors-ligne.")}</p>
-  <div class="filters" id="nt"><button class="is-on" data-t="devis" type="button">🧾 ${T("Devis")}</button><button data-t="facture" type="button">💰 ${T("Facture")}</button></div>
+  <div class="filters" id="nt"><button class="is-on" data-t="devis" type="button">${ic("quote")} ${T("Devis")}</button><button data-t="facture" type="button">${ic("invoice")} ${T("Facture")}</button></div>
   <div class="form" style="margin-top:10px">
   <label>${T("Client")}<select id="fCli">${cliOpts}</select></label>
   <div class="row"><button class="btn small ghost" id="inlineCliBtn" type="button">+ ${T("Nouveau client")}</button></div>
@@ -1244,10 +1247,10 @@ function openFicheClient(id){
   const tEntries=(S.time||[]).filter(t=>t.clientId===id).sort((a,b)=>(b.date||"")<(a.date||"")?-1:1);
   const tMin=tEntries.filter(t=>!t.done).reduce((a,t)=>a+num(t.min),0);
   const docRows=docs.length?docs.map(d=>{
-    return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button" style="width:100%;text-align:left;display:flex;justify-content:space-between;gap:8px"><span>${d.type==="devis"?"🧾":d.type==="avoir"?"↩️":"💰"} ${esc(d.numero)} · ${esc(d.emis||"")}</span><b>${amtOf(d)}</b></button>`;
+    return `<button class="chip-btn" data-act="view" data-id="${d.id}" type="button" style="width:100%;text-align:left;display:flex;justify-content:space-between;gap:8px"><span>${d.type==="devis"?ic("quote"):d.type==="avoir"?ic("undo"):ic("invoice")} ${esc(d.numero)} · ${esc(d.emis||"")}</span><b>${amtOf(d)}</b></button>`;
   }).join(""):`<div class="empty">${T("Aucun document.")}</div>`;
   const tRows=tEntries.length?tEntries.map(t=>`<div class="doc-meta" style="align-items:center"><span>⏱ ${esc(t.label||T("Article"))} · ${esc(t.date||"")} · ${fmtDuree(t.min)}${t.done?" ✓":""}</span><button class="chip-btn" data-tdel="${t.id}" type="button" aria-label="${T("Supprimer")}">×</button></div>`).join(""):`<div class="empty">${T("Aucun temps à facturer.")}</div>`;
-  openSheet(`<h2>☺ ${esc(cliName(c))}</h2><p class="sub">${esc(c.tel||c.email||"—")}${c.adresse?" · "+esc(c.adresse):""}</p>
+  openSheet(`<h2>${ic("user")} ${esc(cliName(c))}</h2><p class="sub">${esc(c.tel||c.email||"—")}${c.adresse?" · "+esc(c.adresse):""}</p>
   <div class="card" style="margin:0 0 10px">
     <div class="doc-meta"><span>${T("À encaisser")}</span><b>${fmt(sum(due),dev)}</b></div>
     <div class="doc-meta"><span>${T("En retard >7j")}</span><b>${fmt(sum(late),dev)}</b></div>
@@ -1255,8 +1258,8 @@ function openFicheClient(id){
   </div>
   <div class="row" style="margin-bottom:10px">
     <button class="btn small primary" id="fNewDoc" type="button">+ ${T("Devis")}</button>
-    ${tel?`<a class="btn small wa" style="text-decoration:none" href="https://wa.me/${tel}" target="_blank" rel="noopener">💬 WhatsApp</a>`:""}
-    ${mail?`<a class="btn small" style="text-decoration:none" href="mailto:${esc(mail)}">✉️ ${T("E-mail")}</a>`:""}
+    ${tel?`<a class="btn small wa" style="text-decoration:none" href="https://wa.me/${tel}" target="_blank" rel="noopener">${ic("chat")} WhatsApp</a>`:""}
+    ${mail?`<a class="btn small" style="text-decoration:none" href="mailto:${esc(mail)}">${ic("mail")} ${T("E-mail")}</a>`:""}
     <button class="btn small ghost" id="fEdit" type="button">✎ ${T("Modifier")}</button>
     <button class="btn small ghost" id="fDel" type="button">${T("Supprimer")}</button>
   </div>
@@ -1312,7 +1315,7 @@ function openTimeBill(id){
   openSheet(`<h2>⏱ ${T("Facturer le temps")}</h2>
   <p class="sub">${esc(cliName(c))} · ${entries.length} · ${fmtDuree(mins)}</p>
   <div class="form">
-    <div class="filters" id="tt"><button class="is-on" data-t="devis" type="button">🧾 ${T("Devis")}</button><button data-t="facture" type="button">💰 ${T("Facture")}</button></div>
+    <div class="filters" id="tt"><button class="is-on" data-t="devis" type="button">${ic("quote")} ${T("Devis")}</button><button data-t="facture" type="button">${ic("invoice")} ${T("Facture")}</button></div>
     <label>${T("Prix / heure")} (${S.biz.devise})<input id="tPrice" inputmode="decimal"></label>
     <label>${T("Échéance")}<input id="tEche" type="date" value="${addDays(todayISO(),15)}"></label>
     <div class="total"><span>${T("Total TTC estimé")}</span><b id="tTot">0</b></div>
@@ -1344,7 +1347,7 @@ function openTimeBill(id){
 function openSign(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const tt=totals(d);
-  openSheet(`<h2>✍️ ${T("Signature client — Bon pour accord")}</h2><p class="sub">${esc(d.numero)} · ${fmt(tt.ttc,S.biz.devise)} · ${esc(d.client)}</p>
+  openSheet(`<h2>${ic("sign")} ${T("Signature client — Bon pour accord")}</h2><p class="sub">${esc(d.numero)} · ${fmt(tt.ttc,S.biz.devise)} · ${esc(d.client)}</p>
   <div class="sig-pad-box" id="sigBox">
     <p style="font-size:12px;color:var(--mut);margin:0 0 6px">${T("Fais signer le client avec le doigt sur l'écran :")}</p>
     <canvas id="sigCanvas" class="sig-canvas" width="380" height="140"></canvas>
@@ -1455,7 +1458,7 @@ function openAcompte(id){
 function openAvoir(id){
   const d=S.docs.find(x=>x.id===id);if(!d||d.type!=="facture")return;
   const tt=totals(d);
-  openSheet(`<h2>↩️ ${T("Émettre un avoir")}</h2>
+  openSheet(`<h2>${ic("undo")} ${T("Émettre un avoir")}</h2>
   <p class="sub">${T("Reprend les lignes de {n} ({a}) pour {c}. Série AVT dédiée — modifiable tant qu'il n'est pas remboursé.",{n:d.numero,a:fmt(tt.net??tt.ttc,S.biz.devise),c:d.client})}</p>
   <div class="row" style="margin-top:8px">
     <button class="btn primary" id="mkAvoir" type="button" style="flex:1">${T("Créer l'avoir ✓")}</button>
@@ -1500,7 +1503,7 @@ function addInterval(iso,freq){
 function openRecur(id){
   const d=S.docs.find(x=>x.id===id);if(!d||d.type!=="facture")return;
   const tt=totals(d);
-  openSheet(`<h2>🔁 ${T("Rendre récurrent")}</h2>
+  openSheet(`<h2>${ic("repeat")} ${T("Rendre récurrent")}</h2>
   <p class="sub">${esc(d.numero)} · ${fmt(tt.net??tt.ttc,S.biz.devise)} · ${esc(d.client)}</p>
   <div class="form">
     <div class="filters" id="recFreq">
@@ -1528,9 +1531,9 @@ function openRecList(){
     const c=S.clients.find(x=>x.id===r.clientId)||{};
     const nm=cliName(c);
     const st=r.active?`<span class="status s-paye">${T("Active")}</span>`:`<span class="status s-brouillon">${T("En pause")}</span>`;
-    return `<article class="doc"><div class="doc-top"><div><b>🔁 ${esc(nm)}</b><br><small>${r.freq==="weekly"?T("Hebdomadaire"):T("Mensuelle")} · ${T("Prochaine émission")} ${esc(r.next||"—")}</small></div>${st}</div><div class="doc-actions"><button class="chip-btn" data-rtoggle="${r.id}" type="button">${r.active?T("Suspendre"):T("Reprendre")}</button><button class="chip-btn" data-rdel="${r.id}" type="button">${T("Supprimer")}</button></div></article>`;
+    return `<article class="doc"><div class="doc-top"><div><b>${ic("repeat")} ${esc(nm)}</b><br><small>${r.freq==="weekly"?T("Hebdomadaire"):T("Mensuelle")} · ${T("Prochaine émission")} ${esc(r.next||"—")}</small></div>${st}</div><div class="doc-actions"><button class="chip-btn" data-rtoggle="${r.id}" type="button">${r.active?T("Suspendre"):T("Reprendre")}</button><button class="chip-btn" data-rdel="${r.id}" type="button">${T("Supprimer")}</button></div></article>`;
   }).join("");
-  openSheet(`<h2>🔁 ${T("Récurrences")}</h2><p class="sub">${T("Hebdomadaire")} / ${T("Mensuelle")} · ${T("Prochaine émission")}</p>
+  openSheet(`<h2>${ic("repeat")} ${T("Récurrences")}</h2><p class="sub">${T("Hebdomadaire")} / ${T("Mensuelle")} · ${T("Prochaine émission")}</p>
   <div class="list">${rows||`<div class="empty">${T("Aucune récurrence.")}</div>`}</div>
   <div class="row" style="margin-top:10px"><button class="btn ghost" id="cancelS" type="button">${T("Fermer")}</button></div>`);
   $("#cancelS").onclick=closeSheet;
@@ -1640,6 +1643,14 @@ function fiscalMention(docTva){
 }
 
 /* ---------- aperçu facture / devis conforme & imprimable ---------- */
+/* Mention de retard de paiement par pays (même formulation que la relance J+15).
+   Était appelée par openView() sans être définie : l'aperçu plantait. */
+function lateNotice(p){
+  return p==="CH"?T("Intérêt moratoire de 5% (art. 104 CO) applicable.")
+    :p==="BE"?T("Pénalités légales + indemnité forfaitaire 40 € (loi 02/08/2002) applicables.")
+    :p==="US"?T("Applicable late fees and interest will be charged.")
+    :T("Pénalités légales + indemnité forfaitaire 40 € (art. L441-10 C. com.) applicables.");
+}
 function openView(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;
   const tt=totals(d);
@@ -1674,7 +1685,7 @@ function openView(id){
       <img src="${esc(d.signature)}" alt="${T("Signature client")}" class="doc-sig-img">
     </div>`:(isDevis?`
     <div style="margin-top:10px;text-align:center">
-      <button class="chip-btn" data-act="sign" data-id="${d.id}" type="button" style="background:#ecfdf5;border-color:#86efac;color:#065f46">✍️ ${T("Faire signer le client maintenant (Bon pour accord)")}</button>
+      <button class="chip-btn" data-act="sign" data-id="${d.id}" type="button" style="background:#ecfdf5;border-color:#86efac;color:#065f46">${ic("sign")} ${T("Faire signer le client maintenant (Bon pour accord)")}</button>
     </div>`:"");
 
   const addr=v=>v?`<div style="font-size:11px;color:var(--mut)">${esc(v)}</div>`:"";
@@ -1683,9 +1694,9 @@ function openView(id){
   const html=`
     <div class="doc-view-actions" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div class="row">
-        <button class="btn small primary" onclick="window.print()" type="button">🖨️ ${T("Imprimer / PDF")}</button>
-        <button class="btn small wa" data-act="shareWa" data-id="${d.id}" type="button">💬 WhatsApp</button>
-        <button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">✉️ ${T("E-mail")}</button>
+        <button class="btn small primary" onclick="window.print()" type="button">${ic("print")} ${T("Imprimer / PDF")}</button>
+        <button class="btn small wa" data-act="shareWa" data-id="${d.id}" type="button">${ic("chat")} WhatsApp</button>
+        <button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">${ic("mail")} ${T("E-mail")}</button>
       </div>
       <button class="btn small ghost" id="cancelS" type="button">✕ ${T("Fermer")}</button>
     </div>
@@ -1783,17 +1794,17 @@ function openView(id){
     <div class="row doc-view-actions" style="margin-top:12px">
       ${isDevis?`
         ${d.statut==="converti"?`<span class="status s-paye">${T("Converti en facture ✓")}</span>`
-        :`${!d.signature?`<button class="btn primary small" data-act="sign" data-id="${d.id}" type="button">✍️ ${T("Faire signer")}</button>`:""}${!d.acompteFactureId?`<button class="btn small" style="background:#f0fdfa;border-color:#99f6e4;color:#0f766e" data-act="acompte" data-id="${d.id}" type="button">⚡ ${T("Acompte")}</button>`:""}`}
+        :`${!d.signature?`<button class="btn primary small" data-act="sign" data-id="${d.id}" type="button">${ic("sign")} ${T("Faire signer")}</button>`:""}${!d.acompteFactureId?`<button class="btn small" style="background:#f0fdfa;border-color:#99f6e4;color:#0f766e" data-act="acompte" data-id="${d.id}" type="button">⚡ ${T("Acompte")}</button>`:""}`}
         <button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button>
         ${d.statut==="converti"?"":`<button class="btn primary small" data-act="convert" data-id="${d.id}" type="button">→ ${T("Facturer")}</button>`}
       `:isAvoir?`
         ${d.statut!=="paye"
-          ? `<button class="btn primary small" data-act="refund" data-id="${d.id}" type="button">✓ ${T("Marquer remboursée ✓")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">✉️ ${T("E-mail")}</button>`
+          ? `<button class="btn primary small" data-act="refund" data-id="${d.id}" type="button">${T("Marquer remboursée ✓")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="shareMail" data-id="${d.id}" type="button">${ic("mail")} ${T("E-mail")}</button>`
           : `<span class="status s-paye">${T("Avoir remboursé ✓")}</span>`}
       `:`
         ${d.statut!=="paye"
           ? `<button class="btn primary small" data-act="pay" data-id="${d.id}" type="button">${T("Lien de paiement")}</button><button class="btn small" data-act="edit" data-id="${d.id}" type="button">✎ ${T("Modifier")}</button><button class="btn small" data-act="paid" data-id="${d.id}" type="button">${T("Marquer payée ✓")}</button>`
-          : `<span class="status s-paye">${T("Facture payée ✓")}</span><button class="btn small" data-act="avoir" data-id="${d.id}" type="button">↩️ ${T("Émettre un avoir")}</button>`}
+          : `<span class="status s-paye">${T("Facture payée ✓")}</span><button class="btn small" data-act="avoir" data-id="${d.id}" type="button">${ic("undo")} ${T("Émettre un avoir")}</button>`}
       `}
       <button class="btn ghost small" id="cancelS2" type="button">${T("Fermer")}</button>
     </div>
@@ -1839,10 +1850,10 @@ function openPay(id){
   <div class="row">${btns}</div>
   <div class="row" style="margin-top:10px">
     <button class="btn ghost" id="copyL" type="button">${T("Copier le lien")}</button>
-    <button class="btn wa" data-act="shareWa" data-id="${d.id}" type="button">💬 WhatsApp →</button>
-    <button class="btn" data-act="shareMail" data-id="${d.id}" type="button">✉️ ${T("E-mail →")}</button>
+    <button class="btn wa" data-act="shareWa" data-id="${d.id}" type="button">${ic("chat")} WhatsApp →</button>
+    <button class="btn" data-act="shareMail" data-id="${d.id}" type="button">${ic("mail")} ${T("E-mail →")}</button>
     ${d.type==="facture"?`<button class="btn primary" id="markP" type="button">${T("Marquer payée ✓")}</button>`:""}
-    ${d.type==="avoir"&&d.statut!=="paye"?`<button class="btn primary" id="refundP" type="button">✓ ${T("Marquer remboursée ✓")}</button>`:""}
+    ${d.type==="avoir"&&d.statut!=="paye"?`<button class="btn primary" id="refundP" type="button">${T("Marquer remboursée ✓")}</button>`:""}
   </div>`);
   $("#copyL").onclick=async()=>{try{await navigator.clipboard.writeText(payUrl);toast(T("Lien copié ✓"))}catch{toast(T("Lien : ")+payUrl)}};
   const mp=$("#markP");
@@ -1889,8 +1900,8 @@ async function openRelance(id){
      aucun e-mail serveur pour le moment. */
   const actions=[
     `<button class="btn ghost" id="copyM" type="button">${T("Copier")}</button>`,
-    tel?`<a class="btn wa" style="text-decoration:none;text-align:center" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent(msg)}" id="sendW">💬 WhatsApp →</a>`:"",
-    mail?`<a class="btn" style="text-decoration:none;text-align:center" href="mailto:${esc(mail)}?subject=${encodeURIComponent(d.numero)}&body=${encodeURIComponent(msg)}" id="sendE">✉️ ${T("E-mail →")}</a>`:""
+    tel?`<a class="btn wa" style="text-decoration:none;text-align:center" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent(msg)}" id="sendW">${ic("chat")} WhatsApp →</a>`:"",
+    mail?`<a class="btn" style="text-decoration:none;text-align:center" href="mailto:${esc(mail)}?subject=${encodeURIComponent(d.numero)}&body=${encodeURIComponent(msg)}" id="sendE">${ic("mail")} ${T("E-mail →")}</a>`:""
   ].join("");
   openSheet(`<h2>${T("Relance")} ${ton}</h2>
   <p class="sub">${esc(d.numero)} · ${j} ${T("jour(s) de retard")} · ${T("déjà")} ${num(d.relances)} ${T("relance(s)")}</p>

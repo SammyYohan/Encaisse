@@ -1,5 +1,7 @@
 # Encaisse
 
+> 🎨 **Design system** : see [`DESIGN.md`](./DESIGN.md) (tokens, typography, components). Fonts are self-hosted in `fonts/`.
+
 For Windows copy-paste commands and multi-device sync limitations, see [`DEMARRAGE_WINDOWS.md`](./DEMARRAGE_WINDOWS.md) and [`SYNCHRONISATION.md`](./SYNCHRONISATION.md).
 
 > **Quote in 60 seconds → clear invoice → paid.**

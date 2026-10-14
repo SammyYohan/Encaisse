@@ -1,5 +1,7 @@
 # Encaisse
 
+> 🎨 **Design system** : voir [`DESIGN.md`](./DESIGN.md) (jetons, typographie, composants). Les polices sont auto-hébergées dans `fonts/`.
+
 > **Un devis en 60 secondes → une facture claire → encaissé.**
 > PWA de devis et facturation **hors-ligne d'abord**. Le ciblage international ne signifie pas que les documents sont conformes aux règles de chaque pays.
 > Bilingue **FR / EN**, paiement **Stripe uniquement**, hébergé sur **Cloudflare**.

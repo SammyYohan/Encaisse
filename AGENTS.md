@@ -43,3 +43,10 @@ python -m http.server 8080
 - `VEILLE.md` — market research + P0/P1/P2 plan. **Read before touching pricing or positioning.**
 - `AUDIT_TECHNIQUE_FR.md` — security fixes, remaining risks, production blockers (static audit only, no browser/D1/Stripe tests run).
 - `legal.html` is a draft: replace all placeholders with real required details and verify Gabonese/international obligations before launch.
+
+## Design (v34)
+
+- Habillage final = **dernier bloc de `styles.css`** (jetons `:root` / `[data-theme="dark"]`, puis composants). Modifier les jetons avant d'ajouter des couleurs en dur. Voir `DESIGN.md`.
+- Polices auto-hébergées (`fonts/`, SIL OFL) : la CSP `font-src 'self'` suffit, aucune requête tierce. Les 5 fichiers `latin` sont pré-cachés par `sw.js`.
+- Icônes d'interface : helper `ic(nom)` dans `app.js` (SVG trait 1,8). Pas d'emoji pour les icônes ; les emojis restants sont dans des clés i18n (secteurs, 📷, 🎙) : ne pas les changer sans migrer `i18n.js` et `lang/*.js`.
+- Après tout changement visuel : incrémenter `C` dans `sw.js`.

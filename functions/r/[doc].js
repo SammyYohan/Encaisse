@@ -84,32 +84,45 @@ function totals(d) {
 
 /* ---------- gabarit ---------- */
 const CSS = `
+/* Polices auto-hébergées (SIL OFL) : aucune requête tierce, disponibles hors-ligne. */
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/bricolage-grotesque-latin-ext-600-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/bricolage-grotesque-latin-ext-700-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/bricolage-grotesque-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/instrument-sans-latin-ext-400-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/instrument-sans-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/instrument-sans-latin-ext-500-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/instrument-sans-latin-500-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/instrument-sans-latin-ext-600-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/instrument-sans-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+header b,.tot .grand,.party b{font-family:\"Bricolage Grotesque\",\"Instrument Sans\",system-ui,sans-serif;letter-spacing:-.015em}
+.tot .grand,td.n{font-variant-numeric:tabular-nums}
 *{box-sizing:border-box}
-body{margin:0;background:#f6f7f9;color:#101828;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{margin:0;background:#F6F7F4;color:#10201A;font:15px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .wrap{max-width:640px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(48px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}
 header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0 14px}
 header b{font-size:17px}
-header span{font-size:11px;color:#667085;text-transform:uppercase;letter-spacing:.08em}
-.card{background:#fff;border:1px solid #e4e7ec;border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+header span{font-size:11px;color:#56625B;text-transform:uppercase;letter-spacing:.08em}
+.card{background:#fff;border:1px solid #E3E6DF;border-radius:18px;padding:18px}
 .banner{border-radius:10px;padding:10px 14px;margin:0 0 14px;font-weight:600;font-size:14px}
-.b-ok{background:#ecfdf3;color:#027a48;border:1px solid #abefc6}
-.b-wait{background:#fffaeb;color:#b54708;border:1px solid #fedf89}
+.b-ok{background:#E6F4EC;color:#0A5A3C;border:1px solid #BFE3CF}
+.b-wait{background:#FBE3D6;color:#8A3410;border:1px solid #F3C9AE}
 .party{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:6px}
-.party small{display:block;color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.party small{display:block;color:#56625B;font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
 table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
-th,td{padding:8px 6px;border-bottom:1px solid #eaecf0;text-align:left}
-th{font-size:10px;color:#667085;text-transform:uppercase;letter-spacing:.05em}
+th,td{padding:8px 6px;border-bottom:1px solid #E3E6DF;text-align:left}
+th{font-size:10px;color:#56625B;text-transform:uppercase;letter-spacing:.05em}
 td.n,th.n{text-align:right}
 .tot{margin-top:10px;font-size:13px}
 .tot div{display:flex;justify-content:space-between;padding:4px 0}
-.tot .grand{font-size:16px;font-weight:700;border-top:2px solid #101828;margin-top:6px;padding-top:8px}
-img.proof{max-width:100%;border-radius:10px;margin-top:10px;border:1px solid #eaecf0;display:block}
-.sig{margin-top:14px;padding:10px 12px;background:#f9fafb;border:1px dashed #d0d5dd;border-radius:10px;font-size:12px;color:#475467}
+.tot .grand{font-size:16px;font-weight:700;border-top:2px solid #10201A;margin-top:6px;padding-top:8px}
+img.proof{max-width:100%;border-radius:10px;margin-top:10px;border:1px solid #E3E6DF;display:block}
+.sig{margin-top:14px;padding:10px 12px;background:#F6F7F4;border:1px dashed #C9CFC6;border-radius:10px;font-size:12px;color:#34443C}
 .sig img{max-height:64px;display:block;margin-top:6px}
-.pay{display:block;text-align:center;background:#0f766e;color:#fff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 16px;border-radius:12px;margin-top:16px}
+.pay{display:block;text-align:center;background:#0B7A55;color:#fff;text-decoration:none;font-weight:600;font-size:16px;min-height:52px;line-height:24px;padding:14px 16px;border-radius:14px;margin-top:16px}
 .pay:active{transform:translateY(1px)}
-.note{font-size:12px;color:#667085;text-align:center;margin:10px 0 0}
-footer{font-size:11px;color:#98a2b3;text-align:center;margin-top:16px;line-height:1.7;word-break:break-word}
+.note{font-size:12px;color:#56625B;text-align:center;margin:10px 0 0}
+footer{font-size:11px;color:#56625B;text-align:center;margin-top:16px;line-height:1.7;word-break:break-word}
 @media print{body{background:#fff}.pay,.note{display:none}.card{border:none;box-shadow:none}}
 `;
 
@@ -182,7 +195,7 @@ function render(slug, row, p, opts) {
       payBtn = `<div class="pay-offline" style="margin-top:16px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;text-align:center">
         <b style="display:block;font-size:14px;color:#0f172a;margin-bottom:6px">${lang === "en" ? "Payment instructions" : "Règlement de la facture"}</b>
         ${biz.iban ? `
-        <div style="font-size:12px;color:#475467;margin-bottom:4px">${lang === "en" ? "Bank transfer to IBAN:" : "Effectuez votre virement sur le compte :"}</div>
+        <div style="font-size:12px;color:#34443C;margin-bottom:4px">${lang === "en" ? "Bank transfer to IBAN:" : "Effectuez votre virement sur le compte :"}</div>
         <code style="display:inline-block;padding:6px 12px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:.04em;margin-bottom:8px;user-select:all">${esc(biz.iban)}</code>
         ` : ""}
         <div style="font-size:12px;color:#64748b">${tpl(Lx.manual, { m: mManual || (lang === "en" ? "Bank transfer / Check / Cash" : "Virement bancaire / Chèque / Espèces") })}</div>
@@ -194,7 +207,7 @@ function render(slug, row, p, opts) {
     ? `<p class="note">${tpl(Lx.avTxt, { n: d.avoirSourceNum || d.numero || "" })}</p>`
     : "";
 
-  const proof = d.photo ? `<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:#667085;margin-bottom:4px">${Lx.proof}</div><img class="proof" src="${esc(d.photo)}" alt="${Lx.proof}"></div>` : "";
+  const proof = d.photo ? `<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:#56625B;margin-bottom:4px">${Lx.proof}</div><img class="proof" src="${esc(d.photo)}" alt="${Lx.proof}"></div>` : "";
   const sig = (d.signature && isDevis) ? `<div class="sig">${Lx.signed}<br><small>${tpl(Lx.signedOn, { d: d.signedAt || d.emis || "" })}</small><img src="${esc(d.signature)}" alt=""></div>` : "";
 
   const acompteRows = tt.acompte > 0
@@ -217,7 +230,7 @@ function render(slug, row, p, opts) {
     <div>
       <small>${Lx.billed}</small>
       <b>${esc(d.client || "—")}</b>
-      ${d.clientId ? `<div style="color:#667085;font-size:11px">${Lx.ref} : ${esc(d.clientId)}</div>` : ""}
+      ${d.clientId ? `<div style="color:#56625B;font-size:11px">${Lx.ref} : ${esc(d.clientId)}</div>` : ""}
     </div>
     <div style="text-align:right">
       <small>${Lx.emitted}</small>${esc(d.emis || "—")}

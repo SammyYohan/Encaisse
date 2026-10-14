@@ -1,4 +1,16 @@
-/* Encaisse SLC — 1 fichier, 0 dépendance, mobile-first, <14KB */
+/* Encaisse — 1 fichier de styles, 0 dépendance, mobile-first */
+/* Polices auto-hébergées (SIL OFL) : aucune requête tierce, disponibles hors-ligne. */
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/bricolage-grotesque-latin-ext-600-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/bricolage-grotesque-latin-ext-700-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/bricolage-grotesque-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/instrument-sans-latin-ext-400-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/instrument-sans-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/instrument-sans-latin-ext-500-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/instrument-sans-latin-500-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/instrument-sans-latin-ext-600-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/instrument-sans-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
 :root{
   --ink:#0f172a; --ink2:#334155; --mut:#64748b; --line:#e2e8f0;
   --bg:#eef2f7; --card:#ffffff; --soft:#f8fafc;
@@ -436,3 +448,223 @@ input,select,textarea{transition:background-color .45s ease,border-color .45s ea
 }
 :where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid var(--acc);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* ======================================================================
+   Encaisse — design « calme et fiable » (release v34)
+   Jetons → typo → surfaces → composants → onboarding → thème sombre.
+   Bloc volontairement placé en dernier : il remplace l'ancien habillage
+   (dégradés, reflets, emojis) sans toucher à la logique de l'app.
+   ====================================================================== */
+:root{
+  --ink:#10201A;--ink2:#34443C;--mut:#56625B;--line:#E3E6DF;--bg:#F6F7F4;--card:#fff;--soft:#F6F7F4;
+  --acc:#0B7A55;--acc-d:#096447;--acc-l:#7FE0B0;--amb:#C2410C;--red:#B42318;--vio:#2F3A8F;
+  --r:18px;--sh:0 1px 2px rgba(16,32,26,.06),0 8px 24px rgba(16,32,26,.07);--sh-s:0 1px 2px rgba(16,32,26,.05);
+  --f:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --fd:"Bricolage Grotesque","Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --hero:#10201A;--hero-line:#2C4238;--hero-mut:#B9C7BF;
+  --tint:#E6F4EC;--tint-line:#BFE3CF;--tint-fg:#0A5A3C;
+  --n-bg:#E4E9E6;--n-fg:#34443C;--late-bg:#FBE3D6;--late-fg:#8A3410;--ok-bg:#D5F0E1;--ok-fg:#0A5A3C;--sig-bg:#E3E7FB;--sig-fg:#2F3A8F;
+}
+[data-theme="dark"]{
+  --ink:#E8F0EA;--ink2:#C3D1C8;--mut:#93A79B;--line:#25392F;--bg:#0A130F;--card:#13211A;--soft:#0E1813;
+  --hero:#0C1F17;--hero-line:#24392F;
+  --tint:#0F2A20;--tint-line:#1B4A38;--tint-fg:#9FE8C4;
+  --n-bg:#22342B;--n-fg:#C3D1C8;--late-bg:#3A2214;--late-fg:#FFB38A;--ok-bg:#0F3A29;--ok-fg:#9FE8C4;--sig-bg:#1E2347;--sig-fg:#B9C2FF;
+  --sh:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+
+/* --- base & typographie --- */
+body,[data-theme="dark"] body{background:var(--bg);background-attachment:scroll;font-family:var(--f);font-size:15px;line-height:1.45}
+.brand,.sec-head h2,.card h3,.sheet h2,h2.pad,.slide h1,.doc-top b,.doc-amt,.total b,.kpi-card strong,.inv-biz-title,.inv-doc-num,.inv-tot-row.grand,.plan .p,.kpi strong{font-family:var(--fd);letter-spacing:-.015em}
+.kpi-card strong,.doc-amt,.total b,.inv-table td,.inv-tot-row,.paylist{font-variant-numeric:tabular-nums}
+.sec-head h2,.card h3{font-size:18px;font-weight:700}
+h2.pad{font-size:26px;line-height:1.15;padding-top:18px}
+.sheet h2{font-size:22px;line-height:1.15}
+.ic{vertical-align:-3px;flex:none}
+.muted{color:var(--mut)}
+::selection{background:var(--acc-l);color:#10201A}
+[data-theme="dark"] ::selection{background:#0F4A35;color:#E8F0EA}
+
+/* --- cadre : plein écran sur mobile, carte posée sur grand écran --- */
+.phone{background:var(--soft);border:1px solid var(--line);box-shadow:var(--sh)}
+.phone::before{display:none}
+@media(max-width:559px){
+  .stage{padding:0}
+  .phone{width:100%;min-height:100dvh;border-radius:0;border:0;box-shadow:none}
+}
+
+/* --- en-tête --- */
+.top{padding-top:calc(14px + env(safe-area-inset-top,0px));background:linear-gradient(var(--soft) 85%,transparent);backdrop-filter:none}
+[data-theme="dark"] .top{background:linear-gradient(var(--soft) 85%,transparent)}
+.brand{font-weight:700;letter-spacing:-.02em}
+.logo{background:none;border:0;border-radius:9px;box-shadow:none}
+.logo::after{display:none}
+.pill-pays,.dot-net{box-shadow:none;font-weight:600;color:var(--ink2)}
+.dot-net i{background:var(--acc);box-shadow:0 0 0 3px var(--tint)}
+.plan-badge{font-weight:600;background:var(--ok-bg);color:var(--ok-fg)}
+.plan-badge.pro{background:var(--acc);color:#fff}
+.views{padding:2px 16px 140px}
+
+/* --- accueil : carte « cash » --- */
+.hero{background:var(--hero);border:1px solid var(--hero-line);border-radius:24px;padding:20px;box-shadow:none}
+.hero::before,.hero::after{display:none}
+.eyebrow{color:var(--hero-mut);font-size:13px;margin-bottom:10px}
+.kpis{grid-template-columns:1fr 1fr;gap:0 16px}
+.kpi-card{background:none;border:0;border-radius:0;padding:0;backdrop-filter:none;color:#fff}
+.kpi-card:hover{transform:none;background:none;box-shadow:none}
+.kpi-card[data-kpi="due"]{grid-column:1/-1;margin-bottom:6px}
+.kpi-card:not([data-kpi="due"]){border-top:1px solid var(--hero-line);padding-top:14px;margin-top:8px}
+.kpi-card span{font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--hero-mut)}
+.kpi-card strong{font-size:22px;font-weight:700;color:#fff}
+.kpi-card[data-kpi="due"] strong{font-size:40px;line-height:1.1}
+.kpi-card.alert strong{color:#FFB38A}.kpi-card.ok strong{color:var(--acc-l)}
+.kpi-card em,.kpi-card.alert em,.kpi-card.ok em{color:var(--hero-mut);font-size:12px}
+.cashbar{background:none;border:0;border-radius:0;padding:0;margin-top:18px;color:var(--hero-mut)}
+.cashbar-top b{color:#fff}
+.track{height:6px;background:var(--hero-line)}
+.track i{background:var(--acc-l)}
+.cashbar small{color:var(--hero-mut)}
+.sec-head{margin:22px 2px 8px}
+
+/* --- listes & cartes document --- */
+.doc{padding:14px 16px;gap:10px;box-shadow:none}
+.doc[data-id]:hover,.card:hover{transform:none;box-shadow:var(--sh);border-color:var(--line)}
+.card{box-shadow:none;padding:16px}
+.doc-top b{font-size:15px;font-weight:700}
+.doc-top b .ic{color:var(--mut)}
+.doc-meta{font-size:13px}
+.doc-amt{font-size:17px}
+.empty{box-shadow:none;border:1px dashed var(--line)}
+.status,.sig-signed-badge{font-weight:600}
+.s-brouillon,.s-envoye,.s-converti{background:var(--n-bg);color:var(--n-fg)}
+.s-retard,.s-annule{background:var(--late-bg);color:var(--late-fg)}
+.s-paye{background:var(--ok-bg);color:var(--ok-fg)}
+.s-signe,.sig-signed-badge{background:var(--sig-bg);color:var(--sig-fg)}
+.chip-btn{min-height:44px;padding:0 14px;font-size:13px;font-weight:600;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.chip-btn.more{min-width:44px;padding:0}
+.chip-btn.go{background:var(--card);color:var(--ink);border-color:var(--line)}
+.chip-btn[data-act="convert"],.chip-btn.pay{background:var(--acc);border-color:var(--acc);color:#fff}
+.chip-btn.wa{background:var(--tint);border-color:var(--tint-line);color:var(--tint-fg)}
+[data-theme="dark"] .chip-btn.go{background:var(--card);color:var(--ink);border-color:var(--line)}
+[data-theme="dark"] .chip-btn[data-act="convert"],[data-theme="dark"] .chip-btn.pay{background:var(--acc);border-color:var(--acc);color:#fff}
+
+/* --- recherche & filtres --- */
+.search{border-radius:14px;min-height:48px;box-shadow:none}
+.search:focus-within{transform:none;box-shadow:none}
+.search input{min-height:0;padding:12px 0}
+.search svg{flex:none;color:var(--mut)}
+.filters button{min-height:44px;padding:0 14px;font-size:14px;font-weight:600}
+.cnt-badge,[data-theme="dark"] .cnt-badge{background:none;padding:0;margin-left:3px;font-size:inherit;font-weight:600;color:var(--mut)}
+.cnt-badge.alert{color:var(--late-fg)}
+.filters button.is-on .cnt-badge,.filters button.is-on .cnt-badge.alert,[data-theme="dark"] .filters button.is-on .cnt-badge,[data-theme="dark"] .filters button.is-on .cnt-badge.alert{background:none;color:inherit;opacity:.78}
+
+/* --- boutons & champs --- */
+.btn{min-height:48px;padding:0 18px;font-weight:600;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn:hover,.chip-btn:hover,.filters button:hover,.pay-toggles button:hover{transform:none;box-shadow:none}
+.btn.small{min-height:44px;padding:0 14px;font-size:14px;border-radius:12px}
+.btn.big{min-height:56px;font-size:17px;border-radius:16px}
+.btn.primary{background:var(--acc);border-color:transparent;color:#fff;box-shadow:none}
+.btn.primary:hover{background:var(--acc-d);box-shadow:none;filter:none}
+.btn.wa{background:var(--tint);border-color:var(--tint-line);color:var(--tint-fg)}
+#sendW,#sendE{text-decoration:none}
+#sendW{background:var(--acc);border-color:transparent;color:#fff}
+.btn.danger{color:var(--red);border-color:var(--late-bg)}
+.act-list .btn{min-height:52px}
+.act-list .btn.danger{background:var(--late-bg);color:var(--late-fg)}
+[data-theme="dark"] .btn.danger{color:var(--late-fg)}
+input,select,textarea{border-radius:14px;padding:12px 14px}
+input:not([type="checkbox"]):not([type="file"]),select{min-height:48px}
+textarea{min-height:96px}
+.check-row input{min-height:0}
+.form label{font-weight:600;font-size:13px;color:var(--ink2)}
+.line>button{min-height:48px}
+.line input{padding:12px 10px}
+.rule{background:var(--tint);border-color:var(--tint-line);color:var(--tint-fg);border-radius:14px}
+.pay-toggles button{min-height:44px;font-weight:600}
+.pay-toggles button.is-on,[data-theme="dark"] .pay-toggles button.is-on{background:var(--tint);border-color:var(--acc);color:var(--tint-fg)}
+.cycle button{min-height:44px}
+.preset-chip{min-height:36px;padding:0 12px}
+.preset-chip:hover,.preset-chip:active,[data-theme="dark"] .preset-chip:hover{background:var(--tint);border-color:var(--acc);color:var(--tint-fg);transform:none}
+.total{background:var(--soft)}
+.total b{font-size:18px}
+.paylink{background:var(--hero)}
+.wa-preview,[data-theme="dark"] .wa-preview{background:var(--tint);border:0;color:var(--ink);border-radius:18px 18px 18px 4px;font-size:15px;line-height:1.55;padding:16px}
+.plan-card,[data-theme="dark"] .plan-card{border:1px solid var(--tint-line);background:var(--tint)}
+.plan.is-pro{box-shadow:none;border-color:var(--acc)}
+.sig-pad-box.has-sig,[data-theme="dark"] .sig-pad-box.has-sig{background:var(--tint);border-color:var(--tint-line)}
+.install-bar{background:var(--tint);border-color:var(--tint-line);color:var(--tint-fg)}
+.demo-bar{background:var(--late-bg);border-color:transparent;color:var(--late-fg)}
+.install-bar-act .btn{min-height:44px;padding:0 14px;font-size:13px}
+.toast{bottom:calc(104px + env(safe-area-inset-bottom,0px));font-weight:600}
+:where(button,a,input,select,textarea,[tabindex]):focus-visible,input:focus,select:focus,textarea:focus{outline-color:var(--acc)}
+[data-theme="dark"] :where(button,a,input,select,textarea,[tabindex]):focus-visible,[data-theme="dark"] input:focus,[data-theme="dark"] select:focus,[data-theme="dark"] textarea:focus{outline-color:var(--acc-l)}
+
+/* --- dock + bouton « + » central --- */
+.tabs{left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:min(456px,calc(100% - 24px));grid-template-columns:1fr 1fr 76px 1fr 1fr;align-items:center;background:var(--card);backdrop-filter:none;border:1px solid var(--line);border-radius:22px;padding:6px;box-shadow:var(--sh)}
+[data-theme="dark"] .tabs{background:var(--card)}
+.tabs button:nth-child(3){grid-column:4}.tabs button:nth-child(4){grid-column:5}
+.tabs button{min-height:56px;font-size:11px;font-weight:600;gap:3px;border-radius:16px;color:var(--mut);position:relative}
+.tabs button:hover{transform:none;color:var(--ink)}
+.tabs button.is-on,[data-theme="dark"] .tabs button.is-on{background:none;color:var(--ink);box-shadow:none;font-weight:700}
+.tabs button i{display:grid;place-items:center;line-height:0}
+.tabs button.is-on i{transform:none}
+.tabs button.is-on::after{width:5px;height:5px;bottom:2px;border-radius:50%;background:var(--acc);opacity:1}
+[data-theme="dark"] .tabs button.is-on::after{background:var(--acc-l)}
+.tabs svg,.fab svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fab,[data-theme="dark"] .fab{left:50%;right:auto;bottom:calc(21px + env(safe-area-inset-bottom,0px));width:56px;height:56px;padding:0;justify-content:center;border-radius:50%;font-size:0;background:var(--ink);color:var(--card);border:0;box-shadow:none;animation:none;transform:translateX(-50%)}
+[data-theme="dark"] .fab{background:var(--acc-l);color:#10201A}
+.fab:hover{transform:translateX(-50%);box-shadow:none}
+.fab:active{transform:translateX(-50%) scale(.94)}
+
+/* --- feuilles (modales) --- */
+.scrim{background:rgba(16,32,26,.5);backdrop-filter:none}
+.sheet{border-radius:24px 24px 0 0;box-shadow:0 -12px 40px rgba(16,32,26,.18);animation:up .3s var(--ease)}
+
+/* --- aperçu facture (papier) --- */
+.invoice-paper{border-radius:16px;box-shadow:none}
+.inv-header{border-bottom:1px solid var(--line)}
+.inv-fiscal-pill,.inv-signed-box{background:var(--tint);border-color:var(--tint-line);color:var(--tint-fg)}
+.inv-tot-row.acompte{color:var(--tint-fg)}
+[data-theme="dark"] .invoice-paper{--tint:#E6F4EC;--tint-line:#BFE3CF;--tint-fg:#0A5A3C;--sig-bg:#E3E7FB;--sig-fg:#2F3A8F;--n-bg:#E4E9E6}
+
+/* --- onboarding --- */
+.onb,.onb[hidden]{background:#10201A}
+.onb[hidden]{display:none}
+.onb-bg,.onb::after{display:none}
+.onb-bar{background:var(--hero-line)}
+.onb-bar i{background:var(--acc-l)}
+.onb-top-right .link{min-height:44px;padding:0 14px;background:transparent;border-color:var(--hero-line);font-weight:600;backdrop-filter:none}
+.slide h1{font-size:40px;line-height:1.04}
+.slide h1 mark{background:none;-webkit-background-clip:initial;background-clip:initial;color:var(--acc-l)}
+.slide p{color:var(--hero-mut)}
+.slide .fine{color:#8FA398}
+.art{background:rgba(255,255,255,.05);border:1px solid var(--hero-line);box-shadow:none;backdrop-filter:none}
+.card-mini,.coin{animation:none;box-shadow:none}
+.chips li,.ticks li{background:transparent;border:1px solid var(--hero-line);font-weight:600}
+.ticks li::before{color:var(--acc-l)}
+.onb-input{min-height:48px;border-radius:14px}
+.pays-grid button{min-height:48px;border-radius:14px;background:transparent;border:1px solid var(--hero-line);font-weight:600}
+.pays-grid button:hover{transform:none;background:rgba(255,255,255,.08);border-color:var(--acc-l)}
+.pays-grid button.is-sel{background:#F6F7F4;color:#10201A}
+.dots i.is-on{background:var(--acc-l);box-shadow:none}
+.onb-nav .btn.primary{background:var(--acc-l);color:#10201A;min-height:56px;font-size:17px;border-radius:16px}
+.preset-preview .preset-chip{background:transparent;border-color:var(--hero-line)}
+
+/* --- finitions (v34) --- */
+a.btn,a.chip-btn{color:inherit;text-decoration:none}
+.btn.primary,a.btn.primary{color:#fff}
+/* Cartes document : action principale pleine largeur + « ⋯ », puis les autres actions. */
+.doc[data-id] .doc-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;gap:8px}
+.doc[data-id] .doc-actions>.chip-btn{width:100%;min-width:0;padding:0 10px}
+.doc[data-id] .doc-actions>.chip-btn:first-child{grid-column:1/3;grid-row:1}
+.doc[data-id] .doc-actions>.chip-btn.more{grid-column:3;grid-row:1}
+/* Cartes client : les actions Modifier / Retirer restent dans la fiche (toucher la carte). */
+.doc[data-cfiche] .doc-actions>[data-cedit],.doc[data-cfiche] .doc-actions>[data-cdel]{display:none}
+.doc[data-cfiche] .doc-actions>[data-cnew]{background:var(--acc);border-color:var(--acc);color:#fff}
+.doc[data-cfiche]{cursor:pointer}
+.doc-view-actions .btn{white-space:nowrap}
+.inv-meta-right{flex:1 1 150px}
+.onb-top-right{gap:8px}
+.onb-top-right select.link{max-width:124px;padding:0 10px}
+@media(max-width:520px){.inv-table{display:table;white-space:normal;overflow:visible}}
+.doc[data-id] .doc-actions>.chip-btn{font-size:12.5px;padding:0 8px;white-space:nowrap}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Encaisse — Accueil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+body{margin:0}
+.t{font-family:"Instrument Sans",system-ui,sans-serif;color:#10201A}
+.n{font-family:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:700}
+.b{border:0;font:inherit;font-weight:600;font-size:15px;cursor:pointer;border-radius:14px;min-height:48px;padding:0 18px}
+.p{display:inline-block;font-size:12px;font-weight:600;border-radius:99px;padding:4px 10px;white-space:nowrap}
+.c{background:#fff;border:1px solid #E3E6DF;border-radius:18px}
+.m{color:#56625B;font-size:13px}
+</style>
+</helmet>
+<div class="t" style="position:relative;box-sizing:border-box;width:390px;height:844px;background:#F6F7F4;padding:24px 20px 0;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;min-height:44px">
+<div><div class="m">Bonjour</div><div class="n" style="font-size:22px">Atelier Dupont</div></div>
+<span class="p" style="background:#fff;border:1px solid #E3E6DF;color:#34443C;display:flex;align-items:center;gap:6px"><i style="width:8px;height:8px;border-radius:50%;background:#0B7A55"></i>Hors-ligne OK</span>
+</div>
+<div style="margin-top:14px;background:#10201A;color:#fff;border-radius:24px;padding:20px">
+<div style="font-size:13px;color:#B9C7BF">À encaisser</div>
+<div class="n" style="font-size:44px;line-height:1.1;margin-top:2px">18 450,00 €</div>
+<div style="font-size:13px;color:#B9C7BF;margin-top:2px">5 factures en cours</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #2C4238">
+<div><div style="font-size:12px;color:#B9C7BF">En retard</div><div class="n" style="font-size:20px;color:#FFB38A">4 500,00 €</div></div>
+<div><div style="font-size:12px;color:#B9C7BF">Encaissé ce mois</div><div class="n" style="font-size:20px;color:#7FE0B0">6 200,00 €</div></div>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#B9C7BF;margin-top:16px"><span>Attendu sous 30 jours</span><b style="color:#fff">62 %</b></div>
+<div style="height:6px;border-radius:9px;background:#2C4238;margin-top:8px"><div style="width:62%;height:100%;border-radius:9px;background:#7FE0B0"></div></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin:18px 2px 8px"><h2 class="n" style="margin:0;font-size:18px">À relancer</h2><button class="b" style="background:none;color:#0B7A55;min-height:44px;padding:0 4px;font-size:14px">Tout voir</button></div>
+<div class="c" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 14px 14px 16px">
+<div><div style="font-weight:600">Awa Konaté</div><div class="m">FAC-2026-0042 · 12 j de retard</div><div class="n" style="font-size:18px;margin-top:2px">850,00 €</div></div>
+<button class="b" style="background:#0B7A55;color:#fff">Relancer</button>
+</div>
+<div class="c" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 14px 14px 16px;margin-top:10px">
+<div><div style="font-weight:600">SARL Bâti-Plus</div><div class="m">FAC-2026-0039 · 9 j de retard</div><div class="n" style="font-size:18px;margin-top:2px">3 650,00 €</div></div>
+<button class="b" style="background:#0B7A55;color:#fff">Relancer</button>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 2px 8px"><h2 class="n" style="margin:0;font-size:18px">Derniers documents</h2></div>
+<div class="c" style="padding:0 16px">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #E3E6DF"><div><div style="font-weight:600;font-size:15px">Studio Lumière</div><div class="m">DEV-2026-015</div></div><div style="text-align:right"><div class="n" style="font-size:16px">2 400,00 €</div><span class="p" style="background:#E3E7FB;color:#2F3A8F">Signé</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0"><div><div style="font-weight:600;font-size:15px">M. Perrin</div><div class="m">FAC-2026-0041</div></div><div style="text-align:right"><div class="n" style="font-size:16px">1 200,00 €</div><span class="p" style="background:#D5F0E1;color:#0A5A3C">Payée</span></div></div>
+</div>
+<nav aria-label="Navigation" style="position:absolute;left:0;right:0;bottom:0;height:84px;box-sizing:border-box;padding:8px 8px 18px;background:#fff;border-top:1px solid #E3E6DF;display:grid;grid-template-columns:repeat(5,1fr);align-items:center"><button class="b" style="background:none;color:#10201A;padding:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:700"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Accueil</button><button class="b" style="background:none;color:#56625B;padding:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>Docs</button><button class="b" aria-label="Nouveau document" style="justify-self:center;width:54px;height:54px;padding:0;border-radius:50%;background:#10201A;color:#fff;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button class="b" style="background:none;color:#56625B;padding:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Clients</button><button class="b" style="background:none;color:#56625B;padding:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Réglages</button></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic{renderVals(){return {}}}
+</script>
+</body>
+</html>
