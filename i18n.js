@@ -490,6 +490,11 @@
     "Factur-X (XML)": "Factur-X (XML)",
     "XML Factur-X téléchargé ✓": "Factur-X XML downloaded ✓",
     "Factur-X : devis exclus — factures et avoirs uniquement.": "Factur-X: quotes excluded — invoices and credit notes only.",
+    "Lien Stripe personnel (facultatif)": "Personal Stripe link (optional)",
+    "https://buy.stripe.com/…": "https://buy.stripe.com/…",
+    "Payer par carte →": "Pay by card →",
+    "Lien Stripe invalide : colle ton Payment Link (buy.stripe.com/…)": "Invalid Stripe link: paste your Payment Link (buy.stripe.com/…)",
+    "Tu as atteint tes {n} partages gratuits. Passe au payant pour continuer.": "You have reached your {n} free shares. Upgrade to continue.",
   };
 
   /* 24 langues officielles de l'UE (nom natif = libellé affiché, norme Switch) :

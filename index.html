@@ -191,6 +191,7 @@ try{var __t="auto";try{var __s=JSON.parse(localStorage.getItem("encaisse.v1")||"
           <label><span data-i18n="N° TVA / SIRET / EIN">N° TVA / SIRET / EIN</span><input name="tvaId" maxlength="40" placeholder="Ex : FR + 11 chiffres" data-i18n-ph="Ex : FR + 11 chiffres"></label>
         </div>
         <label><span data-i18n="IBAN / RIB (facultatif)">IBAN / RIB (facultatif)</span><input name="iban" maxlength="40" placeholder="Ex : FR76 …" data-i18n-ph="Ex : FR76 …"></label>
+        <label><span data-i18n="Lien Stripe personnel (facultatif)">Lien Stripe personnel (facultatif)</span><input name="stripeLink" maxlength="200" placeholder="https://buy.stripe.com/…" data-i18n-ph="https://buy.stripe.com/…" inputmode="url" autocomplete="off"></label>
         <p class="rule" id="ruleLine"></p>
         <div class="pay-toggles" id="payToggles"></div>
         <button class="btn primary" type="submit" data-i18n="Enregistrer">Enregistrer</button>

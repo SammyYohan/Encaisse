@@ -37,7 +37,7 @@ Direction : un seul accent, des montants lisibles, zéro décoration gratuite. L
 - `app.js` : helper `ic()` (icônes SVG au lieu d'emojis), **correction du bug `lateNotice()`** (non défini → l'aperçu d'un devis/facture plantait), bouton « + » toujours visible, « Bonjour » sans emoji.
 - `legal.html` et `functions/r/[doc].js` (page client) : mêmes jetons et polices.
 - `icons/*`, `manifest.webmanifest` : nouveau logo (coche menthe sur vert-noir), `theme_color` `#10201A`.
-- `sw.js` : cache `encaisse-v35`, polices pré-cachées.
+- `sw.js` : cache `encaisse-v36`, polices pré-cachées.
 
 ## Dossier `design/`
 

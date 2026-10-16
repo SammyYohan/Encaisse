@@ -189,7 +189,7 @@ anglaise dans `i18n.js`. Ne jamais traduire la clé elle-même.
 
 ### 4.6 Hors-ligne & cache
 
-`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v35`).
+`sw.js` met tout l'app en cache (constante `C`, actuellement `encaisse-v36`).
 `config.js`, `i18n.js` et `sw.js`
 sont en **network-first** pour qu'une clé ou une traduction se propage immédiatement.
 **Incrémenter la constante `C` à chaque release.**

@@ -385,5 +385,11 @@
   "Photo de chantier jointe en preuve, lignes en 3 champs, total calculé tout seul. Dictée vocale quand Chrome est en ligne. Hors-ligne d'abord : tes données restent sur ton appareil, sauf partage ou sauvegarde activée.": "Site photo attached as proof, 3-field lines, total computed automatically. Voice dictation when Chrome is online. Offline-first: your data stays on your device unless you share or back up.",
   "Factur-X (XML)": "Factur-X (XML)",
   "XML Factur-X téléchargé ✓": "Factur-X XML downloaded ✓",
-  "Factur-X : devis exclus — factures et avoirs uniquement.": "Factur-X: quotes excluded — invoices and credit notes only."
+  "Factur-X : devis exclus — factures et avoirs uniquement.": "Factur-X: quotes excluded — invoices and credit notes only.",
+  /* Relais EN (lien Stripe artisan) : sans traduction native — repli anglais. */
+  "Lien Stripe personnel (facultatif)": "Personal Stripe link (optional)",
+  "https://buy.stripe.com/…": "https://buy.stripe.com/…",
+  "Payer par carte →": "Pay by card →",
+  "Lien Stripe invalide : colle ton Payment Link (buy.stripe.com/…)": "Invalid Stripe link: paste your Payment Link (buy.stripe.com/…)",
+  "Tu as atteint tes {n} partages gratuits. Passe au payant pour continuer.": "You have reached your {n} free shares. Upgrade to continue."
 };

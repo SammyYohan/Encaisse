@@ -42,5 +42,13 @@ assert.match(api, /Ne jamais accepter l'ancien champ `key`/,
 assert.match(legal, /brouillon|working draft|à compléter|to be completed/i,
   "Legal page must clearly identify its draft/placeholder status.");
 assert.match(headers, /Content-Security-Policy/i, "Security headers should define a CSP.");
+assert.match(app, /cleanStripeLink/,
+  "Artisan payout link must be validated as a Stripe Payment Link.");
+assert.match(app, /quota_gratuite_atteinte/,
+  "Portal quota breach must route to the paywall.");
+assert.match(api, /quota_gratuite_atteinte/,
+  "Portal endpoint must enforce the free share quota with a clean 403.");
+assert.match(clientPage, /buy\\.stripe\\.com/,
+  "Customer page must only accept Stripe Payment Links.");
 
 console.log("Encaisse smoke checks: OK");

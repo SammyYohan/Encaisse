@@ -111,6 +111,15 @@ function makeQR(text){
    source pour portail, relances, abonnement et sauvegarde. */
 function siteBase(){try{const h=window.location&&window.location.hostname;if(h==="localhost"||h==="127.0.0.1"||h==="[::1]"||h==="")return ""}catch(e){}return String((window.ENCAISSE_CONFIG||{}).SITE_URL||"").replace(/\/+$/,"")}
 
+/* Lien de paiement PERSONNEL de l'artisan (son propre compte Stripe).
+   Anti-hameçonnage : seuls les Payment Links Stripe sont acceptés —
+   tout le reste (y compris PayPal, hors scope Stripe-only) est refusé. */
+function cleanStripeLink(v){
+  const s=String(v||"").trim().slice(0,200);
+  if(!s)return "";
+  if(!/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9]+/.test(s))return "";
+  return s;
+}
 function getDocUrl(docId){
   const id=encodeURIComponent(docId);
   const site=siteBase();
@@ -139,7 +148,7 @@ function portalPayload(d){
   const c=S.clients.find(x=>x.id===d.clientId)||{};
   return{doc,
     biz:{nom:b.nom||"",devise:b.devise,pays:b.pays,adresse:b.adresse||"",tvaId:b.tvaId||"",
-         iban:b.iban||"",contact:b.contact||"",moyens:b.moyens||[]},
+         iban:b.iban||"",contact:b.contact||"",moyens:b.moyens||[],stripeLink:cleanStripeLink(b.stripeLink)},
     cli:{e:String(c.email||"").slice(0,120),n:String(cliName(c)||"").slice(0,80)},
     lang:lang()};
 }
@@ -155,11 +164,14 @@ async function ensurePortal(d,silent){
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),15000);
     const r=await fetch(site+"/api/portal",{
-      method:"POST",headers:{"Content-Type":"application/json"},
+      method:"POST",headers:{"Content-Type":"application/json","X-Sub-Token":(S.sub&&S.sub.token)||""},
       body:JSON.stringify({slug:d.portal?.slug||"",hash:h,key:ownerKey(),...payload}),
       signal:ctrl.signal});
     clearTimeout(timer);
     const j=await r.json().catch(()=>({}));
+    /* Verrou freemium : quota de partages dépassé → écran d'abonnement
+       (silencieux en BÊTA GRATUITE : openPaywall() ne fait rien, lien local). */
+    if(r.status===403&&j.error==="quota_gratuite_atteinte"){closeSheet();openPaywall(T("Tu as atteint tes {n} partages gratuits. Passe au payant pour continuer.",{n:5}));if(!silent)toast(T("Portail client indisponible — lien local utilisé."));return{url:getDocUrl(d.id),server:false}}
     if(!r.ok||!j.slug)throw new Error(j.error||("http_"+r.status));
     const first=!d.portal?.slug;
     d.portal={slug:j.slug,hash:h};
@@ -534,7 +546,7 @@ const planOf=()=>PLANS[zoneKey()];
 const fmtP=v=>{const z=zoneKey();if(z==="EUR")return v+" €";if(z==="CHF")return v+" CHF";return "$"+v};
 const FREE_MONTHLY=5;
 
-let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",theme:"auto",clients:[],docs:[],rec:[],time:[],seq:{DEV:{},FAC:{},AVT:{}}};
+let S={biz:{nom:"",pays:"FR",secteur:"artisan",devise:"€",moyens:["stripe_cb","sepa","virement","especes"],adresse:"",contact:"",tvaId:"",iban:"",stripeLink:""},sub:{plan:"free",cycle:"monthly",since:null},lang:"fr",theme:"auto",clients:[],docs:[],rec:[],time:[],seq:{DEV:{},FAC:{},AVT:{}}};
 
 /* Langue = source unique i18n (24 langues UE, voir i18n.js) ; repli français. */
 function detectLang(){try{if(window.getLang)return window.getLang()}catch(e){}return "fr"}
@@ -586,6 +598,7 @@ function migrateMoyens(){
   if(!CUR[S.biz.devise])S.biz.devise=PAYS[S.biz.pays].devise;
   const list=(S.biz.moyens||[]).map(m=>LEGACY_M[m]||m).filter(k=>MOYENS[k]);
   S.biz.moyens=list.length?[...new Set(list)]:[...PAYS[S.biz.pays].moyens];
+  S.biz.stripeLink=cleanStripeLink(S.biz.stripeLink);
   (S.clients||[]).forEach(c=>{if(c&&typeof c==="object"){c.tel=c.tel||"";c.email=c.email||"";c.adresse=c.adresse||"";c.tvaId=c.tvaId||""}});
   S.lang=(window.ENCAISSE_LANG_LIST&&window.ENCAISSE_LANG_LIST[S.lang])?S.lang:detectLang();
 }
@@ -1945,6 +1958,11 @@ function openPay(id){
   let payUrl=getDocUrl(d.id);
   const site=siteBase();
   const qrSVG=makeQR(payUrl);
+  /* Lien de paiement personnel de l'artisan : son Payment Link + référence
+     du document (réconciliation dans son dashboard Stripe) + QR dédié. */
+  const artBase=cleanStripeLink(S.biz.stripeLink);
+  const artUrl=(d.type!=="devis"&&artBase)?artBase+"?client_reference_id="+encodeURIComponent(d.id):"";
+  const artQR=artUrl?`<div class="inv-qr-code" id="payQRArt" style="background:#fff;border-radius:10px;padding:3px;margin-top:8px">${makeQR(artUrl)}</div>`:"";
   openSheet(`<h2>${d.type==="devis"?T("Partager le document"):d.type==="avoir"?T("Partager l'avoir"):T("Lien de paiement")}</h2>
   <p class="sub">${esc(d.numero)} · ${amtOf(d)} · ${esc(d.client)}</p>
   <div class="paylink">
@@ -1958,6 +1976,7 @@ function openPay(id){
       : `${T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Modes acceptés :")} ${(allowed.map(mLabel)).join(", ")}.`)
     : T("Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code.")}</p>
   <div class="row">${btns}</div>
+  ${artUrl?`<a class="btn primary" id="artPay" style="text-decoration:none;text-align:center;margin-top:10px" href="${esc(artUrl)}" target="_blank" rel="noopener">${ic("card")} ${T("Payer par carte →")}</a>${artQR}`:""}
   <div class="row" style="margin-top:10px">
     <button class="btn ghost" id="copyL" type="button">${T("Copier le lien")}</button>
     <button class="btn wa" data-act="shareWa" data-id="${d.id}" type="button">${ic("chat")} WhatsApp →</button>
@@ -2051,7 +2070,7 @@ function syncSettings(){
   const ts=$("#themeSel");if(ts)ts.value=S.theme||"auto";
   document.querySelector('input[name="biz"]').value=S.biz.nom||"";
   const set=(n,v)=>{const el=document.querySelector(`[name="${n}"]`);if(el)el.value=v||""};
-  set("adresse",S.biz.adresse);set("contact",S.biz.contact);set("tvaId",S.biz.tvaId);set("iban",S.biz.iban);
+  set("adresse",S.biz.adresse);set("contact",S.biz.contact);set("tvaId",S.biz.tvaId);set("iban",S.biz.iban);set("stripeLink",S.biz.stripeLink);
   $("#ruleLine").textContent="📌 "+loc(PAYS[S.biz.pays]?.rule||"");
   const al=$("#archiveLine");
   if(al)al.textContent=T("Numérotation inviolable, jamais remise à zéro, montants en centimes, journal horodaté. Conservation {a} à ta charge : exporte en JSON/CSV/FEC et active la sauvegarde chiffrée — téléphone perdu = historique perdu sans sauvegarde.",{a:loc(PAYS[S.biz.pays]?.archive||"10 ans")});
@@ -2219,6 +2238,8 @@ function bind(){
     S.biz.contact=String(f.get("contact")||"").slice(0,80);
     S.biz.tvaId=String(f.get("tvaId")||"").slice(0,40);
     S.biz.iban=String(f.get("iban")||"").slice(0,40);
+    S.biz.stripeLink=cleanStripeLink(f.get("stripeLink"));
+    if(f.get("stripeLink")&&!S.biz.stripeLink)toast(T("Lien Stripe invalide : colle ton Payment Link (buy.stripe.com/…)"));
     const wl=String(f.get("lang")||"fr");
     const wantLang=(window.ENCAISSE_LANG_LIST&&window.ENCAISSE_LANG_LIST[wl])?wl:"fr";
     if(wantLang!==lang()&&typeof window.setAppLang==="function"){window.setAppLang(wantLang).then(()=>{syncSettings();render()}).catch(()=>{})}

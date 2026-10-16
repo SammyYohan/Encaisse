@@ -203,6 +203,13 @@ function render(slug, row, p, opts, env) {
     }
   }
 
+  /* Lien de paiement PERSONNEL de l'artisan (son propre compte Stripe) :
+     re-validé ici car le payload D1 est une entrée non fiable. */
+  const artRaw = String((p.biz || {}).stripeLink || "");
+  if (!paid && d.type === "facture" && /^https:\/\/buy\.stripe\.com\/[A-Za-z0-9]+/.test(artRaw)) {
+    payBtn += `<a class="pay" href="${esc(artRaw)}?client_reference_id=${esc(slug)}">${lang === "en" ? "Pay by card ✓" : "Payer par carte ✓"}</a>`;
+  }
+
   const avNote = isAvoir
     ? `<p class="note">${tpl(Lx.avTxt, { n: d.avoirSourceNum || d.numero || "" })}</p>`
     : "";

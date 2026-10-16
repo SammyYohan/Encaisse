@@ -75,11 +75,17 @@ async function runReminders(env) {
     if (!st) continue;
     if (row.remind_at && now - row.remind_at < 72 * 3600e3) continue;
     out.due++;
+    /* Lien de paiement 1-clic pour le fournisseur de relance (mail/SMS) :
+       absolu si la variable d'env SITE_URL est posée sur le Worker
+       (dashboard Workers → Settings → Variables), relatif sinon. */
+    const payBase = String(env.SITE_URL || "").replace(/\/+$/, "");
+    const payUrl = payBase + "/r/" + row.slug;
     const item = {
       slug: row.slug,
       numero: d.numero || "",
       client: d.client || "",
       montant_centimes: totals(d).net,
+      url_paiement: payUrl,
       devise: ((p.biz || {}).devise) || "€",
       echeance: d.eche,
       jours_retard: j,

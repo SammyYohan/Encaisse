@@ -300,6 +300,23 @@ async function postPortal(ctx) {
     await env.DB.prepare("ALTER TABLE portal ADD COLUMN remind_at INTEGER").run().catch(function () {});
     const prev = await env.DB.prepare("SELECT payload, hash, owner FROM portal WHERE slug = ?").bind(slug).first().catch(function () { return null; });
     if (prev && prev.owner && prev.owner !== owner) return json({ error: "acces_refuse" }, 403);
+    /* Verrou freemium : quota de PARTAGES (pas de factures — D1 ne contient
+       que les documents explicitement partagés, jamais tout l'historique ;
+       le comptage exhaustif reste canCreate() côté app). L'appareil (owner)
+       est la seule identité serveur disponible. Les abonnés envoient leur
+       jeton HMAC (X-Sub-Token) et passent toujours. */
+    const GRATUIT_PORTAIL = 5; /* aligné sur FREE_MONTHLY : une seule limite commerciale */
+    if (!prev) {
+      let premium = null;
+      try {
+        const tok = request.headers.get("X-Sub-Token") || "";
+        premium = tok ? await verifyToken(env, tok) : null;
+      } catch (e) { premium = null; }
+      if (!premium || !premium.sid) {
+        const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM portal WHERE owner = ?").bind(owner || "").first().catch(function () { return null; });
+        if (c && Number(c.n) >= GRATUIT_PORTAIL) return json({ error: "quota_gratuite_atteinte", limite: GRATUIT_PORTAIL }, 403);
+      }
+    }
     /* Lignes legacy sans owner (owner NULL) : premier écrivain gagne, puis
        l'owner est verrouillé via COALESCE ci-dessous (possession = slug 96 bits). */
     /* Évite les réécritures inutiles : si le payload est identique, le hash
