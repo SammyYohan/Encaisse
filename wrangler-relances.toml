@@ -1,0 +1,19 @@
+# Encaisse — config du Worker compagnon "relances" (ne pas fusionner avec
+# wrangler.toml : celui-ci pilote les Pages Functions, celui-ci le Worker seul).
+# Déploiement : npx wrangler deploy --config wrangler-relances.toml
+# Secrets (jamais ici) : npx wrangler secret put REMIND_WEBHOOK --config wrangler-relances.toml
+#                        npx wrangler secret put REMIND_KEY --config wrangler-relances.toml
+name = "encaisse-relances"
+main = "worker-relances.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "encaisse"
+database_id = "1338a01b-3600-45ad-a246-77ea9e9135e2"
+
+[vars]
+SITE_URL = "https://encaisse.pages.dev"
+
+[triggers]
+crons = ["0 8 * * *"]

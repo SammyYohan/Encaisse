@@ -63,7 +63,7 @@ Le nom de base utilisé dans la commande doit correspondre au `database_name` du
 5. Active aussi la sauvegarde automatique sur ce second appareil.
 6. Crée un client de test sur le premier appareil et vérifie qu'il apparaît sur le second après la synchronisation.
 
-La sauvegarde automatique et le partage client sont deux mécanismes distincts. Les paiements Stripe restent en mode démo par défaut. Ne renseigne pas de secrets Stripe dans les fichiers source et n'active pas les paiements réels avant un test complet.
+La sauvegarde automatique et le partage client sont deux mécanismes distincts. Les paiements Stripe restent désactivés par défaut (bêta gratuite). Ne renseigne pas de secrets Stripe dans les fichiers source et n'active pas les paiements réels avant un test complet.
 
 ## Limites à connaître avant un usage professionnel
 

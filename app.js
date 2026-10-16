@@ -966,7 +966,8 @@ function openPaywall(reason){
 
 function paymentsReady(){
   const cfg=window.ENCAISSE_CONFIG||{};
-  return !cfg.DEMO_MODE && !!cfg.STRIPE_PUBLIC_KEY && cfg.STRIPE_LIVE===true;
+  /* Seul verrou : BETA_GRATUITE (bêta) puis STRIPE_LIVE + clé publique (prod). */
+  return !!cfg.STRIPE_PUBLIC_KEY && cfg.STRIPE_LIVE===true;
 }
 async function activatePlan(plan){
   if(paymentsReady()){
@@ -985,7 +986,7 @@ async function activatePlan(plan){
       return;
     }
   }
-  const reason=T("Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.");
+  const reason=T("Paiements non configurés : aucun débit. Ajoute ta clé Stripe pour encaisser en ligne.");
   S.sub={plan,cycle:S.sub?.cycle||"monthly",since:todayISO()};
   save();closeSheet();render();
   toast(`✓ ${T("Plan")} ${plan} — ${reason}`);
@@ -2373,7 +2374,7 @@ function bind(){
   window.addEventListener("online",()=>{flushBackup(true);syncPaidFromServer(false);genRecurrences()});
   document.addEventListener("visibilitychange",()=>{if(document.hidden)flushBackup(true);else{syncPaidFromServer(false);genRecurrences()}});
 
-  const db=$("#demoBar");if(db)db.hidden=paymentsReady()||betaFree(); /* BÊTA : le bandeau « démo / aucun paiement » reste masqué. */
+  const db=$("#demoBar");if(db)db.hidden=paymentsReady()||betaFree(); /* Bandeau masqué en bêta comme en paiements prêts. */
 
   if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").then(reg=>{

@@ -2,7 +2,7 @@
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).lv = {
   "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Sūti saiti pa e-pastu/WhatsApp vai rādi QR kodu. Klients maksā ar Stripe:",
   "Lien de paiement Stripe + relances": "Stripe maksājuma saite + atgādinājumi",
-  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demo režīms: nekādu norakstīšanu. Pievieno slepeno Stripe atslēgu iekasēšanai.",
+  "Paiements non configurés : aucun débit. Ajoute ta clé Stripe pour encaisser en ligne.": "Payments not configured: no charge. Add your Stripe key to collect online.",
   "Règlement sécurisé par Stripe": "Drošs maksājums ar Stripe",
   "Stripe uniquement": "Tikai Stripe",
   "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Tiek izdots avansa rēķins ar savu Stripe maksājuma saiti. Atlikums automātiski atskaitīts no gala rēķina.",

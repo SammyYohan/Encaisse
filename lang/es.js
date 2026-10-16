@@ -2,7 +2,7 @@
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).es = {
   "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Envía este enlace por e-mail/WhatsApp o haz escanear el QR. El cliente paga con Stripe:",
   "Lien de paiement Stripe + relances": "Enlace de pago Stripe + reclamaciones",
-  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Modo demo: sin cargos. Conecta tu clave secreta de Stripe para cobrar.",
+  "Paiements non configurés : aucun débit. Ajoute ta clé Stripe pour encaisser en ligne.": "Payments not configured: no charge. Add your Stripe key to collect online.",
   "Règlement sécurisé par Stripe": "Pago seguro con Stripe",
   "Stripe uniquement": "Solo Stripe",
   "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Se emite una factura de anticipo con su propio enlace de pago Stripe. El saldo se descuenta automáticamente de la factura final.",

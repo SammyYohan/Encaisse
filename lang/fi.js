@@ -2,7 +2,7 @@
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).fi = {
   "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Lähetä linkki sähköpostilla/WhatsAppilla tai näytä QR-koodi. Asiakas maksaa Stripellä:",
   "Lien de paiement Stripe + relances": "Stripe-maksulinkki + muistutukset",
-  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demotila: ei veloituksia. Yhdistä salainen Stripe-avaimesi periäksesi.",
+  "Paiements non configurés : aucun débit. Ajoute ta clé Stripe pour encaisser en ligne.": "Payments not configured: no charge. Add your Stripe key to collect online.",
   "Règlement sécurisé par Stripe": "Turvallinen maksu Stripellä",
   "Stripe uniquement": "Vain Stripe",
   "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Ennakkolasku omalla Stripe-maksulinkillä. Loppusumma vähennetään automaattisesti loppulaskusta.",

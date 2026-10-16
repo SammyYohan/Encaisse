@@ -205,8 +205,8 @@ Pas de bibliothèque PDF : la facture est mise en forme pour l'écran et
 
 | Clé | Actuel | Sens |
 |---|---|---|
-| `DEMO_MODE` | `true` | Mode démonstration : aucun paiement réel ; l’activation Pro locale sert uniquement à tester l’interface |
-| `STRIPE_LIVE` | `false` | Désactivé par défaut ; n’activer qu’après tests et configuration des secrets |
+| `BETA_GRATUITE` | `true` | Bêta : accès complet illimité, sans quota ni paywall — l'unique verrou commercial |
+| `STRIPE_LIVE` | `false` | Désactivé par défaut ; n'activer qu'après tests et configuration des secrets |
 | `STRIPE_PUBLIC_KEY` | `""` | À configurer uniquement après les tests Stripe ; clé *publishable* visible par le navigateur |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Partenaire agréé e-facturation (Europe) — optionnel |
 | `SITE_URL` | `https://encaisse.pages.dev` | Origine publique qui sert l'app — active la vraie page client `/r/:slug` (publiée au partage) |

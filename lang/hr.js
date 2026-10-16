@@ -2,7 +2,7 @@
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).hr = {
   "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Pošalji link e-mailom/WhatsAppom ili pokaži QR kod. Klijent plaća Stripeom:",
   "Lien de paiement Stripe + relances": "Stripe link za plaćanje + opomene",
-  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demo način: bez naplate. Spoji tajni Stripe ključ za naplatu.",
+  "Paiements non configurés : aucun débit. Ajoute ta clé Stripe pour encaisser en ligne.": "Payments not configured: no charge. Add your Stripe key to collect online.",
   "Règlement sécurisé par Stripe": "Sigurno plaćanje Stripeom",
   "Stripe uniquement": "Samo Stripe",
   "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Izdaje se račun predujma s vlastitim Stripe linkom. Saldo se automatski odbija od konačnog računa.",

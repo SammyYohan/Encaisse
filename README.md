@@ -209,14 +209,14 @@ the action bar are hidden when printing.
 
 | Key | Current | Meaning |
 |---|---|---|
-| `DEMO_MODE` | `true` | Demo mode: no real payments; local Pro activation is for interface testing only |
+| `BETA_GRATUITE` | `true` | Beta: full unlimited access, no quota, no paywall — the single commercial gate |
 | `STRIPE_LIVE` | `false` | Disabled by default; enable only after test-mode checks and secret configuration |
 | `STRIPE_PUBLIC_KEY` | `""` | Configure only after Stripe testing; *publishable* key is browser-visible |
 | `PDP_API_KEY`, `PEPPOL_AP_*` | `""` | Certified e-invoicing partner (EU) — optional |
 | `SITE_URL` | `https://encaisse.pages.dev` | Public origin serving the app — enables the real customer page `/r/:slug` (uploaded on explicit share) |
 
 > ⚠️ Live payments are disabled by default. Enable them only after Stripe test-mode checks, Cloudflare secret configuration, and legal review.
-> Demo-granting only happens when payments aren't configured (`paymentsReady()`
+> Local plan-granting only happens when payments aren't configured (`paymentsReady()`
 > false) — never flip back while secrets are live.
 
 ## 6. Deployment
@@ -377,7 +377,7 @@ What an acquirer should know on day one:
 
 | Item | Status |
 |---|---|
-| Revenue / paying customers | Demo mode by default; no real payment enabled in this archive |
+| Revenue / paying customers | Free beta by default; no real payment enabled in this archive |
 | Backend / database | **Exists**: Pages Functions (`functions/`) + D1 tables `portal`/`backup` — Stripe secrets live in Cloudflare, never in the repo |
 | Users' personal data held by us | Explicitly shared documents and enabled encrypted backups may be stored in D1; verify actual data flows and retention before launch |
 | Third-party accounts needed to transfer | Cloudflare, Stripe, the domain registrar, GitHub |

@@ -1,11 +1,9 @@
 /* Encaisse — Worker compagnon "relances" (P1 : Pages Functions n'ont pas de cron).
-   Deploiement (une fois, dashboard ou CLI) :
-     npx wrangler deploy worker-relances.js --name encaisse-relances
-     + binding D1 nomme "DB" (meme base que les Pages Functions)
-     + variable REMIND_WEBHOOK (optionnel : URL n8n / Zapier / Make qui envoie
-       vraiment le WhatsApp / e-mail — sans elle, le Worker se contente de
-       marquer les relances dues dans D1, sans envoi)
-     + declencheur cron : dashboard Workers → Triggers → Cron (ex. "0 8 * * *")
+   Deploiement (une fois) :
+     npx wrangler deploy --config wrangler-relances.toml
+     (binding D1 « DB », SITE_URL et cron sont dans ce fichier ; les secrets
+     REMIND_WEBHOOK / REMIND_KEY se posent via `wrangler secret put ... --config
+     wrangler-relances.toml`, jamais dans le dépôt).
    Logique : factures impayees, J+3 poli / J+7 ferme / J+15 mise en demeure
    (memes seuils que l'app), anti-doublon 72 h via portal.remind_at,
    compteur portal.remind_count. Idempotent : rejouer ne renotifie pas.

@@ -2,7 +2,7 @@
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).hu = {
   "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Küldd el e-mailben/WhatsAppon vagy olvastasd be a QR-kódot. Az ügyfél Stripe-pal fizet:",
   "Lien de paiement Stripe + relances": "Stripe fizetési link + felszólítások",
-  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Demó mód: nincs terhelés. Csatlakoztasd a titkos Stripe-kulcsod a beszedéshez.",
+  "Paiements non configurés : aucun débit. Ajoute ta clé Stripe pour encaisser en ligne.": "Payments not configured: no charge. Add your Stripe key to collect online.",
   "Règlement sécurisé par Stripe": "Biztonságos fizetés Stripe-pal",
   "Stripe uniquement": "Csak Stripe",
   "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Előlegszámla saját Stripe fizetési linkkel. Az egyenleg automatikusan levonódik a végszámlából.",

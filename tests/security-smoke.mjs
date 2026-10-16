@@ -8,8 +8,8 @@ const [config, app, api, legal, headers, clientPage, worker] = await Promise.all
   read("worker-relances.js")
 ]);
 
-assert.match(config, /DEMO_MODE:\s*true/, "Payments must default to demo mode.");
 assert.match(config, /STRIPE_LIVE:\s*false/, "Live Stripe must be disabled by default.");
+assert.doesNotMatch(config, /DEMO_MODE/, "DEMO_MODE was removed: BETA_GRATUITE is the single gate.");
 assert.match(config, /BETA_GRATUITE:\s*true/, "Beta flag must stay enabled until commercial launch.");
 assert.doesNotMatch(config + api + clientPage + worker, /sk_live_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+/,
   "Never commit Stripe secret keys or webhook signing secrets.");

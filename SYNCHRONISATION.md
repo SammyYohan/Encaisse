@@ -18,7 +18,7 @@ La synchronisation en ligne nécessite que le site soit déployé en HTTPS et qu
 2. Dans Cloudflare Pages, associer cette base avec le binding exact `DB`.
 3. Déployer les Pages Functions.
 4. Vérifier que `POST /api/backup` répond avec une erreur JSON explicite plutôt qu'une erreur HTML. Une erreur `503` signifie généralement que le binding `DB` manque.
-5. Garder `DEMO_MODE: true` et `STRIPE_LIVE: false` tant que les paiements n'ont pas été testés et validés séparément.
+5. Garder `STRIPE_LIVE: false` (et `BETA_GRATUITE: true`) tant que les paiements n'ont pas été testés et validés séparément.
 
 Le endpoint de sauvegarde crée sa table `backup` automatiquement. Le schéma `schema.sql` reste nécessaire pour les autres fonctions de portail client.
 

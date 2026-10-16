@@ -2,10 +2,6 @@
    Ce fichier pilote le comportement public de l application.
    Ne jamais placer de cle Stripe secrete dans ce fichier public. */
 window.ENCAISSE_CONFIG = {
-  /* true  = garde-fou anti-debit involontaire.
-     false = autorise les debits reels (necessite STRIPE_LIVE=true + secrets Cloudflare). */
-  DEMO_MODE: true,
-
   /* MODE BÊTA / AUTONOME GRATUIT :
      true  = acces complet illimite : devis, factures, exports, suivi du temps
              sans quota, sans paywall et sans aucune dependance a Stripe.
@@ -16,7 +12,7 @@ window.ENCAISSE_CONFIG = {
   /* Pour basculer en production avec paiements Stripe :
      1. Configurer D1 + STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET dans Cloudflare Pages.
      2. Mettre STRIPE_PUBLIC_KEY ci-dessous (cle commencant par pk_live_ ou pk_test_).
-     3. Basculer DEMO_MODE: false, STRIPE_LIVE: true, BETA_GRATUITE: false. */
+     3. Mettre STRIPE_LIVE: true, BETA_GRATUITE: false. */
   STRIPE_LIVE: false,
 
   // Cle Stripe publishable publique pour le navigateur (ex: pk_live_... ou pk_test_...)

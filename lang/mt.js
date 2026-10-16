@@ -2,7 +2,7 @@
 (window.ENCAISSE_LANGS = window.ENCAISSE_LANGS || {}).mt = {
   "Envoie ce lien par e-mail/WhatsApp ou fais scanner le QR code. Le client paie par Stripe :": "Ibgħat din il-link bl-email/WhatsApp jew skannja l-QR. Il-klijent iħallas bi Stripe:",
   "Lien de paiement Stripe + relances": "Link ta' ħlas Stripe + tfakkiriet",
-  "Mode démonstration : aucun débit. Branche ta clé Stripe secrète pour encaisser.": "Mod dimostrattiv: l-ebda ħlas. Qabbad iċ-ċavetta sigrieta Stripe biex tiġbor.",
+  "Paiements non configurés : aucun débit. Ajoute ta clé Stripe pour encaisser en ligne.": "Payments not configured: no charge. Add your Stripe key to collect online.",
   "Règlement sécurisé par Stripe": "Ħlas sigur bi Stripe",
   "Stripe uniquement": "Stripe biss",
   "Une facture d'acompte est émise avec son propre lien de paiement Stripe. Le solde est automatiquement déduit de la facture finale.": "Tinħareġ fattura ta' depożitu bil-link ta' ħlas Stripe tagħha. Il-bilanċ jitnaqqas awtomatikament mill-fattura finali.",
